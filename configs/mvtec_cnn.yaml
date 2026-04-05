@@ -1,0 +1,33 @@
+# LRAD Configuration — MVTec AD (bottle category)
+# Adjust 'category' and 'data_root' for your server setup.
+
+experiment:
+  name: "mvtec_bottle"
+  seed: 42
+  output_dir: "outputs/mvtec_bottle"
+
+dataset:
+  name: "mvtec"
+  category: "bottle"                              # ← change per product
+  data_root: "./data/mvtec_anomaly_detection"     # ← adjust to your path on DCE Metz
+  image_size: 224
+  batch_size: 32
+
+model:
+  architecture: "cnn"
+  channels: [3, 16, 32, 64, 128]    # RGB input, deeper for 224x224
+  input_size: 224
+  num_classes: 1                     # single normal class
+
+training:
+  classifier:
+    epochs: 30
+    lr: 0.001
+  decoders:
+    epochs: 30
+    lr: 0.001
+
+evaluation:
+  fusion: "weighted"
+  n_display: 10
+  max_eval_batches: null

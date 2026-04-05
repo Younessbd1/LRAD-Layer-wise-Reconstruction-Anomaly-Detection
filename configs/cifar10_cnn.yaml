@@ -1,0 +1,31 @@
+# LRAD Configuration — Protocol 3: CIFAR-10 + CNN
+
+experiment:
+  name: "cifar10_cnn"
+  seed: 42
+  output_dir: "outputs/cifar10_cnn"
+
+dataset:
+  name: "cifar10"
+  normal_classes: [0]     # airplane as normal
+  batch_size: 64
+  data_root: "./data"
+
+model:
+  architecture: "cnn"
+  channels: [3, 16, 32, 64, 128]
+  input_size: 32
+  num_classes: 1          # one-class (still needs >=2 for CE, see note)
+
+training:
+  classifier:
+    epochs: 30
+    lr: 0.001
+  decoders:
+    epochs: 30
+    lr: 0.001
+
+evaluation:
+  fusion: "weighted"
+  n_display: 10
+  max_eval_batches: 20

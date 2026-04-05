@@ -1,0 +1,31 @@
+# LRAD Configuration — Protocol 2: MNIST + CNN
+
+experiment:
+  name: "mnist_cnn"
+  seed: 42
+  output_dir: "outputs/mnist_cnn"
+
+dataset:
+  name: "mnist"
+  normal_classes: [0, 1, 2, 3]
+  batch_size: 64
+  data_root: "./data"
+
+model:
+  architecture: "cnn"
+  channels: [1, 8, 16, 32, 64]
+  input_size: 28
+  num_classes: 4
+
+training:
+  classifier:
+    epochs: 15
+    lr: 0.001
+  decoders:
+    epochs: 20
+    lr: 0.001
+
+evaluation:
+  fusion: "mean"
+  n_display: 10
+  max_eval_batches: null

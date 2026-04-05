@@ -1,0 +1,33 @@
+# LRAD Configuration — Protocol 1: MNIST + MLP
+# Train MLP on digits [0,1,2,3], detect [4..9] and Fashion-MNIST as anomalies.
+
+experiment:
+  name: "mnist_mlp"
+  seed: 42
+  output_dir: "outputs/mnist_mlp"
+
+dataset:
+  name: "mnist"
+  normal_classes: [0, 1, 2, 3]
+  batch_size: 64
+  data_root: "./data"
+
+model:
+  architecture: "mlp"
+  input_dim: 784          # 28 * 28
+  input_size: 28
+  hidden_dims: [512, 256, 128, 64]
+  num_classes: 4
+
+training:
+  classifier:
+    epochs: 15
+    lr: 0.001
+  decoders:
+    epochs: 20
+    lr: 0.001
+
+evaluation:
+  fusion: "mean"          # mean | max | weighted
+  n_display: 10
+  max_eval_batches: null  # null = evaluate all
