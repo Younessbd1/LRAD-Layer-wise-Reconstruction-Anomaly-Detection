@@ -1,3 +1,4 @@
+from ._style import apply_style, PALETTE, HEAT_CMAP, IMG_CMAP
 from .heatmaps import (
     plot_heatmap_grid,
     plot_score_distributions,
@@ -13,3 +14,5 @@ from .activations import (
     compute_activation_stats,
     format_stats_report,
 )
+
+apply_style()
