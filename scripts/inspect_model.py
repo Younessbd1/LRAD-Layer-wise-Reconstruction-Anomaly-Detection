@@ -136,12 +136,13 @@ def inspect_split(
     )
     plt.close("all")
 
-    # 4. Per-layer error heatmaps
+    # 4. Per-layer error heatmaps (with reconstructions alongside, shared vmax)
     plot_per_layer_errors(
         images=x.cpu().numpy(),
         per_layer_maps=[m.cpu().numpy() for m in per_layer_maps],
+        reconstructions=[r.cpu().numpy() for r in reconstructions],
         n_samples=n_samples,
-        title=f"{split_name} — per-layer error heatmaps",
+        title=f"{split_name} — per-layer reconstructions and error heatmaps",
         save_path=str(split_dir / "per_layer_errors.png"),
     )
     plt.close("all")

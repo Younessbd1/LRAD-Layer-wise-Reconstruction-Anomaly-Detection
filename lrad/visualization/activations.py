@@ -2,17 +2,33 @@
 
 These plots answer questions like:
   - What features does the classifier learn at each depth?
-  - How much of the activation is zero (ReLU sparsity)?
+  - How sparse is each layer? How many channels are dead?
   - What does each individual decoder reconstruct, before they're combined?
   - Which layer contributes most to catching a given anomaly?
   - How are activation values distributed?
+
+All plots share a consistent publication-quality style defined in ``_style``.
 """
+
+from __future__ import annotations
 
 import numpy as np
 import matplotlib.pyplot as plt
 import torch
-from pathlib import Path
 from typing import Optional
+
+from ._style import (
+    apply_style,
+    attach_reference_colorbar,
+    clean_image_axis,
+    annotate_score,
+    row_label,
+    soft_grid,
+    img_to_display,
+    is_grayscale,
+    ensure_dir,
+    PALETTE, CYCLE, HEAT_CMAP, IMG_CMAP,
+)
 
 
 # ---------------------------------------------------------------------------
@@ -23,23 +39,6 @@ def _to_numpy(x):
     if isinstance(x, torch.Tensor):
         return x.detach().cpu().numpy()
     return np.asarray(x)
-
-
-def _img_for_display(img: np.ndarray) -> np.ndarray:
-    """Convert (C, H, W) to a matplotlib-friendly array."""
-    if img.ndim == 2:
-        return img
-    if img.shape[0] == 1:
-        return img[0]
-    if img.shape[0] == 3:
-        rgb = np.transpose(img, (1, 2, 0))
-        return np.clip(rgb, 0, 1)
-    return img[0]
-
-
-def _ensure_dir(path: Optional[str]) -> None:
-    if path:
-        Path(path).parent.mkdir(parents=True, exist_ok=True)
 
 
 # ---------------------------------------------------------------------------
@@ -53,69 +52,92 @@ def plot_feature_maps(
     layer_labels: Optional[list[str]] = None,
     title: str = "Feature Activations Across Layers",
     save_path: Optional[str] = None,
+    cmap: str = "viridis",
 ) -> plt.Figure:
-    """Plot top-k most-active feature channels per layer for a single sample.
+    """Top-k most-active feature channels per layer, for a single sample.
 
-    For CNN activations (B, C, H, W): shows channel maps as 2D heatmaps.
-    For MLP activations (B, D): reshapes vector to near-square grid and plots as 1 heatmap per layer.
+    CNN activations (B, C, H, W) → channel maps as 2D heatmaps.
+    MLP activations (B, D)        → vector reshaped to near-square grid.
 
-    The visual mimics the classic low/mid/high-level feature diagram.
+    A viridis reference colorbar on the right indicates the low-to-high
+    activation gradient. Channels are sorted left-to-right by mean activation
+    magnitude, so column 0 is the strongest for this specific input.
     """
+    apply_style()
     n_layers = len(activations)
-
     is_cnn = activations[0].ndim == 4
 
     if is_cnn:
-        fig, axes = plt.subplots(n_layers, top_k, figsize=(top_k * 1.0, n_layers * 1.2))
+        fig, axes = plt.subplots(
+            n_layers, top_k,
+            figsize=(top_k * 1.05 + 1.2, n_layers * 1.32 + 0.8),
+            gridspec_kw=dict(wspace=0.10, hspace=0.42),
+        )
         if n_layers == 1:
             axes = axes[np.newaxis, :]
 
         for l_idx, act in enumerate(activations):
-            a = _to_numpy(act[sample_idx])  # (C, H, W)
-            # Pick channels by mean activation magnitude (most "active")
+            a = _to_numpy(act[sample_idx])
             channel_strength = a.reshape(a.shape[0], -1).mean(axis=1)
             order = np.argsort(-np.abs(channel_strength))[:top_k]
 
-            label = layer_labels[l_idx] if layer_labels else f"Layer {l_idx}"
+            base = layer_labels[l_idx] if layer_labels else f"Layer {l_idx}"
+            spatial = f"{a.shape[1]}×{a.shape[2]}"
+            label = f"{base}\n{spatial} · {a.shape[0]}ch"
             for col, ch in enumerate(order):
                 ax = axes[l_idx, col]
-                ax.imshow(a[ch], cmap="viridis")
-                ax.set_xticks([])
-                ax.set_yticks([])
+                ax.imshow(a[ch], cmap=cmap)
+                clean_image_axis(ax)
                 if col == 0:
-                    ax.set_ylabel(label, fontsize=9)
-                ax.set_title(f"ch{ch}", fontsize=6)
+                    row_label(ax, label, fontsize=8.5)
+                ax.set_title(f"ch{ch}  ({channel_strength[ch]:.2f})",
+                             fontsize=6.5, color=PALETTE["text_muted"], pad=3)
 
-            # Pad remaining cells if fewer channels than top_k
             for col in range(len(order), top_k):
                 axes[l_idx, col].axis("off")
 
+        attach_reference_colorbar(
+            fig, axes, cmap=cmap, vmax=1.0,
+            label="Activation intensity",
+            endpoint_labels=("silent", "firing"),
+        )
+
     else:
-        # MLP: one reshaped heatmap per layer
-        fig, axes = plt.subplots(1, n_layers, figsize=(n_layers * 2.5, 2.5))
+        fig, axes = plt.subplots(
+            1, n_layers,
+            figsize=(n_layers * 3.0 + 1.2, 3.0),
+            gridspec_kw=dict(wspace=0.22),
+        )
         if n_layers == 1:
             axes = [axes]
 
         for l_idx, act in enumerate(activations):
-            a = _to_numpy(act[sample_idx])  # (D,)
+            a = _to_numpy(act[sample_idx])
             side = int(np.ceil(np.sqrt(a.shape[0])))
             padded = np.zeros(side * side)
             padded[: a.shape[0]] = a
             grid = padded.reshape(side, side)
 
             label = layer_labels[l_idx] if layer_labels else f"Layer {l_idx}"
-            axes[l_idx].imshow(grid, cmap="viridis")
-            axes[l_idx].set_title(f"{label}\n(dim={a.shape[0]})", fontsize=9)
-            axes[l_idx].set_xticks([])
-            axes[l_idx].set_yticks([])
+            ax = axes[l_idx]
+            ax.imshow(grid, cmap=cmap)
+            clean_image_axis(ax)
+            ax.set_title(f"{label}  (dim = {a.shape[0]})", fontsize=10)
 
-    fig.suptitle(title, fontsize=12, fontweight="bold", y=1.02)
-    plt.tight_layout()
+        attach_reference_colorbar(
+            fig, axes, cmap=cmap, vmax=1.0,
+            label="Activation intensity",
+            endpoint_labels=("silent", "firing"),
+        )
+
+    fig.suptitle(
+        f"{title}\nSample #{sample_idx}  ·  channels sorted by mean activation (strongest → weakest)",
+        fontsize=12, fontweight="bold", color=PALETTE["text"], y=1.00,
+    )
 
     if save_path:
-        _ensure_dir(save_path)
-        fig.savefig(save_path, dpi=200, bbox_inches="tight")
-
+        ensure_dir(save_path)
+        fig.savefig(save_path)
     return fig
 
 
@@ -124,13 +146,7 @@ def plot_feature_maps(
 # ---------------------------------------------------------------------------
 
 def compute_activation_stats(activations: list) -> dict:
-    """Per-layer summary statistics.
-
-    Returns dict with lists indexed by layer:
-        mean, std, sparsity (% exact zeros), l2_norm,
-        dead_channels (% channels with all-zero activations across the batch),
-        max, min.
-    """
+    """Per-layer summary statistics."""
     stats = {"mean": [], "std": [], "sparsity": [], "l2_norm": [],
              "dead_channels": [], "max": [], "min": []}
 
@@ -142,11 +158,10 @@ def compute_activation_stats(activations: list) -> dict:
         stats["l2_norm"].append(float(np.linalg.norm(a.reshape(a.shape[0], -1), axis=1).mean()))
         stats["max"].append(float(a.max()))
         stats["min"].append(float(a.min()))
-
-        if a.ndim == 4:  # (B, C, H, W)
+        if a.ndim == 4:
             per_channel = a.reshape(a.shape[0], a.shape[1], -1).sum(axis=(0, 2))
             dead = (per_channel == 0).mean()
-        else:  # (B, D)
+        else:
             per_unit = a.sum(axis=0)
             dead = (per_unit == 0).mean()
         stats["dead_channels"].append(float(dead))
@@ -159,154 +174,204 @@ def plot_activation_stats(
     title: str = "Per-Layer Activation Statistics",
     save_path: Optional[str] = None,
 ) -> plt.Figure:
-    """Bar chart of per-layer stats: mean, std, sparsity, L2 norm, dead channels."""
+    """6-panel bar chart: mean, std, L2, sparsity, dead channels, max."""
+    apply_style()
     stats = compute_activation_stats(activations)
     n_layers = len(activations)
     x = np.arange(n_layers)
     labels = [f"L{i}" for i in range(n_layers)]
 
-    fig, axes = plt.subplots(2, 3, figsize=(13, 7))
-    fig.suptitle(title, fontsize=13, fontweight="bold")
+    fig, axes = plt.subplots(
+        2, 3,
+        figsize=(13, 7),
+        gridspec_kw=dict(hspace=0.38, wspace=0.28),
+    )
+    fig.suptitle(title, fontsize=14, fontweight="bold", color=PALETTE["text"])
 
     panels = [
-        ("mean", "Mean activation", axes[0, 0], "#0F6E56"),
-        ("std", "Std. dev.", axes[0, 1], "#534AB7"),
-        ("l2_norm", "Mean L2 norm", axes[0, 2], "#BA7517"),
-        ("sparsity", "Sparsity (% zeros)", axes[1, 0], "#D85A30"),
-        ("dead_channels", "Dead channels (%)", axes[1, 1], "#8B2E1F"),
-        ("max", "Max activation", axes[1, 2], "#1F6FB4"),
+        ("mean",          "Mean activation",         axes[0, 0], PALETTE["normal"],       ""),
+        ("std",           "Std. deviation",          axes[0, 1], PALETTE["accent"],       ""),
+        ("l2_norm",       "Mean L2 norm",            axes[0, 2], PALETTE["neutral"],      ""),
+        ("sparsity",      "Sparsity  (% zeros)",     axes[1, 0], PALETTE["anomaly"],      "%"),
+        ("dead_channels", "Dead channels  (%)",      axes[1, 1], PALETTE["anomaly_2"],    "%"),
+        ("max",           "Max activation",          axes[1, 2], PALETTE["accent_2"],     ""),
     ]
 
-    for key, title_txt, ax, color in panels:
+    for key, title_txt, ax, color, suffix in panels:
         values = stats[key]
         if key in ("sparsity", "dead_channels"):
             values = [v * 100 for v in values]
-        ax.bar(x, values, color=color)
+
+        bars = ax.bar(x, values, color=color, width=0.7,
+                      edgecolor="white", linewidth=0.6, zorder=3)
+
+        # value labels above bars
+        vmax = max(values) if max(values) > 0 else 1
+        for bar, v in zip(bars, values):
+            ax.text(bar.get_x() + bar.get_width() / 2, v + vmax * 0.02,
+                    f"{v:.2f}{suffix}", ha="center", va="bottom",
+                    fontsize=8, color=PALETTE["text"])
+
         ax.set_xticks(x)
         ax.set_xticklabels(labels)
-        ax.set_title(title_txt, fontsize=10)
-        ax.grid(axis="y", alpha=0.3)
+        ax.set_title(title_txt, fontsize=10.5)
+        soft_grid(ax, axis="y")
+        ax.set_ylim(0 if min(values) >= 0 else None,
+                    vmax * 1.18 if max(values) > 0 else 1)
 
-    plt.tight_layout()
     if save_path:
-        _ensure_dir(save_path)
-        fig.savefig(save_path, dpi=200, bbox_inches="tight")
-
+        ensure_dir(save_path)
+        fig.savefig(save_path)
     return fig
 
 
 # ---------------------------------------------------------------------------
-# 3. Per-layer reconstructions (what each decoder produces, before fusion)
+# 3. Per-layer reconstructions
 # ---------------------------------------------------------------------------
 
 def plot_per_layer_reconstructions(
     images: np.ndarray,
     reconstructions: list,
     n_samples: int = 6,
+    per_layer_maps: Optional[list] = None,
     title: str = "Per-Decoder Reconstructions (before fusion)",
     save_path: Optional[str] = None,
 ) -> plt.Figure:
-    """Compare input image with each decoder's reconstruction.
-
-    Rows: [Original | Decoder 0 recon | Decoder 1 recon | ... | Decoder N recon]
-    Columns: samples.
-    """
+    """Input vs. each decoder's reconstruction. Scores overlaid when maps given."""
+    apply_style()
     images = _to_numpy(images)
     recons = [_to_numpy(r) for r in reconstructions]
+    maps = [_to_numpy(m) for m in per_layer_maps] if per_layer_maps is not None else None
 
     n = min(n_samples, len(images))
     n_decoders = len(recons)
     n_rows = 1 + n_decoders
 
-    fig, axes = plt.subplots(n_rows, n, figsize=(n * 1.8, n_rows * 1.8))
+    fig, axes = plt.subplots(
+        n_rows, n,
+        figsize=(n * 1.9, n_rows * 1.9),
+        gridspec_kw=dict(hspace=0.18, wspace=0.06),
+    )
     if n == 1:
         axes = axes[:, np.newaxis]
-
-    fig.suptitle(title, fontsize=12, fontweight="bold", y=1.02)
+    fig.suptitle(title, fontsize=13, fontweight="bold", y=1.02, color=PALETTE["text"])
 
     for col in range(n):
-        img = _img_for_display(images[col])
-        axes[0, col].imshow(img, cmap="gray" if img.ndim == 2 else None)
+        img = img_to_display(images[col])
+        gray = is_grayscale(images[col])
+        ax0 = axes[0, col]
+        ax0.imshow(img, cmap=IMG_CMAP if gray else None)
+        clean_image_axis(ax0)
         if col == 0:
-            axes[0, col].set_ylabel("Original", fontsize=9)
+            row_label(ax0, "Original")
 
         for d_idx, r in enumerate(recons):
-            ri = _img_for_display(r[col])
-            axes[d_idx + 1, col].imshow(ri, cmap="gray" if ri.ndim == 2 else None, vmin=0, vmax=1)
+            ri = img_to_display(r[col])
+            ax = axes[d_idx + 1, col]
+            ax.imshow(ri, cmap=IMG_CMAP if gray else None, vmin=0, vmax=1)
+            clean_image_axis(ax)
             if col == 0:
-                axes[d_idx + 1, col].set_ylabel(f"Dec. {d_idx}", fontsize=9)
+                row_label(ax, f"Dec {d_idx}")
+            if maps is not None:
+                hm = maps[d_idx][col]
+                if hm.ndim == 3:
+                    hm = hm[0]
+                annotate_score(ax, float(hm.max()))
 
-    for ax in axes.flat:
-        ax.set_xticks([])
-        ax.set_yticks([])
-
-    plt.tight_layout()
     if save_path:
-        _ensure_dir(save_path)
-        fig.savefig(save_path, dpi=200, bbox_inches="tight")
-
+        ensure_dir(save_path)
+        fig.savefig(save_path)
     return fig
 
 
 # ---------------------------------------------------------------------------
-# 4. Per-layer error maps + per-layer image-level scores
+# 4. Per-layer error heatmaps (with optional reconstruction alongside)
 # ---------------------------------------------------------------------------
 
 def plot_per_layer_errors(
     images: np.ndarray,
     per_layer_maps: list,
+    reconstructions: Optional[list] = None,
     n_samples: int = 6,
-    title: str = "Per-Layer Error Heatmaps (before fusion)",
+    title: str = "Per-Layer Reconstructions & Error Heatmaps  (before fusion)",
     save_path: Optional[str] = None,
-    cmap: str = "inferno",
+    cmap: str = HEAT_CMAP,
 ) -> plt.Figure:
-    """Show each decoder's error heatmap with its image-level score (max pixel).
+    """Show each decoder's reconstruction and its error heatmap side-by-side.
 
-    Lets you see *which layer catches which anomaly* before fusion collapses them.
+    Reference colorbar on the right shows the full inferno gradient [0, 1]
+    (theoretical squared-error range for inputs in [0, 1]).
+    Each tile is auto-scaled for readability; the score badge `s=` shows the
+    true per-layer image-level anomaly score.
     """
+    apply_style()
     images = _to_numpy(images)
     maps = [_to_numpy(m) for m in per_layer_maps]
+    recons = [_to_numpy(r) for r in reconstructions] if reconstructions is not None else None
 
     n = min(n_samples, len(images))
     n_layers = len(maps)
-    n_rows = 1 + n_layers
+    has_recons = recons is not None
+    rows_per_layer = 2 if has_recons else 1
+    n_rows = 1 + n_layers * rows_per_layer
 
-    fig, axes = plt.subplots(n_rows, n, figsize=(n * 1.8, n_rows * 1.8))
+    fig, axes = plt.subplots(
+        n_rows, n,
+        figsize=(n * 1.9, n_rows * 1.9),
+        gridspec_kw=dict(hspace=0.18, wspace=0.06),
+    )
     if n == 1:
         axes = axes[:, np.newaxis]
-
-    fig.suptitle(title, fontsize=12, fontweight="bold", y=1.02)
+    fig.suptitle(title, fontsize=13, fontweight="bold", y=0.995, color=PALETTE["text"])
 
     for col in range(n):
-        img = _img_for_display(images[col])
-        axes[0, col].imshow(img, cmap="gray" if img.ndim == 2 else None)
+        img = img_to_display(images[col])
+        gray = is_grayscale(images[col])
+        ax0 = axes[0, col]
+        ax0.imshow(img, cmap=IMG_CMAP if gray else None)
+        clean_image_axis(ax0)
         if col == 0:
-            axes[0, col].set_ylabel("Original", fontsize=9)
+            row_label(ax0, "Original")
 
         for l_idx, layer_maps in enumerate(maps):
             hm = layer_maps[col]
             if hm.ndim == 3:
                 hm = hm[0]
-            axes[l_idx + 1, col].imshow(hm, cmap=cmap, vmin=0)
-            score = float(hm.max())
-            axes[l_idx + 1, col].set_title(f"s={score:.3f}", fontsize=7)
+            layer_score = float(hm.max())
+
+            if has_recons:
+                recon = img_to_display(recons[l_idx][col])
+                r_recon = 1 + l_idx * 2
+                r_err = r_recon + 1
+                ax_r = axes[r_recon, col]
+                ax_r.imshow(recon, cmap=IMG_CMAP if gray else None, vmin=0, vmax=1)
+                clean_image_axis(ax_r)
+                if col == 0:
+                    row_label(ax_r, f"Recon L{l_idx}")
+                annotate_score(ax_r, layer_score)
+            else:
+                r_err = 1 + l_idx
+
+            ax_e = axes[r_err, col]
+            ax_e.imshow(hm, cmap=cmap)
+            clean_image_axis(ax_e)
             if col == 0:
-                axes[l_idx + 1, col].set_ylabel(f"Layer {l_idx}", fontsize=9)
+                row_label(ax_e, f"Error L{l_idx}")
+            annotate_score(ax_e, layer_score)
 
-    for ax in axes.flat:
-        ax.set_xticks([])
-        ax.set_yticks([])
+    attach_reference_colorbar(
+        fig, axes, cmap=cmap, vmax=1.0,
+        label="Squared reconstruction error  (per-tile auto-scaled; reference 0–1)",
+    )
 
-    plt.tight_layout()
     if save_path:
-        _ensure_dir(save_path)
-        fig.savefig(save_path, dpi=200, bbox_inches="tight")
-
+        ensure_dir(save_path)
+        fig.savefig(save_path)
     return fig
 
 
 # ---------------------------------------------------------------------------
-# 5. Activation value distributions (histograms)
+# 5. Activation value distributions
 # ---------------------------------------------------------------------------
 
 def plot_activation_distributions(
@@ -316,38 +381,70 @@ def plot_activation_distributions(
     title: str = "Activation Value Distributions per Layer",
     save_path: Optional[str] = None,
 ) -> plt.Figure:
-    """Histogram of activation values for each layer.
+    """Histogram of activation values per layer with a sparsity / moments callout.
 
-    With ReLU, most values pile up at 0 — the spike tells you how sparse the layer is.
+    On a log-y axis the zero bin is typically the tallest (ReLU sparsity), so
+    the stat callout is anchored to the upper-right where the distribution
+    has already decayed and cannot collide with the bars.
     """
+    apply_style()
     n_layers = len(activations)
     n_cols = min(n_layers, 4)
     n_rows = int(np.ceil(n_layers / n_cols))
 
-    fig, axes = plt.subplots(n_rows, n_cols, figsize=(n_cols * 3.5, n_rows * 2.8))
-    fig.suptitle(title, fontsize=12, fontweight="bold")
-
+    fig, axes = plt.subplots(
+        n_rows, n_cols,
+        figsize=(n_cols * 4.0, n_rows * 3.2),
+        constrained_layout=True,
+    )
+    suptitle = title + ("  ·  y-axis: log scale" if log_y else "")
+    fig.suptitle(suptitle, fontsize=13, fontweight="bold", color=PALETTE["text"])
     axes_flat = np.atleast_1d(axes).flatten()
 
     for i, act in enumerate(activations):
         a = _to_numpy(act).flatten()
         ax = axes_flat[i]
-        ax.hist(a, bins=bins, color="#0F6E56", alpha=0.8)
-        ax.set_title(f"Layer {i}  (n={a.size:,})", fontsize=9)
-        ax.set_xlabel("activation", fontsize=8)
-        ax.set_ylabel("count", fontsize=8)
+        ax.hist(a, bins=bins, color=PALETTE["accent_2"],
+                edgecolor="white", linewidth=0.3, zorder=3)
+
+        sparsity = float((a == 0).mean())
+        mean = float(a.mean())
+        std = float(a.std())
+        amax = float(a.max())
+
+        ax.axvline(0, color=PALETTE["text_muted"], linestyle=":",
+                   linewidth=0.8, zorder=2, label="zero")
+        ax.axvline(mean, color=PALETTE["anomaly"], linestyle="--",
+                   linewidth=0.9, zorder=4, label=f"mean = {mean:.2f}")
+
+        stats_txt = (
+            f"sparsity  {sparsity * 100:5.1f}%\n"
+            f"mean      {mean:+.3f}\n"
+            f"std       {std:.3f}\n"
+            f"max       {amax:.3f}"
+        )
+        ax.text(
+            0.98, 0.97, stats_txt,
+            transform=ax.transAxes, ha="right", va="top",
+            fontsize=8, color=PALETTE["text"], family="monospace",
+            linespacing=1.35,
+            bbox=dict(boxstyle="round,pad=0.35", facecolor="white",
+                      edgecolor=PALETTE["grid"], linewidth=0.6, alpha=0.95),
+        )
+        ax.set_title(f"Layer {i}   (n = {a.size:,})", fontsize=10.5)
+        ax.set_xlabel("Activation value")
+        ax.set_ylabel("Count")
         if log_y:
             ax.set_yscale("log")
-        ax.grid(alpha=0.3)
+        ax.legend(loc="upper left", fontsize=7.5, frameon=False)
+        soft_grid(ax, axis="y")
 
     for j in range(len(activations), len(axes_flat)):
         axes_flat[j].axis("off")
 
-    plt.tight_layout()
     if save_path:
-        _ensure_dir(save_path)
-        fig.savefig(save_path, dpi=200, bbox_inches="tight")
-
+        ensure_dir(save_path)
+        fig.savefig(save_path)
     return fig
 
 
