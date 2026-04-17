@@ -39,16 +39,19 @@ def collect_anomaly_scores(
     model.eval()
     model.to(device)
 
+    n_decoders = len(model.decoders)
     all_scores = []
     all_heatmaps = []
     all_images = []
-    all_per_layer = [[] for _ in range(len(model.decoders))]
+    all_per_layer = [[] for _ in range(n_decoders)]
+    all_recons = [[] for _ in range(n_decoders)]
 
     for batch_idx, (images, _) in enumerate(dataloader):
         if max_batches and batch_idx >= max_batches:
             break
 
         images = images.to(device)
+        fwd = model.forward(images)
         result = model.compute_anomaly_maps(images, fusion=fusion)
 
         all_scores.append(result["scores"].cpu().numpy())
@@ -58,11 +61,15 @@ def collect_anomaly_scores(
         for i, plm in enumerate(result["per_layer"]):
             all_per_layer[i].append(plm.squeeze(1).cpu().numpy())
 
+        for i, recon in enumerate(fwd["reconstructions"]):
+            all_recons[i].append(recon.cpu().numpy())
+
     return {
         "scores": np.concatenate(all_scores),
         "heatmaps": np.concatenate(all_heatmaps),
         "images": np.concatenate(all_images),
         "per_layer_maps": [np.concatenate(p) for p in all_per_layer],
+        "reconstructions": [np.concatenate(r) for r in all_recons],
     }
 
 
