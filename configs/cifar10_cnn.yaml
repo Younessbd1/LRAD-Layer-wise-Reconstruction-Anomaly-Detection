@@ -19,10 +19,10 @@ model:
 
 training:
   classifier:
-    epochs: 30
+    epochs: 60
     lr: 0.001
   decoders:
-    epochs: 30
+    epochs: 60
     lr: 0.001
 
 evaluation:
