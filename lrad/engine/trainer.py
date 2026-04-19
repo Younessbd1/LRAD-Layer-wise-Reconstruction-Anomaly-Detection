@@ -15,6 +15,7 @@ import logging
 
 from ..models.classifier import CNNClassifier, MLPClassifier
 from ..models.lrad_model import LRADModel
+from ..models.lrad_nested import LRADModelNested
 
 logger = logging.getLogger("lrad")
 
@@ -153,6 +154,71 @@ def train_decoders(
                                 for i in range(n_decoders))
             logger.info(
                 f"  [Decoders] Epoch {epoch+1}/{epochs} — {loss_str}"
+            )
+
+    return history
+
+
+def train_decoders_nested(
+    model: LRADModelNested,
+    train_loader: DataLoader,
+    epochs: int = 20,
+    lr: float = 1e-3,
+    device: torch.device = torch.device("cpu"),
+) -> dict:
+    """Train nested decoders with local targets.
+
+    Each decoder D_k is trained with:
+      D_0:  loss = MSE(D_0(a_0), x)            ← image as target
+      D_k:  loss = MSE(D_k(a_k), a_{k-1})      ← previous activation as target
+
+    All decoders are updated jointly each batch (one optimizer per decoder),
+    but losses are isolated — no gradients flow between decoders. This matches
+    the diagram's "stage k" semantics while staying training-efficient.
+
+    Returns:
+        dict with 'losses': list of lists (per-decoder, per-epoch average MSE).
+    """
+    model.to(device)
+    criterion = nn.MSELoss()
+
+    n_decoders = len(model.decoders)
+    optimizers = [optim.Adam(d.parameters(), lr=lr) for d in model.decoders]
+    history = {"losses": [[] for _ in range(n_decoders)]}
+
+    for epoch in range(epochs):
+        epoch_losses = [0.0] * n_decoders
+        total = 0
+
+        for images, _ in train_loader:
+            images = images.to(device)
+            B = images.size(0)
+            total += B
+
+            with torch.no_grad():
+                _, all_acts = model.classifier(images)
+
+            for k in range(n_decoders):
+                input_act = all_acts[k].detach()
+                target = images if k == 0 else all_acts[k - 1].detach()
+
+                optimizers[k].zero_grad()
+                pred = model.decoders[k](input_act)
+                loss = criterion(pred, target)
+                loss.backward()
+                optimizers[k].step()
+
+                epoch_losses[k] += loss.item() * B
+
+        for k in range(n_decoders):
+            history["losses"][k].append(epoch_losses[k] / total)
+
+        if (epoch + 1) % 5 == 0 or epoch == 0:
+            loss_str = ", ".join(
+                f"D{k}={history['losses'][k][-1]:.4f}" for k in range(n_decoders)
+            )
+            logger.info(
+                f"  [Nested Decoders] Epoch {epoch+1}/{epochs} — {loss_str}"
             )
 
     return history

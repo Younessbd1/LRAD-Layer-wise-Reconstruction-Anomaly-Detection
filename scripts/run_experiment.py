@@ -25,7 +25,8 @@ from lrad.utils.helpers import get_device, seed_everything, setup_logging, count
 from lrad.data.datasets import get_mnist_loaders, get_cifar10_loaders
 from lrad.models.classifier import CNNClassifier, MLPClassifier
 from lrad.models.lrad_model import LRADModel
-from lrad.engine.trainer import train_classifier, train_decoders
+from lrad.models.lrad_nested import LRADModelNested
+from lrad.engine.trainer import train_classifier, train_decoders, train_decoders_nested
 from lrad.engine.evaluator import evaluate_full, compute_auroc, collect_anomaly_scores
 from lrad.visualization.heatmaps import (
     plot_heatmap_grid,
@@ -63,12 +64,25 @@ def main():
     parser = argparse.ArgumentParser(description="Run LRAD experiment")
     parser.add_argument("--config", type=str, required=True, help="Path to YAML config")
     parser.add_argument("--show", action="store_true", help="Show plots interactively")
+    parser.add_argument(
+        "--decoder_type", choices=["parallel", "nested"], default=None,
+        help="Override decoder architecture. Falls back to model.decoder_type "
+             "in the config, then to 'parallel'.",
+    )
     args = parser.parse_args()
 
     # --- Setup ---
     cfg = load_config(args.config)
     exp = cfg["experiment"]
-    output_dir = Path(exp["output_dir"])
+
+    decoder_type = (
+        args.decoder_type
+        or cfg["model"].get("decoder_type", "parallel")
+    ).lower()
+    if decoder_type not in ("parallel", "nested"):
+        raise ValueError(f"Unknown decoder_type: {decoder_type}")
+
+    output_dir = Path(exp["output_dir"].rstrip("/") + f"_{decoder_type}")
     output_dir.mkdir(parents=True, exist_ok=True)
 
     seed_everything(exp.get("seed", 42))
@@ -76,6 +90,7 @@ def main():
     device = get_device()
 
     logger.info(f"Experiment: {exp['name']}")
+    logger.info(f"Decoder type: {decoder_type}")
     logger.info(f"Device: {device}")
     logger.info(f"Output: {output_dir}")
 
@@ -122,18 +137,25 @@ def main():
     torch.save(classifier.state_dict(), output_dir / "classifier.pt")
 
     # --- Build LRAD model ---
-    model = LRADModel(classifier)
-    logger.info(f"LRAD Model built with {len(model.decoders)} decoders")
+    if decoder_type == "nested":
+        model = LRADModelNested(classifier)
+        train_fn = train_decoders_nested
+    else:
+        model = LRADModel(classifier)
+        train_fn = train_decoders
+
+    logger.info(f"LRAD Model ({decoder_type}) built with {len(model.decoders)} decoders")
     for i, dec in enumerate(model.decoders):
         logger.info(f"  Decoder {i}: {dec} ({count_parameters(dec):,} params)")
+    logger.info(f"  total decoder params: {sum(count_parameters(d) for d in model.decoders):,}")
 
     # --- Phase 2: Train decoders ---
     logger.info("=" * 50)
-    logger.info("PHASE 2: Training decoders")
+    logger.info(f"PHASE 2: Training decoders ({decoder_type})")
     logger.info("=" * 50)
 
     dcfg_train = cfg["training"]["decoders"]
-    dec_history = train_decoders(
+    dec_history = train_fn(
         model=model,
         train_loader=loaders["train"],
         epochs=dcfg_train["epochs"],
@@ -225,9 +247,11 @@ def main():
         "experiment": exp["name"],
         "normal_classes": dcfg["normal_classes"],
         "architecture": cfg["model"]["architecture"],
+        "decoder_type": decoder_type,
         "aurocs": {k: float(v) for k, v in results["aurocs"].items()},
         "classifier_final_acc": cls_history["accuracies"][-1],
         "classifier_final_loss": cls_history["losses"][-1],
+        "decoder_params_total": int(sum(count_parameters(d) for d in model.decoders)),
     }
 
     import json
