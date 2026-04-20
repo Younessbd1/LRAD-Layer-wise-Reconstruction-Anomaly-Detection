@@ -113,7 +113,7 @@ def inspect_split(
             activations=activations,
             sample_idx=i,
             top_k=16,
-            title=f"{split_name} — sample {i}: feature maps",
+            title=f"{split_name} - sample {i}: feature maps",
             save_path=str(split_dir / f"feature_maps_sample_{i}.png"),
         )
         plt.close("all")
@@ -121,7 +121,7 @@ def inspect_split(
     # 2. Activation stats (single plot, uses full batch)
     plot_activation_stats(
         activations=activations,
-        title=f"{split_name} — activation statistics",
+        title=f"{split_name} - activation statistics",
         save_path=str(split_dir / "activation_stats.png"),
     )
     plt.close("all")
@@ -131,7 +131,7 @@ def inspect_split(
         images=x.cpu().numpy(),
         reconstructions=[r.cpu().numpy() for r in reconstructions],
         n_samples=n_samples,
-        title=f"{split_name} — per-decoder reconstructions",
+        title=f"{split_name} - per-decoder reconstructions",
         save_path=str(split_dir / "per_layer_reconstructions.png"),
     )
     plt.close("all")
@@ -142,7 +142,7 @@ def inspect_split(
         per_layer_maps=[m.cpu().numpy() for m in per_layer_maps],
         reconstructions=[r.cpu().numpy() for r in reconstructions],
         n_samples=n_samples,
-        title=f"{split_name} — per-layer reconstructions and error heatmaps",
+        title=f"{split_name} - per-layer reconstructions and error heatmaps",
         save_path=str(split_dir / "per_layer_errors.png"),
     )
     plt.close("all")
@@ -150,7 +150,7 @@ def inspect_split(
     # 5. Activation histograms
     plot_activation_distributions(
         activations=activations,
-        title=f"{split_name} — activation distributions",
+        title=f"{split_name} - activation distributions",
         save_path=str(split_dir / "activation_distributions.png"),
     )
     plt.close("all")

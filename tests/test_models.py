@@ -1,4 +1,4 @@
-"""Unit tests for LRAD models — verifies shapes, freezing, and reconstruction."""
+"""Unit tests for LRAD models - verifies shapes, freezing, and reconstruction."""
 
 import sys
 from pathlib import Path
@@ -79,7 +79,7 @@ class TestCNNDecoder:
         channels = [1, 8, 16]
         spatial = [28, 14, 7]
         decoder = CNNDecoder(channels, spatial)
-        # Input: activation from layer 2 → (B, 16, 7, 7)
+        # Input: activation from layer 2 -> (B, 16, 7, 7)
         x = torch.randn(2, 16, 7, 7)
         out = decoder(x)
         assert out.shape == (2, 1, 28, 28)
@@ -90,7 +90,7 @@ class TestCNNDecoder:
         decoder = CNNDecoder(channels, spatial)
         x = torch.randn(4, 8, 14, 14)
         out = decoder(x)
-        # Sigmoid output → [0, 1]
+        # Sigmoid output -> [0, 1]
         assert out.min() >= 0.0
         assert out.max() <= 1.0
 

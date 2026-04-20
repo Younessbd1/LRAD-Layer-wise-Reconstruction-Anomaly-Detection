@@ -1,4 +1,4 @@
-"""Visualization utilities for LRAD-UQ — error, uncertainty, and combined maps."""
+"""Visualization utilities for LRAD-UQ - error, uncertainty, and combined maps."""
 
 import numpy as np
 import matplotlib.pyplot as plt
@@ -20,7 +20,7 @@ def plot_uq_heatmap_grid(
 ) -> plt.Figure:
     """Plot: Original | Error map | Uncertainty map | Combined | Overlay.
 
-    This is the key visualization for your internship presentation —
+    This is the key visualization for your internship presentation -
     it shows the three outputs side by side, demonstrating how uncertainty
     adds information beyond raw reconstruction error.
     """
@@ -86,7 +86,7 @@ def plot_uq_score_comparison(
     separates normal from anomaly distributions.
     """
     fig, axes = plt.subplots(1, 3, figsize=(14, 4))
-    fig.suptitle(f"Score Comparison — {split_name}", fontsize=13, fontweight="bold")
+    fig.suptitle(f"Score Comparison - {split_name}", fontsize=13, fontweight="bold")
 
     score_types = [
         ("scores_error", "Reconstruction Error", "#0F6E56"),
@@ -143,7 +143,7 @@ def plot_uncertainty_calibration(
 
     ax.set_xlabel("Reconstruction Error (max pixel)", fontsize=11)
     ax.set_ylabel("Epistemic Uncertainty (max pixel)", fontsize=11)
-    ax.set_title("Error vs Uncertainty — Normal vs Anomaly", fontsize=12)
+    ax.set_title("Error vs Uncertainty - Normal vs Anomaly", fontsize=12)
     ax.legend(fontsize=10)
 
     plt.tight_layout()

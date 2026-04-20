@@ -39,7 +39,7 @@ from lrad.engine.trainer import (
     train_classifier, train_decoders, train_decoders_nested,
 )
 from lrad.engine.evaluator import evaluate_full, compute_auroc
-from lrad.visualization.heatmaps import plot_heatmap_grid
+from lrad.visualization.heatmaps import plot_heatmap_grid, plot_heatmap_grid_sidebyside
 
 
 def load_config(path: str) -> dict:
@@ -95,7 +95,7 @@ def plot_training_curves(parallel_hist, nested_hist, save_path):
         ax.grid(alpha=0.3)
         ax.legend(fontsize=8)
 
-    fig.suptitle("Training MSE per decoder — parallel vs nested\n"
+    fig.suptitle("Training MSE per decoder - parallel vs nested\n"
                  "(targets differ: parallel=image; nested D₀=image, Dₖ=a_{k-1})",
                  fontsize=11, fontweight="bold")
     fig.tight_layout()
@@ -138,7 +138,7 @@ def plot_params_bars(parallel_params, nested_params, save_path):
     ax.set_xticks(x)
     ax.set_xticklabels([f"D{k}" for k in range(n)])
     ax.set_ylabel("Trainable parameters")
-    ax.set_title("Decoder parameter count — parallel vs nested", fontsize=11, fontweight="bold")
+    ax.set_title("Decoder parameter count - parallel vs nested", fontsize=11, fontweight="bold")
     ax.legend()
     ax.grid(axis="y", alpha=0.3)
     fig.tight_layout()
@@ -162,7 +162,7 @@ def plot_auroc_bars(parallel_aurocs, nested_aurocs, save_path):
     ax.set_ylabel("AUROC")
     ax.set_ylim(0, 1.05)
     ax.axhline(0.5, color="gray", linestyle="--", linewidth=0.8, label="chance")
-    ax.set_title("Per-split AUROC — parallel vs nested", fontsize=11, fontweight="bold")
+    ax.set_title("Per-split AUROC - parallel vs nested", fontsize=11, fontweight="bold")
     ax.legend()
     ax.grid(axis="y", alpha=0.3)
 
@@ -313,21 +313,26 @@ def main():
         output_dir / "auroc_bars.png",
     )
 
-    # Heatmap grids per split, side by side
+    # Side-by-side heatmap comparison per split (both architectures in one figure)
     n_disp = ecfg.get("n_display", 8)
     splits = ["normal"] + [k for k in parallel_results if k not in ("normal", "aurocs")]
     for split in splits:
-        for tag, results in [("parallel", parallel_results), ("nested", nested_results)]:
-            data = results[split]
-            plot_heatmap_grid(
-                images=data["images"][:n_disp],
-                heatmaps=data["heatmaps"][:n_disp],
-                per_layer_maps=[p[:n_disp] for p in data["per_layer_maps"]],
-                reconstructions=[r[:n_disp] for r in data.get("reconstructions", [])] or None,
-                scores=data["scores"][:n_disp],
-                title=f"{exp['name']} — {tag} — {split}",
-                save_path=str(output_dir / f"heatmaps_{split}_{tag}.png"),
-            )
+        p_data = parallel_results[split]
+        n_data = nested_results[split]
+        plot_heatmap_grid_sidebyside(
+            images=p_data["images"][:n_disp],
+            parallel_data={
+                "heatmaps": p_data["heatmaps"][:n_disp],
+                "scores": p_data["scores"][:n_disp],
+            },
+            nested_data={
+                "heatmaps": n_data["heatmaps"][:n_disp],
+                "scores": n_data["scores"][:n_disp],
+            },
+            n_samples=n_disp,
+            title=f"{exp['name']} - parallel vs nested - {split}",
+            save_path=str(output_dir / f"heatmaps_{split}_compare.png"),
+        )
         plt.close("all")
 
     # ---- Summary ----

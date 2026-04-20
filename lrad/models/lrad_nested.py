@@ -1,4 +1,4 @@
-"""LRAD Nested Pipeline — wraps a frozen classifier with cascaded decoders.
+"""LRAD Nested Pipeline - wraps a frozen classifier with cascaded decoders.
 
 Mirror of `LRADModel` but each decoder only inverts its adjacent classifier
 block. Reconstructions from deep layers are produced by chaining decoders.
@@ -18,8 +18,8 @@ class LRADModelNested(nn.Module):
     """LRAD with nested (cascaded) decoders.
 
     Each decoder D_k inverts a single classifier block:
-      D_0: a_0 → image
-      D_k: a_k → a_{k-1}   for k >= 1
+      D_0: a_0 -> image
+      D_k: a_k -> a_{k-1}   for k >= 1
 
     At inference, reconstruction from level k is built by cascading:
       x̂_k = D_0(D_1(...D_k(a_k)))

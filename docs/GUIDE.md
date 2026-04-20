@@ -1,4 +1,4 @@
-# Guide pratique — Ton rôle et workflow Git/GitHub
+# Guide pratique - Ton rôle et workflow Git/GitHub
 
 ## 1. Ton rôle concret
 
@@ -12,21 +12,21 @@
 
 ### Ce que TU fais (la recherche)
 
-#### Étape immédiate — Valider sur MNIST (1 jour)
+#### Étape immédiate - Valider sur MNIST (1 jour)
 ```bash
 python scripts/run_experiment.py --config configs/mnist_mlp.yaml
 python scripts/run_experiment.py --config configs/mnist_cnn.yaml
 python scripts/run_uq_experiment.py --config configs/mnist_cnn_uq.yaml
 ```
-→ Vérifie que les heatmaps sont cohérentes, que l'AUROC est bon, que les anomalies (digits 4-9 + Fashion-MNIST) sont bien détectées.
+-> Vérifie que les heatmaps sont cohérentes, que l'AUROC est bon, que les anomalies (digits 4-9 + Fashion-MNIST) sont bien détectées.
 
-#### Étape suivante — MVTec AD (1-2 semaines)
+#### Étape suivante - MVTec AD (1-2 semaines)
 1. Télécharge MVTec AD sur ton serveur DCE Metz
 2. Modifie `data_root` dans `configs/mvtec_cnn.yaml`
 3. Lance pour chaque catégorie (bottle, cable, etc.)
 4. Compare tes AUROC avec ceux de PatchCore (99.1%)
 
-#### Étape recherche — Comparer UQ vs déterministe (2-3 semaines)
+#### Étape recherche - Comparer UQ vs déterministe (2-3 semaines)
 C'est LE cœur de ton stage. Tu as 3 expériences à mener :
 - **LRAD déterministe** (baseline) : `run_experiment.py`
 - **LRAD + MC Dropout** : `run_uq_experiment.py` avec `method: mc_dropout`
@@ -48,16 +48,16 @@ Question de recherche : "Est-ce que l'incertitude épistémique améliore la dé
 
 ```
 run_experiment.py
-├── Phase 1 : Entraîne le classifieur sur TON dataset → sauvegarde classifier.pt
-├── Phase 2 : Gèle le classifieur, entraîne les décodeurs → sauvegarde decoder_*.pt
-└── Évaluation : Génère heatmaps + AUROC → sauvegarde dans outputs/
+├── Phase 1 : Entraîne le classifieur sur TON dataset -> sauvegarde classifier.pt
+├── Phase 2 : Gèle le classifieur, entraîne les décodeurs -> sauvegarde decoder_*.pt
+└── Évaluation : Génère heatmaps + AUROC -> sauvegarde dans outputs/
 ```
 
 Chaque dataset/config produit ses propres poids. Tu ne réutilises jamais les poids d'un autre run. L'entraînement sur MNIST prend ~2 min sur CPU, ~30s sur GPU. Sur MVTec (224×224, RGB), compte ~10-15 min par catégorie sur GPU.
 
 ---
 
-## 3. Setup Git/GitHub — étape par étape
+## 3. Setup Git/GitHub - étape par étape
 
 ### A. Créer le repo GitHub
 
@@ -176,7 +176,7 @@ git commit -m "results: MVTec bottle final results"
 GitHub ne supporte plus les mots de passe pour push. Tu as deux options :
 
 **Option 1 : Token personnel (plus simple)**
-1. GitHub → Settings → Developer settings → Personal access tokens → Generate
+1. GitHub -> Settings -> Developer settings -> Personal access tokens -> Generate
 2. Copie le token
 3. Quand git demande un mot de passe, colle le token
 4. Pour ne pas le retaper à chaque fois :
@@ -189,7 +189,7 @@ GitHub ne supporte plus les mots de passe pour push. Tu as deux options :
 # Sur DCE Metz
 ssh-keygen -t ed25519 -C "ton-email@example.com"
 cat ~/.ssh/id_ed25519.pub
-# Copie le contenu → GitHub → Settings → SSH Keys → New SSH Key
+# Copie le contenu -> GitHub -> Settings -> SSH Keys -> New SSH Key
 
 # Utilise l'URL SSH au lieu de HTTPS
 git remote set-url origin git@github.com:TON-USERNAME/lrad.git

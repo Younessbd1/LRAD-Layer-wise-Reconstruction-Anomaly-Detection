@@ -1,4 +1,4 @@
-# LRAD — Layer-wise Reconstruction Anomaly Detection
+# LRAD - Layer-wise Reconstruction Anomaly Detection
 
 > Train a classifier on normal data. Freeze it. Train decoders on its hidden activations.  
 > At test time, reconstruction error = anomaly heatmap.
@@ -11,7 +11,7 @@
 
 ## Concept
 
-LRAD exploits the fact that a classifier's intermediate representations are **tuned to its training distribution**. When an out-of-distribution (OOD) input passes through the frozen classifier, its activations in anomalous spatial regions become unusual — decoders trained to reconstruct normal images from those activations **fail locally**, producing high reconstruction error exactly where the anomaly is.
+LRAD exploits the fact that a classifier's intermediate representations are **tuned to its training distribution**. When an out-of-distribution (OOD) input passes through the frozen classifier, its activations in anomalous spatial regions become unusual - decoders trained to reconstruct normal images from those activations **fail locally**, producing high reconstruction error exactly where the anomaly is.
 
 ```
                     TRAINING                              TESTING
@@ -26,9 +26,9 @@ LRAD exploits the fact that a classifier's intermediate representations are **tu
 
 ### Key innovations over vanilla autoencoders
 
-1. **Multi-scale heatmaps** — Each decoder level captures anomalies at a different granularity (fine texture vs. structural), then they're fused into one map.
-2. **Classifier bias** — The frozen classifier acts as a learned feature extractor biased toward normal-class semantics, making OOD reconstruction harder than a generic autoencoder would.
-3. **No anomaly labels needed** — Pure one-class learning. Only normal samples required for training.
+1. **Multi-scale heatmaps** - Each decoder level captures anomalies at a different granularity (fine texture vs. structural), then they're fused into one map.
+2. **Classifier bias** - The frozen classifier acts as a learned feature extractor biased toward normal-class semantics, making OOD reconstruction harder than a generic autoencoder would.
+3. **No anomaly labels needed** - Pure one-class learning. Only normal samples required for training.
 
 ---
 
@@ -87,13 +87,13 @@ python scripts/run_experiment.py --config configs/cifar10_cnn.yaml
 
 ## Protocols
 
-### Protocol 1 — MNIST + MLP
-Train an MLP classifier on digits `[0,1,2,3]`. Train N decoders (one per hidden layer) to reconstruct 28×28 images from each layer's activations. Test on held-out `[0,1,2,3]` (should reconstruct well) and on `[4,...,9]` + Fashion-MNIST (should reconstruct poorly → anomaly heatmap).
+### Protocol 1 - MNIST + MLP
+Train an MLP classifier on digits `[0,1,2,3]`. Train N decoders (one per hidden layer) to reconstruct 28×28 images from each layer's activations. Test on held-out `[0,1,2,3]` (should reconstruct well) and on `[4,...,9]` + Fashion-MNIST (should reconstruct poorly -> anomaly heatmap).
 
-### Protocol 2 — MNIST + CNN
+### Protocol 2 - MNIST + CNN
 Same as Protocol 1, but with spatial convolutions. Decoders use transposed convolutions, preserving spatial structure. Heatmaps are naturally pixel-aligned.
 
-### Protocol 3 — CIFAR-10 + CNN
+### Protocol 3 - CIFAR-10 + CNN
 Train on one CIFAR-10 class (e.g., "airplane"). Test against other classes. Demonstrates scaling to RGB, 32×32, more complex textures.
 
 ---
@@ -107,7 +107,7 @@ If you use this work in your research, please cite:
   title={LRAD: Layer-wise Reconstruction Anomaly Detection},
   author={Youness},
   year={2025},
-  note={Research internship project — Uncertainty Quantification for Anomaly Detection}
+  note={Research internship project - Uncertainty Quantification for Anomaly Detection}
 }
 ```
 
@@ -115,4 +115,4 @@ If you use this work in your research, please cite:
 
 ## License
 
-MIT — see [LICENSE](LICENSE).
+MIT - see [LICENSE](LICENSE).

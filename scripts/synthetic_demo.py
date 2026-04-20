@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Offline demo — uses synthetic data to verify the full LRAD pipeline.
+"""Offline demo - uses synthetic data to verify the full LRAD pipeline.
 
 Generates simple geometric shapes as 'normal' data and noise/different
 shapes as 'anomaly' data. No network downloads required.

@@ -1,4 +1,4 @@
-# LRAD — Methodology
+# LRAD - Methodology
 
 ## 1. Problem formulation
 
@@ -20,7 +20,7 @@ We train a standard classifier (CNN or MLP) on the normal data. The key insight:
 
 #### CNN variant
 ```
-x → [Conv-BN-ReLU]₁ → [Conv-BN-ReLU]₂ → ... → [Conv-BN-ReLU]_K → GAP → FC → logits
+x -> [Conv-BN-ReLU]₁ -> [Conv-BN-ReLU]₂ -> ... -> [Conv-BN-ReLU]_K -> GAP -> FC -> logits
          ↓ a₁              ↓ a₂                      ↓ a_K
 ```
 
@@ -28,7 +28,7 @@ Each activation aₖ ∈ ℝ^(Cₖ × Hₖ × Wₖ) retains spatial structure, a
 
 #### MLP variant
 ```
-x.flatten() → [Linear-BN-ReLU]₁ → ... → [Linear-BN-ReLU]_K → FC → logits
+x.flatten() -> [Linear-BN-ReLU]₁ -> ... -> [Linear-BN-ReLU]_K -> FC -> logits
                    ↓ a₁                      ↓ a_K
 ```
 
@@ -56,7 +56,7 @@ Symmetric linear layers mapping the hidden dimension back to the flattened image
 
 ### 2.3 Why freeze the classifier?
 
-Freezing is critical. If the classifier were trainable during decoder training, the system would degenerate into a standard autoencoder — the classifier would adapt its representations to make reconstruction easy for ANY input, including anomalies. By freezing, we ensure the representations remain biased toward normal data, making OOD reconstruction inherently difficult.
+Freezing is critical. If the classifier were trainable during decoder training, the system would degenerate into a standard autoencoder - the classifier would adapt its representations to make reconstruction easy for ANY input, including anomalies. By freezing, we ensure the representations remain biased toward normal data, making OOD reconstruction inherently difficult.
 
 ## 3. Anomaly detection at test time
 
@@ -106,8 +106,8 @@ This follows the PatchCore principle: an image is anomalous as soon as a single 
 |-------|---------|-------------------|
 | Train | Digits [0,1,2,3] | Classifier learns, decoders learn to reconstruct |
 | Test normal | Digits [0,1,2,3] (test set) | Low reconstruction error, low heatmap intensity |
-| Test anomaly (near-OOD) | Digits [4,5,6,7,8,9] | Higher error — digit structure differs |
-| Test anomaly (far-OOD) | Fashion-MNIST | Much higher error — completely different distribution |
+| Test anomaly (near-OOD) | Digits [4,5,6,7,8,9] | Higher error - digit structure differs |
+| Test anomaly (far-OOD) | Fashion-MNIST | Much higher error - completely different distribution |
 
 ### 4.2 Metrics
 
@@ -133,7 +133,7 @@ This follows the PatchCore principle: an image is anomalous as soon as a single 
 
 LRAD provides a natural bridge to UQ methods:
 
-1. **MC Dropout in decoders**: Add dropout layers to decoders, perform T forward passes at test time. The variance of reconstructions across passes captures epistemic uncertainty about the reconstruction — high variance = the decoder is unsure = potential anomaly.
+1. **MC Dropout in decoders**: Add dropout layers to decoders, perform T forward passes at test time. The variance of reconstructions across passes captures epistemic uncertainty about the reconstruction - high variance = the decoder is unsure = potential anomaly.
 
 2. **Decoder ensembles**: Train M decoders with different initialisations for each layer. Disagreement between ensemble members quantifies model uncertainty.
 

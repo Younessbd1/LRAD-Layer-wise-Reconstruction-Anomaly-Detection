@@ -1,4 +1,4 @@
-# LRAD Configuration — Protocol 1: MNIST + MLP
+# LRAD Configuration - Protocol 1: MNIST + MLP
 # Train MLP on digits [0,1,2,3], detect [4..9] and Fashion-MNIST as anomalies.
 
 experiment:

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Synthetic UQ demo — verifies MC Dropout and Ensemble pipelines."""
+"""Synthetic UQ demo - verifies MC Dropout and Ensemble pipelines."""
 
 import sys
 from pathlib import Path
@@ -122,14 +122,14 @@ plot_uq_heatmap_grid(
     mc_normal["images"][:n], mc_normal["error_maps"][:n],
     mc_normal["uncertainty_maps"][:n], mc_normal["combined_maps"][:n],
     scores_combined=mc_normal["scores_combined"][:n],
-    title="MC Dropout — Normal",
+    title="MC Dropout - Normal",
     save_path=str(out / "mc_normal.png"),
 )
 plot_uq_heatmap_grid(
     mc_anomaly["images"][:n], mc_anomaly["error_maps"][:n],
     mc_anomaly["uncertainty_maps"][:n], mc_anomaly["combined_maps"][:n],
     scores_combined=mc_anomaly["scores_combined"][:n],
-    title="MC Dropout — Anomaly",
+    title="MC Dropout - Anomaly",
     save_path=str(out / "mc_anomaly.png"),
 )
 plot_uq_score_comparison(
@@ -182,7 +182,7 @@ plot_uq_heatmap_grid(
     ens_anomaly["images"][:n], ens_anomaly["error_maps"][:n],
     ens_anomaly["uncertainty_maps"][:n], ens_anomaly["combined_maps"][:n],
     scores_combined=ens_anomaly["scores_combined"][:n],
-    title="Deep Ensemble — Anomaly",
+    title="Deep Ensemble - Anomaly",
     save_path=str(out / "ens_anomaly.png"),
 )
 plot_uncertainty_calibration(

@@ -79,7 +79,7 @@ def train_classifier(
 
         if (epoch + 1) % 5 == 0 or epoch == 0:
             logger.info(
-                f"  [Classifier] Epoch {epoch+1}/{epochs} — "
+                f"  [Classifier] Epoch {epoch+1}/{epochs} - "
                 f"Loss: {avg_loss:.4f}, Acc: {accuracy:.4f}"
             )
 
@@ -153,7 +153,7 @@ def train_decoders(
             loss_str = ", ".join(f"D{i}={history['losses'][i][-1]:.4f}"
                                 for i in range(n_decoders))
             logger.info(
-                f"  [Decoders] Epoch {epoch+1}/{epochs} — {loss_str}"
+                f"  [Decoders] Epoch {epoch+1}/{epochs} - {loss_str}"
             )
 
     return history
@@ -173,7 +173,7 @@ def train_decoders_nested(
       D_k:  loss = MSE(D_k(a_k), a_{k-1})      ← previous activation as target
 
     All decoders are updated jointly each batch (one optimizer per decoder),
-    but losses are isolated — no gradients flow between decoders. This matches
+    but losses are isolated - no gradients flow between decoders. This matches
     the diagram's "stage k" semantics while staying training-efficient.
 
     Returns:
@@ -218,7 +218,7 @@ def train_decoders_nested(
                 f"D{k}={history['losses'][k][-1]:.4f}" for k in range(n_decoders)
             )
             logger.info(
-                f"  [Nested Decoders] Epoch {epoch+1}/{epochs} — {loss_str}"
+                f"  [Nested Decoders] Epoch {epoch+1}/{epochs} - {loss_str}"
             )
 
     return history

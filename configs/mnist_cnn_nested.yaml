@@ -1,4 +1,4 @@
-# LRAD Configuration — MNIST + CNN with NESTED (cascaded) decoders.
+# LRAD Configuration - MNIST + CNN with NESTED (cascaded) decoders.
 # Each decoder D_k inverts only its adjacent classifier block.
 # x̂_k is built at inference by chaining D_0(D_1(...D_k(a_k))).
 

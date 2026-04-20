@@ -46,12 +46,12 @@ def plot_heatmap_grid(
 ) -> plt.Figure:
     """Grid of originals, per-decoder reconstructions + errors, fused map, overlay.
 
-    Layout (rows, top → bottom):
+    Layout (rows, top -> bottom):
         Original                       (score = fused max)
-        Recon_0  → Error_0             (score = layer 0 max)
-        Recon_1  → Error_1
+        Recon_0  -> Error_0             (score = layer 0 max)
+        Recon_1  -> Error_1
         ...
-        Recon_N  → Error_N
+        Recon_N  -> Error_N
         Fused                          (= image-level anomaly score)
         Overlay (fused on original)
 
@@ -84,7 +84,8 @@ def plot_heatmap_grid(
 
         # ---- Row 0: Original ----
         ax = axes[0, col]
-        ax.imshow(img_show, cmap=cmap_image if gray else None)
+        ax.imshow(img_show, norm = None, cmap=cmap_image if gray else None)
+
         clean_image_axis(ax)
         if col == 0:
             row_label(ax, "Original")
@@ -112,7 +113,7 @@ def plot_heatmap_grid(
                 r_err = 1 + l_idx
 
             ax_e = axes[r_err, col]
-            ax_e.imshow(hm, cmap=cmap_heat)
+            ax_e.imshow(hm, vmin=0, vmax=1, cmap=cmap_heat)
             clean_image_axis(ax_e)
             if col == 0:
                 row_label(ax_e, f"Error L{l_idx}")
@@ -122,7 +123,7 @@ def plot_heatmap_grid(
         r_fused = 1 + n_layers * rows_per_layer
         fused = heatmaps[col]
         ax_f = axes[r_fused, col]
-        ax_f.imshow(fused, cmap=cmap_heat)
+        ax_f.imshow(fused, vmin=0, vmax=1, cmap=cmap_heat)
         clean_image_axis(ax_f)
         if col == 0:
             row_label(ax_f, "Fused")
@@ -132,7 +133,7 @@ def plot_heatmap_grid(
         r_overlay = r_fused + 1
         ax_o = axes[r_overlay, col]
         ax_o.imshow(img_show, cmap=cmap_image if gray else None)
-        ax_o.imshow(fused, cmap=cmap_heat, alpha=0.55)
+        ax_o.imshow(fused, vmin=0, vmax=1, cmap=cmap_heat, alpha=0.55)
         clean_image_axis(ax_o)
         if col == 0:
             row_label(ax_o, "Overlay")
@@ -140,7 +141,109 @@ def plot_heatmap_grid(
     # Reference colorbar (shared gradient legend)
     attach_reference_colorbar(
         fig, axes, cmap=cmap_heat, vmax=1.0,
-        label="Squared reconstruction error  (per-tile auto-scaled; reference 0–1)",
+        label="Squared reconstruction error  (absolute scale 0-1)",
+    )
+
+    if save_path:
+        ensure_dir(save_path)
+        fig.savefig(save_path)
+
+    return fig
+
+
+# ---------------------------------------------------------------------------
+# Side-by-side architecture comparison heatmaps
+# ---------------------------------------------------------------------------
+
+def plot_heatmap_grid_sidebyside(
+    images: np.ndarray,
+    parallel_data: dict,
+    nested_data: dict,
+    n_samples: int = 8,
+    title: str = "Parallel vs Nested - Heatmap Comparison",
+    save_path: Optional[str] = None,
+    cmap_image: str = IMG_CMAP,
+    cmap_heat: str = HEAT_CMAP,
+) -> plt.Figure:
+    """Side-by-side heatmap comparison between two architectures on the same images.
+
+    Layout per sample column (top -> bottom):
+        Original
+        [Parallel] Fused heatmap
+        [Parallel] Overlay
+        [Nested]   Fused heatmap
+        [Nested]   Overlay
+
+    Both architectures are shown on the same samples so differences are immediately visible.
+    parallel_data / nested_data must contain keys: heatmaps, scores.
+    """
+    apply_style()
+    n = min(n_samples, len(images))
+
+    row_labels = ["Original", "Parallel fused", "Parallel overlay", "Nested fused", "Nested overlay"]
+    n_rows = len(row_labels)
+
+    fig, axes = plt.subplots(
+        n_rows, n,
+        figsize=(n * 1.9, n_rows * 1.85),
+        gridspec_kw=dict(hspace=0.18, wspace=0.06),
+    )
+    if n == 1:
+        axes = axes[:, np.newaxis]
+    fig.suptitle(title, fontsize=14, fontweight="bold", y=0.995, color=PALETTE["text"])
+
+    for col in range(n):
+        img = images[col]
+        img_show = img_to_display(img)
+        gray = is_grayscale(img)
+
+        p_fused = parallel_data["heatmaps"][col]
+        n_fused = nested_data["heatmaps"][col]
+
+        # Row 0: Original
+        ax = axes[0, col]
+        ax.imshow(img_show, cmap=cmap_image if gray else None)
+        clean_image_axis(ax)
+        if col == 0:
+            row_label(ax, row_labels[0])
+
+        # Row 1: Parallel fused
+        ax = axes[1, col]
+        ax.imshow(p_fused, vmin=0, vmax=1, cmap=cmap_heat)
+        clean_image_axis(ax, frame_color="#1e40af")
+        if col == 0:
+            row_label(ax, row_labels[1])
+        if parallel_data.get("scores") is not None:
+            annotate_score(ax, float(parallel_data["scores"][col]))
+
+        # Row 2: Parallel overlay
+        ax = axes[2, col]
+        ax.imshow(img_show, cmap=cmap_image if gray else None)
+        ax.imshow(p_fused, vmin=0, vmax=1, cmap=cmap_heat, alpha=0.55)
+        clean_image_axis(ax, frame_color="#1e40af")
+        if col == 0:
+            row_label(ax, row_labels[2])
+
+        # Row 3: Nested fused
+        ax = axes[3, col]
+        ax.imshow(n_fused, vmin=0, vmax=1, cmap=cmap_heat)
+        clean_image_axis(ax, frame_color="#059669")
+        if col == 0:
+            row_label(ax, row_labels[3])
+        if nested_data.get("scores") is not None:
+            annotate_score(ax, float(nested_data["scores"][col]))
+
+        # Row 4: Nested overlay
+        ax = axes[4, col]
+        ax.imshow(img_show, cmap=cmap_image if gray else None)
+        ax.imshow(n_fused, vmin=0, vmax=1, cmap=cmap_heat, alpha=0.55)
+        clean_image_axis(ax, frame_color="#059669")
+        if col == 0:
+            row_label(ax, row_labels[4])
+
+    attach_reference_colorbar(
+        fig, axes, cmap=cmap_heat, vmax=1.0,
+        label="Squared reconstruction error  (reference 0-1)",
     )
 
     if save_path:
@@ -155,7 +258,7 @@ def plot_heatmap_grid(
 # ---------------------------------------------------------------------------
 
 def _auroc_numpy(normal: np.ndarray, anomaly: np.ndarray) -> float:
-    """Compute AUROC via rank statistic (Mann–Whitney U). Pure numpy."""
+    """Compute AUROC via rank statistic (Mann-Whitney U). Pure numpy."""
     n_n, n_a = len(normal), len(anomaly)
     if n_n == 0 or n_a == 0:
         return float("nan")
@@ -325,7 +428,7 @@ def plot_reconstruction_comparison(
     normal_recons: list[np.ndarray],
     anomaly_recons: list[np.ndarray],
     n_samples: int = 6,
-    title: str = "Reconstruction Comparison — Normal (left) vs Anomaly (right)",
+    title: str = "Reconstruction Comparison - Normal (left) vs Anomaly (right)",
     save_path: Optional[str] = None,
 ) -> plt.Figure:
     """Side-by-side per-decoder reconstructions for normal vs anomaly samples."""

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Quick smoke test — runs a mini experiment to verify the full pipeline."""
+"""Quick smoke test - runs a mini experiment to verify the full pipeline."""
 
 import sys
 from pathlib import Path
@@ -59,7 +59,7 @@ for split in ["normal", "mnist", "fashion"]:
         data["images"][:n], data["heatmaps"][:n],
         [p[:n] for p in data["per_layer_maps"]],
         scores=data["scores"][:n],
-        title=f"CNN — {split}",
+        title=f"CNN - {split}",
         save_path=str(out / f"cnn_{split}.png"),
     )
 
@@ -93,7 +93,7 @@ for split in ["normal", "mnist", "fashion"]:
         data["images"][:n], data["heatmaps"][:n],
         [p[:n] for p in data["per_layer_maps"]],
         scores=data["scores"][:n],
-        title=f"MLP — {split}",
+        title=f"MLP - {split}",
         save_path=str(out / f"mlp_{split}.png"),
     )
 

@@ -1,9 +1,9 @@
-# LRAD Configuration — Protocol 2: MNIST + CNN
+# LRAD Configuration - Protocol 2: MNIST + CNN
 
 experiment:
   name: "mnist_cnn"
   seed: 42
-  output_dir: "outputs/mnist_cnn"
+  output_dir: "outputsV2/mnist_cnn"
 
 dataset:
   name: "mnist"

@@ -1,4 +1,4 @@
-# LRAD Configuration — Protocol 3: CIFAR-10 + CNN
+# LRAD Configuration - Protocol 3: CIFAR-10 + CNN
 
 experiment:
   name: "cifar10_cnn"

@@ -91,7 +91,7 @@ def train_uq_decoders(
                 f"D{i}={history['losses'][i][-1]:.4f}"
                 for i in range(len(model.decoders))
             )
-            logger.info(f"  [UQ Decoders] Epoch {epoch+1}/{epochs} — {loss_str}")
+            logger.info(f"  [UQ Decoders] Epoch {epoch+1}/{epochs} - {loss_str}")
 
     return history
 
@@ -149,7 +149,7 @@ def full_uq_evaluation(
 
     Returns per-split results + AUROC for each scoring method.
     """
-    logger.info("UQ Evaluation — normal test set...")
+    logger.info("UQ Evaluation - normal test set...")
     normal = evaluate_uq(model, loaders["test_normal"], device, fusion, max_batches)
 
     output = {"normal": normal, "aurocs": {}}
@@ -157,7 +157,7 @@ def full_uq_evaluation(
     anomaly_keys = [k for k in loaders if k.startswith("test_anomaly")]
     for key in anomaly_keys:
         split = key.replace("test_anomaly_", "").replace("test_anomaly", "ood")
-        logger.info(f"UQ Evaluation — {split}...")
+        logger.info(f"UQ Evaluation - {split}...")
         anomaly = evaluate_uq(model, loaders[key], device, fusion, max_batches)
         output[split] = anomaly
 

@@ -2,8 +2,8 @@
 
 Unlike the parallel decoders in `decoder.py`, each nested decoder D_k inverts
 ONE classifier block only:
-  - D_0: a_0 → image           (only D_0 reaches pixel space)
-  - D_k: a_k → a_{k-1}          for k >= 1
+  - D_0: a_0 -> image           (only D_0 reaches pixel space)
+  - D_k: a_k -> a_{k-1}          for k >= 1
 
 To reconstruct from level k at inference, decoders are chained:
     x̂_k = D_0(D_1(...D_k(a_k)))
@@ -25,7 +25,7 @@ class CNNNestedDecoder(nn.Module):
         in_size: spatial size of a_k.
         out_size: spatial size of target.
         is_image_target: True only for D_0. Adds Sigmoid to bound output to [0,1].
-                         For intermediate decoders, no output activation is used —
+                         For intermediate decoders, no output activation is used -
                          we let MSE pull raw values toward the post-BN+ReLU target.
     """
 
@@ -60,8 +60,8 @@ class CNNNestedDecoder(nn.Module):
         return self.activation(self.deconv(x))
 
     def __repr__(self):
-        tag = "→image" if self.is_image_target else "→activation"
-        return (f"CNNNestedDecoder({self._in_ch}@{self._in_sz}² → "
+        tag = "->image" if self.is_image_target else "->activation"
+        return (f"CNNNestedDecoder({self._in_ch}@{self._in_sz}² -> "
                 f"{self._out_ch}@{self._out_sz}², {tag})")
 
 
@@ -71,7 +71,7 @@ class MLPNestedDecoder(nn.Module):
     Args:
         in_dim: dimension of input activation a_k.
         out_dim: dimension of target (a_{k-1} dim, or input_dim for image).
-        output_shape: if provided, reshape final output to (C, H, W) — only for D_0.
+        output_shape: if provided, reshape final output to (C, H, W) - only for D_0.
     """
 
     def __init__(
@@ -96,5 +96,5 @@ class MLPNestedDecoder(nn.Module):
         return out
 
     def __repr__(self):
-        tag = f"→image{self.output_shape}" if self.is_image_target else "→activation"
-        return f"MLPNestedDecoder({self._in_dim} → {self._out_dim}, {tag})"
+        tag = f"->image{self.output_shape}" if self.is_image_target else "->activation"
+        return f"MLPNestedDecoder({self._in_dim} -> {self._out_dim}, {tag})"

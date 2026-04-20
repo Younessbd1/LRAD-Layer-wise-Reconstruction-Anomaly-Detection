@@ -1,4 +1,4 @@
-"""LRAD Pipeline — wraps a frozen classifier with N trainable decoders.
+"""LRAD Pipeline - wraps a frozen classifier with N trainable decoders.
 
 This is the main model class. It handles:
   - Building decoders matched to each classifier layer
@@ -104,9 +104,9 @@ class LRADModel(nn.Module):
         Args:
             x: Input images (B, C, H, W).
             fusion: How to combine multi-scale maps. One of:
-                    'mean' — average across decoder levels
-                    'max'  — take pixel-wise maximum
-                    'weighted' — weight by inverse reconstruction quality
+                    'mean' - average across decoder levels
+                    'max'  - take pixel-wise maximum
+                    'weighted' - weight by inverse reconstruction quality
 
         Returns:
             dict with keys:

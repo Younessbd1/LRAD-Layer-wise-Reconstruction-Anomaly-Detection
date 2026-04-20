@@ -1,4 +1,4 @@
-# LRAD Configuration — MVTec AD (bottle category)
+# LRAD Configuration - MVTec AD (bottle category)
 # Adjust 'category' and 'data_root' for your server setup.
 
 experiment:

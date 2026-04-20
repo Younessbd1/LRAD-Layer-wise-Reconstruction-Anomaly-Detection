@@ -56,8 +56,8 @@ def plot_feature_maps(
 ) -> plt.Figure:
     """Top-k most-active feature channels per layer, for a single sample.
 
-    CNN activations (B, C, H, W) → channel maps as 2D heatmaps.
-    MLP activations (B, D)        → vector reshaped to near-square grid.
+    CNN activations (B, C, H, W) -> channel maps as 2D heatmaps.
+    MLP activations (B, D)        -> vector reshaped to near-square grid.
 
     A viridis reference colorbar on the right indicates the low-to-high
     activation gradient. Channels are sorted left-to-right by mean activation
@@ -131,7 +131,7 @@ def plot_feature_maps(
         )
 
     fig.suptitle(
-        f"{title}\nSample #{sample_idx}  ·  channels sorted by mean activation (strongest → weakest)",
+        f"{title}\nSample #{sample_idx}  ·  channels sorted by mean activation (strongest -> weakest)",
         fontsize=12, fontweight="bold", color=PALETTE["text"], y=1.00,
     )
 
@@ -353,7 +353,7 @@ def plot_per_layer_errors(
                 r_err = 1 + l_idx
 
             ax_e = axes[r_err, col]
-            ax_e.imshow(hm, cmap=cmap)
+            ax_e.imshow(hm, vmin=0, vmax=1, cmap=cmap)
             clean_image_axis(ax_e)
             if col == 0:
                 row_label(ax_e, f"Error L{l_idx}")
@@ -361,7 +361,7 @@ def plot_per_layer_errors(
 
     attach_reference_colorbar(
         fig, axes, cmap=cmap, vmax=1.0,
-        label="Squared reconstruction error  (per-tile auto-scaled; reference 0–1)",
+        label="Squared reconstruction error  (absolute scale 0-1)",
     )
 
     if save_path:

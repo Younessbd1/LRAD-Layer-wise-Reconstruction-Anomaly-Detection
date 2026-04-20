@@ -12,8 +12,8 @@ from typing import Optional
 class CNNClassifier(nn.Module):
     """Convolutional classifier with per-block activation extraction.
 
-    Each block: Conv2d → BatchNorm → ReLU (stride=2 downsampling).
-    Final: AdaptiveAvgPool → Linear → logits.
+    Each block: Conv2d -> BatchNorm -> ReLU (stride=2 downsampling).
+    Final: AdaptiveAvgPool -> Linear -> logits.
 
     Args:
         channels: List of channel dimensions, e.g. [1, 16, 32, 64].
@@ -70,8 +70,8 @@ class CNNClassifier(nn.Module):
 class MLPClassifier(nn.Module):
     """Fully-connected classifier with per-layer activation extraction.
 
-    Each hidden layer: Linear → BatchNorm1d → ReLU.
-    Final: Linear → logits.
+    Each hidden layer: Linear -> BatchNorm1d -> ReLU.
+    Final: Linear -> logits.
 
     For heatmap generation, activations are 1D vectors that get reshaped
     back to spatial maps by the corresponding MLP decoder.

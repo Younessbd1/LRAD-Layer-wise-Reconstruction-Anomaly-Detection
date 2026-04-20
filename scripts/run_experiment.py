@@ -69,6 +69,15 @@ def main():
         help="Override decoder architecture. Falls back to model.decoder_type "
              "in the config, then to 'parallel'.",
     )
+    parser.add_argument(
+        "--eval-only", action="store_true",
+        help="Skip training and load existing weights from the output directory.",
+    )
+    parser.add_argument(
+        "--weights-dir", type=str, default=None,
+        help="Path to directory containing classifier.pt and decoder_*.pt. "
+             "Defaults to the experiment output directory.",
+    )
     args = parser.parse_args()
 
     # --- Setup ---
@@ -118,24 +127,6 @@ def main():
     logger.info(f"Classifier: {classifier}")
     logger.info(f"  Parameters: {count_parameters(classifier):,}")
 
-    # --- Phase 1: Train classifier ---
-    logger.info("=" * 50)
-    logger.info("PHASE 1: Training classifier")
-    logger.info("=" * 50)
-
-    tcfg = cfg["training"]["classifier"]
-    cls_history = train_classifier(
-        classifier=classifier,
-        train_loader=loaders["train"],
-        class_map=loaders["class_map"],
-        epochs=tcfg["epochs"],
-        lr=tcfg["lr"],
-        device=device,
-    )
-
-    # Save classifier
-    torch.save(classifier.state_dict(), output_dir / "classifier.pt")
-
     # --- Build LRAD model ---
     if decoder_type == "nested":
         model = LRADModelNested(classifier)
@@ -144,28 +135,63 @@ def main():
         model = LRADModel(classifier)
         train_fn = train_decoders
 
-    logger.info(f"LRAD Model ({decoder_type}) built with {len(model.decoders)} decoders")
-    for i, dec in enumerate(model.decoders):
-        logger.info(f"  Decoder {i}: {dec} ({count_parameters(dec):,} params)")
-    logger.info(f"  total decoder params: {sum(count_parameters(d) for d in model.decoders):,}")
+    if args.eval_only:
+        # Load saved weights, skip training entirely
+        weights_dir = Path(args.weights_dir) if args.weights_dir else output_dir
+        logger.info(f"--eval-only: loading weights from {weights_dir}")
 
-    # --- Phase 2: Train decoders ---
-    logger.info("=" * 50)
-    logger.info(f"PHASE 2: Training decoders ({decoder_type})")
-    logger.info("=" * 50)
+        cls_path = weights_dir / "classifier.pt"
+        if not cls_path.exists():
+            raise FileNotFoundError(f"Classifier weights not found: {cls_path}")
+        classifier.load_state_dict(torch.load(cls_path, map_location=device))
+        logger.info(f"  Loaded classifier from {cls_path}")
 
-    dcfg_train = cfg["training"]["decoders"]
-    dec_history = train_fn(
-        model=model,
-        train_loader=loaders["train"],
-        epochs=dcfg_train["epochs"],
-        lr=dcfg_train["lr"],
-        device=device,
-    )
+        for i, dec in enumerate(model.decoders):
+            dec_path = weights_dir / f"decoder_{i}.pt"
+            if not dec_path.exists():
+                raise FileNotFoundError(f"Decoder weights not found: {dec_path}")
+            dec.load_state_dict(torch.load(dec_path, map_location=device))
+            logger.info(f"  Loaded decoder {i} from {dec_path}")
 
-    # Save decoders
-    for i, dec in enumerate(model.decoders):
-        torch.save(dec.state_dict(), output_dir / f"decoder_{i}.pt")
+    else:
+        # --- Phase 1: Train classifier ---
+        logger.info("=" * 50)
+        logger.info("PHASE 1: Training classifier")
+        logger.info("=" * 50)
+
+        tcfg = cfg["training"]["classifier"]
+        cls_history = train_classifier(
+            classifier=classifier,
+            train_loader=loaders["train"],
+            class_map=loaders["class_map"],
+            epochs=tcfg["epochs"],
+            lr=tcfg["lr"],
+            device=device,
+        )
+
+        torch.save(classifier.state_dict(), output_dir / "classifier.pt")
+
+        logger.info(f"LRAD Model ({decoder_type}) built with {len(model.decoders)} decoders")
+        for i, dec in enumerate(model.decoders):
+            logger.info(f"  Decoder {i}: {dec} ({count_parameters(dec):,} params)")
+        logger.info(f"  total decoder params: {sum(count_parameters(d) for d in model.decoders):,}")
+
+        # --- Phase 2: Train decoders ---
+        logger.info("=" * 50)
+        logger.info(f"PHASE 2: Training decoders ({decoder_type})")
+        logger.info("=" * 50)
+
+        dcfg_train = cfg["training"]["decoders"]
+        dec_history = train_fn(
+            model=model,
+            train_loader=loaders["train"],
+            epochs=dcfg_train["epochs"],
+            lr=dcfg_train["lr"],
+            device=device,
+        )
+
+        for i, dec in enumerate(model.decoders):
+            torch.save(dec.state_dict(), output_dir / f"decoder_{i}.pt")
 
     # --- Evaluation ---
     logger.info("=" * 50)
@@ -199,7 +225,7 @@ def main():
         per_layer_maps=[p[:n_display] for p in results["normal"]["per_layer_maps"]],
         reconstructions=[r[:n_display] for r in results["normal"].get("reconstructions", [])] or None,
         scores=results["normal"]["scores"][:n_display],
-        title=f"{exp['name']} — Normal Samples",
+        title=f"{exp['name']} - Normal Samples",
         save_path=str(output_dir / "heatmaps_normal.png"),
     )
 
@@ -212,7 +238,7 @@ def main():
             per_layer_maps=[p[:n_display] for p in split_data["per_layer_maps"]],
             reconstructions=[r[:n_display] for r in split_data.get("reconstructions", [])] or None,
             scores=split_data["scores"][:n_display],
-            title=f"{exp['name']} — Anomaly: {split_name}",
+            title=f"{exp['name']} - Anomaly: {split_name}",
             save_path=str(output_dir / f"heatmaps_{split_name}.png"),
         )
 
@@ -224,7 +250,7 @@ def main():
     plot_score_distributions(
         normal_scores=results["normal"]["scores"],
         anomaly_scores_dict=anomaly_scores,
-        title=f"{exp['name']} — Score Distributions",
+        title=f"{exp['name']} - Score Distributions",
         save_path=str(output_dir / "score_distributions.png"),
     )
 
@@ -236,7 +262,7 @@ def main():
 
     plot_roc_curves(
         auroc_results=roc_data,
-        title=f"{exp['name']} — ROC Curves",
+        title=f"{exp['name']} - ROC Curves",
         save_path=str(output_dir / "roc_curves.png"),
     )
 
@@ -249,8 +275,14 @@ def main():
         "architecture": cfg["model"]["architecture"],
         "decoder_type": decoder_type,
         "aurocs": {k: float(v) for k, v in results["aurocs"].items()},
-        "classifier_final_acc": cls_history["accuracies"][-1],
-        "classifier_final_loss": cls_history["losses"][-1],
+        **(
+            {}
+            if args.eval_only
+            else {
+                "classifier_final_acc": cls_history["accuracies"][-1],
+                "classifier_final_loss": cls_history["losses"][-1],
+            }
+        ),
         "decoder_params_total": int(sum(count_parameters(d) for d in model.decoders)),
     }
 

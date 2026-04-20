@@ -1,107 +1,83 @@
 # How LRAD Reconstruction Works
 
-This document explains the pipeline stage-by-stage so you can interpret the
-diagnostic plots produced by `scripts/inspect_model.py`.
+Notes on the pipeline and how to read the plots from `scripts/inspect_model.py`.
 
-## The core idea
+## Idea
 
-Train a classifier on *only normal* data. At each hidden layer, attach a
-**decoder** that tries to reconstruct the original image from that layer's
-activations. When the decoders are later fed an **anomalous** image, they
-reconstruct it poorly — because they've only ever seen normal activations.
-The pixel-wise reconstruction error becomes the anomaly heatmap.
+Train a classifier on only normal data. Attach one decoder per hidden layer that tries to reconstruct the input from that layer's activations. Feed an anomalous image: decoders reconstruct it badly because they never saw activations like that. Pixel-wise squared error = heatmap.
 
 ## Pipeline
 
 ```
-                              ┌─────────────────────────────────┐
-                              │      frozen classifier          │
-  input x  ──▶  Block 0  ──▶  Block 1  ──▶  ...  ──▶  Block N  ──▶  logits
-                  │              │                      │
-                  │ a₀           │ a₁                   │ aₙ
-                  ▼              ▼                      ▼
-              Decoder 0     Decoder 1              Decoder N
-                  │              │                      │
-                  ▼              ▼                      ▼
-                  x̂₀             x̂₁                    x̂ₙ
-                  │              │                      │
-           ┌──────┴──────────────┴──────────────────────┘
-           │
-           ▼
-   per-pixel error:  eᵢ = (x̂ᵢ − x)²       (one heatmap per decoder)
-           │
-           ▼
-   fusion (mean / max / weighted)  ──▶  final anomaly heatmap  ──▶  score
+  x -> Block0 -> Block1 -> ... -> BlockN -> logits  (frozen classifier)
+         |         |                |
+         a0        a1               aN
+         v         v                v
+       Dec0      Dec1             DecN
+         |         |                |
+         v         v                v
+         x0        x1               xN   (reconstructions)
+
+  error:  e_i = mean_channel((x_i - x)^2)     one map per decoder
+  fuse:   mean / max / weighted  ->  final heatmap
+  score:  max(final heatmap)
 ```
 
-## Stage-by-stage
+## Stages
 
-### 1. Classifier activations (aᵢ)
+### 1. Activations
 
-- The classifier is trained first, then **frozen**.
-- At depth `i`, the activation `aᵢ` has shape `(B, Cᵢ, Hᵢ, Wᵢ)` for CNN,
-  or `(B, Dᵢ)` for MLP.
-- **Early layers** encode local textures / edges.
-  **Deep layers** encode object-level, semantic features.
-- *Plot:* `feature_maps_sample_*.png`, `activation_distributions.png`.
+Classifier is trained, then frozen. At depth `i`, `a_i` has shape `(B, C_i, H_i, W_i)` for CNN or `(B, D_i)` for MLP. Shallow layers = edges/textures. Deep layers = object-level stuff.
 
-### 2. Decoders (x̂ᵢ = Decoderᵢ(aᵢ))
+Plots: `feature_maps_sample_*.png`, `activation_distributions.png`.
 
-- Each decoder is an independent network, one per chosen depth.
-- CNN decoder: mirror of the encoder using `ConvTranspose2d` — upsamples the
-  activation map back to the original resolution `(H, W)` with `Sigmoid`
-  at the end for pixel values in [0, 1].
-- MLP decoder: Linear → ReLU → Linear → Sigmoid → reshape to `(C, H, W)`.
-- **Trained only on normal data** to minimize MSE(x̂ᵢ, x).
-- *Plot:* `per_layer_reconstructions.png`.
+### 2. Decoders
 
-### 3. Per-layer error maps (eᵢ)
+One independent network per depth.
 
-- For each decoder: `eᵢ = mean_channel((x̂ᵢ − x)²)` — a single-channel
-  heatmap at image resolution.
-- On normal data: small error (decoder was trained for this).
-- On anomalous data: errors spike wherever the classifier's features
-  can't be inverted back to the pixel.
-- **Different layers catch different anomalies:** shallow-layer errors
-  highlight texture/local defects; deep-layer errors highlight
-  structural/semantic deviations.
-- *Plot:* `per_layer_errors.png` — each tile's `s=` annotation is that
-  layer's per-image score (the max pixel value in that error map).
+- CNN decoder: mirror of the encoder with `ConvTranspose2d`, ends in `Sigmoid`, output `(H, W)` in [0, 1].
+- MLP decoder: Linear -> ReLU -> Linear -> Sigmoid -> reshape `(C, H, W)`.
+
+Trained on normal data only, MSE loss.
+
+Plot: `per_layer_reconstructions.png`.
+
+### 3. Per-layer error maps
+
+`e_i = mean_channel((x_i - x)^2)`, single channel, image-resolution.
+
+- Normal input: small error (decoder has seen this kind of activation).
+- Anomaly: errors spike where features can't be inverted back to the pixel.
+
+Shallow layers catch texture/local defects. Deep layers catch structural stuff. That's the whole reason for stacking them.
+
+Plot: `per_layer_errors.png`. The `s=` on each tile is that layer's per-image score (max of its error map).
 
 ### 4. Fusion
 
-Multiple error maps are combined into one. Three options:
+Three options:
 
-- **`mean`** — simple average. Robust baseline.
-- **`max`** — pixel-wise max across layers. Catches any layer that fires.
-  More sensitive, more false positives.
-- **`weighted`** — inverse-quality weighting, favors decoders with lower
-  average error (i.e. more "trusted" on normal data).
+- `mean`: average. Default.
+- `max`: pixel-wise max. More sensitive, more false positives.
+- `weighted`: inverse-quality weighting, trusts decoders with lower avg normal error.
 
-### 5. Image-level score
+### 5. Image score
 
-Final score = `max(fused_heatmap)`. A single pixel that's very wrong is
-enough to flag the whole image as anomalous.
+`max(fused_heatmap)`. One bad pixel is enough to flag the image.
 
-## Interpreting the inspection plots
+## Reading the plots
 
-| Plot | What to look for |
+| Plot | What to check |
 |---|---|
-| `feature_maps_sample_*.png` | Channel activations per layer for one sample. Shallow rows should look like edges/textures; deep rows should look sparse and abstract. |
-| `activation_stats.png` | Sparsity should increase with depth (deeper layers are more selective). Dead channels > 50% is a red flag. |
-| `activation_distributions.png` | Histograms. With ReLU, expect a big spike at 0. Long positive tails are normal. If a deep layer has no spike, BatchNorm may be forcing non-zero means. |
-| `per_layer_reconstructions.png` | Earlier decoders should reconstruct near-perfectly (more spatial info). Deeper decoders should look blurrier — they have to hallucinate detail. |
-| `per_layer_errors.png` | On normal samples: uniformly low. On anomaly: one or more layers light up at the anomaly location. The `s=` scores tell you which layer contributes most. |
+| `feature_maps_sample_*.png` | Shallow rows: edges/textures. Deep rows: sparse, abstract. |
+| `activation_stats.png` | Sparsity should go up with depth. Dead channels > 50% is bad. |
+| `activation_distributions.png` | With ReLU expect a spike at 0 and a positive tail. No spike in deep layers usually means BatchNorm is pushing the mean off zero. |
+| `per_layer_reconstructions.png` | Early decoders: near-perfect. Deep decoders: blurry (they have to guess detail). |
+| `per_layer_errors.png` | Normal: flat. Anomaly: one or more layers light up at the defect. `s=` tells you which. |
 
-## When things go wrong
+## Things that go wrong
 
-- **All layers perfectly reconstruct anomalies too** → decoders have
-  over-generalized (maybe the normal set was too diverse, or decoders too
-  high-capacity). Reduce decoder width, add more normal classes, or
-  regularize.
-- **All layers produce very high error on normal data** → decoders are
-  under-trained. Increase decoder epochs.
-- **Only one layer fires on anomalies** → fusion is probably drowning
-  its signal. Try `fusion: weighted` or `fusion: max`.
-- **Feature maps look identical across layers** → the classifier
-  collapsed. Retrain with more epochs or lower LR.
+- Decoders reconstruct anomalies too well. Over-capacity or normal set too diverse. Shrink decoder width, narrow the normal class set, or regularize.
+- High error even on normal data. Decoders under-trained. More epochs.
+- Only one layer fires on anomalies. Fusion is drowning it. Try `weighted` or `max`.
+- Feature maps look identical across layers. Classifier collapsed. Retrain, more epochs, lower LR.

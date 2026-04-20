@@ -1,9 +1,9 @@
 """LRAD-UQ: Uncertainty-Quantified Anomaly Detection.
 
 Extends the base LRAD pipeline with three UQ strategies:
-  1. MC Dropout — stochastic decoders, T forward passes
-  2. Deep Ensembles — M independently-trained decoders per layer
-  3. Combined — reconstruction error + uncertainty for richer anomaly maps
+  1. MC Dropout - stochastic decoders, T forward passes
+  2. Deep Ensembles - M independently-trained decoders per layer
+  3. Combined - reconstruction error + uncertainty for richer anomaly maps
 
 Key outputs:
   - Reconstruction error map (same as base LRAD)
@@ -130,7 +130,7 @@ class LRADModelUQ(nn.Module):
                 'uncertainty_maps': list of (B, 1, H, W) epistemic uncertainty per layer
                 'fused_error': (B, 1, H, W) fused reconstruction error
                 'fused_uncertainty': (B, 1, H, W) fused uncertainty
-                'combined': (B, 1, H, W) error × (1 + uncertainty) — boosted anomaly map
+                'combined': (B, 1, H, W) error × (1 + uncertainty) - boosted anomaly map
                 'scores_error': (B,) image-level error scores
                 'scores_uncertainty': (B,) image-level uncertainty scores
                 'scores_combined': (B,) image-level combined scores
@@ -183,9 +183,9 @@ class LRADModelUQ(nn.Module):
             fused_unc = stacked_unc.mean(dim=0)
 
         # Combined score: error boosted by uncertainty
-        # High error + high uncertainty → very suspicious
-        # High error + low uncertainty → confident anomaly
-        # Low error + high uncertainty → model unsure, warrants attention
+        # High error + high uncertainty -> very suspicious
+        # High error + low uncertainty -> confident anomaly
+        # Low error + high uncertainty -> model unsure, warrants attention
         norm_unc = fused_unc / (fused_unc.max() + 1e-8)
         combined = fused_error * (1.0 + norm_unc)
 

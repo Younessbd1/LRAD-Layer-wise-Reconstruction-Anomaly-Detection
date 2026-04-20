@@ -147,7 +147,7 @@ def main():
         results["normal"]["uncertainty_maps"][:n],
         results["normal"]["combined_maps"][:n],
         scores_combined=results["normal"]["scores_combined"][:n],
-        title=f"{exp['name']} — Normal (UQ)",
+        title=f"{exp['name']} - Normal (UQ)",
         save_path=str(out / "uq_normal.png"),
     )
 
@@ -161,7 +161,7 @@ def main():
             data["uncertainty_maps"][:n],
             data["combined_maps"][:n],
             scores_combined=data["scores_combined"][:n],
-            title=f"{exp['name']} — Anomaly: {split_name} (UQ)",
+            title=f"{exp['name']} - Anomaly: {split_name} (UQ)",
             save_path=str(out / f"uq_{split_name}.png"),
         )
 

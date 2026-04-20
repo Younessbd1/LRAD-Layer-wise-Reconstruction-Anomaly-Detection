@@ -14,7 +14,7 @@ from typing import Optional
 
 
 # ---------------------------------------------------------------------------
-# Palette — muted, print-safe, colorblind-friendly
+# Palette - muted, print-safe, colorblind-friendly
 # ---------------------------------------------------------------------------
 
 PALETTE = {
@@ -107,7 +107,7 @@ def apply_style() -> None:
 
 
 # ---------------------------------------------------------------------------
-# Helpers — colorbar, axis polish, tile frames
+# Helpers - colorbar, axis polish, tile frames
 # ---------------------------------------------------------------------------
 
 def attach_reference_colorbar(
@@ -123,7 +123,7 @@ def attach_reference_colorbar(
     Each tile is auto-scaled to its own range; the reference bar shows the
     cmap mapped onto the theoretical [0, vmax] range so the gradient itself
     is visible. `endpoint_labels` overrides the numeric ticks with a (low, high)
-    text pair — useful when the gradient is purely qualitative.
+    text pair - useful when the gradient is purely qualitative.
     """
     sm = ScalarMappable(norm=Normalize(vmin=0.0, vmax=vmax), cmap=cmap)
     sm.set_array([])

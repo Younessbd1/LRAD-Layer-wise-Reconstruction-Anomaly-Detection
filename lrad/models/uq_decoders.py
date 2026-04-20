@@ -2,12 +2,12 @@
 
 Three UQ strategies built on top of the base decoders:
 
-1. MCDropoutCNNDecoder — Adds dropout layers that remain active at test time.
-   Multiple forward passes → distribution of reconstructions → variance = uncertainty.
+1. MCDropoutCNNDecoder - Adds dropout layers that remain active at test time.
+   Multiple forward passes -> distribution of reconstructions -> variance = uncertainty.
 
-2. MCDropoutMLPDecoder — Same principle for MLP decoders.
+2. MCDropoutMLPDecoder - Same principle for MLP decoders.
 
-3. EnsembleDecoder — Wraps M independently-trained decoders. Disagreement = uncertainty.
+3. EnsembleDecoder - Wraps M independently-trained decoders. Disagreement = uncertainty.
 """
 
 import torch
@@ -20,8 +20,8 @@ class MCDropoutCNNDecoder(nn.Module):
     """CNN decoder with MC Dropout for uncertainty quantification.
 
     Dropout is placed AFTER each ConvTranspose2d + BN + ReLU block.
-    At test time, dropout stays active → multiple passes give different
-    reconstructions → variance captures epistemic uncertainty.
+    At test time, dropout stays active -> multiple passes give different
+    reconstructions -> variance captures epistemic uncertainty.
 
     Args:
         channels: Channel dimensions from input to decoded layer.

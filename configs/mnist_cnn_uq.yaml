@@ -1,4 +1,4 @@
-# LRAD-UQ Configuration — MNIST + CNN + MC Dropout
+# LRAD-UQ Configuration - MNIST + CNN + MC Dropout
 
 experiment:
   name: "mnist_cnn_mcdropout"
