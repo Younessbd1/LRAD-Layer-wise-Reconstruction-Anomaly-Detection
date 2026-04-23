@@ -87,13 +87,13 @@ python scripts/run_experiment.py --config configs/cifar10_cnn.yaml
 
 ## Protocols
 
-### Protocol 1 - MNIST + MLP
+## Protocol 1 - MNIST + MLP
 Train an MLP classifier on digits `[0,1,2,3]`. Train N decoders (one per hidden layer) to reconstruct 28×28 images from each layer's activations. Test on held-out `[0,1,2,3]` (should reconstruct well) and on `[4,...,9]` + Fashion-MNIST (should reconstruct poorly -> anomaly heatmap).
 
-### Protocol 2 - MNIST + CNN
+## Protocol 2 - MNIST + CNN
 Same as Protocol 1, but with spatial convolutions. Decoders use transposed convolutions, preserving spatial structure. Heatmaps are naturally pixel-aligned.
 
-### Protocol 3 - CIFAR-10 + CNN
+## Protocol 3 - CIFAR-10 + CNN
 Train on one CIFAR-10 class (e.g., "airplane"). Test against other classes. Demonstrates scaling to RGB, 32×32, more complex textures.
 
 ---
