@@ -81,6 +81,20 @@ python scripts/run_experiment.py --config configs/mnist_cnn.yaml
 
 # Run CIFAR-10 experiment
 python scripts/run_experiment.py --config configs/cifar10_cnn.yaml
+
+# Run the Real-IAD pipeline (deep CNN backbone, 224x224 RGB).
+# Full end-to-end guide: docs/REALIAD_GUIDE.md
+python scripts/prepare_realiad.py --data-root $HOME/Real-IAD/realiad_1024
+python scripts/run_realiad.py --config configs/realiad.yaml
+```
+
+Running on Grid'5000 at LORIA (Nancy)? The SLURM batch scripts are in
+`scripts/slurm/`:
+
+```bash
+sbatch scripts/slurm/prepare_realiad.sbatch    # CPU, builds the manifest
+sbatch scripts/slurm/train_realiad.sbatch      # GPU, full train + eval
+sbatch scripts/slurm/ablation_depth.sbatch     # GPU, resnet10/18/34 sweep
 ```
 
 ---
@@ -95,6 +109,10 @@ Same as Protocol 1, but with spatial convolutions. Decoders use transposed convo
 
 ## Protocol 3 - CIFAR-10 + CNN
 Train on one CIFAR-10 class (e.g., "airplane"). Test against other classes. Demonstrates scaling to RGB, 32×32, more complex textures.
+
+## Protocol 4 - Real-IAD + Deep CNN (ResNet-style)
+
+Full industrial anomaly detection pipeline: OK-only train/val/test_normal split (deterministic by part), all NG samples in test_anomaly, per-stage decoders feeding a fused heatmap, image-level AUROC/PR-AUC/F1 and pixel-level AUROC. Uses a ResNet-18-shaped backbone with rotation pretext or category classification for Phase 1, and runs end-to-end on a single Grid'5000 GPU. See [`docs/REALIAD_GUIDE.md`](docs/REALIAD_GUIDE.md).
 
 ---
 
