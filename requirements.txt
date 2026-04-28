@@ -1,6 +1,12 @@
-torch>=2.0
-torchvision>=0.15
-numpy>=1.24
+# Pinned to a CUDA 11.8 build of PyTorch so the Pascal GPUs on Grid'5000 Nancy
+# (GTX 1080 Ti, compute capability 6.1 / sm_61) are supported. PyTorch >=2.6
+# wheels dropped sm_60/sm_70, so newer versions error with
+# "no kernel image is available for execution on the device".
+# Install with: pip install -r requirements.txt --extra-index-url https://download.pytorch.org/whl/cu118
+torch==2.4.1+cu118
+torchvision==0.19.1+cu118
+numpy>=1.24,<2.0
 matplotlib>=3.7
 scikit-learn>=1.2
 pyyaml>=6.0
+Pillow>=9.0

@@ -1,219 +1,118 @@
-"""Unit tests for LRAD models - verifies shapes, freezing, and reconstruction."""
+"""Unit tests for the deep CNN LRAD pipeline."""
 
 import sys
 from pathlib import Path
+
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 import torch
 import pytest
-from lrad.models.classifier import CNNClassifier, MLPClassifier
-from lrad.models.decoder import CNNDecoder, MLPDecoder
-from lrad.models.lrad_model import LRADModel
+
+from lrad.models import (
+    DeepCNNClassifier,
+    LRADModel,
+    build_decoders,
+    build_deep_cnn,
+)
+from lrad.models.decoder import CNNDecoder
 
 
-# ──────────────────────────────────────────────
-#  CNN Classifier
-# ──────────────────────────────────────────────
+# ---------------------------------------------------------------------------
+# DeepCNNClassifier
+# ---------------------------------------------------------------------------
 
-class TestCNNClassifier:
-    def setup_method(self):
-        self.channels = [1, 8, 16, 32]
-        self.model = CNNClassifier(self.channels, num_classes=4, input_size=28)
-
-    def test_output_shapes(self):
-        x = torch.randn(2, 1, 28, 28)
-        logits, acts = self.model(x)
+class TestDeepCNNClassifier:
+    def test_default_resnet18_shapes(self):
+        m = build_deep_cnn(preset="resnet18", in_channels=3,
+                           num_classes=4, input_size=224, stem="large")
+        assert m.spatial_sizes == [224, 56, 28, 14, 7]
+        x = torch.zeros(2, 3, 224, 224)
+        logits, acts = m(x)
         assert logits.shape == (2, 4)
-        assert len(acts) == len(self.channels) - 1
-
-    def test_spatial_sizes_computed(self):
-        assert len(self.model.spatial_sizes) == len(self.channels)
-        assert self.model.spatial_sizes[0] == 28
+        assert [a.shape[1] for a in acts] == [64, 128, 256, 512]
+        assert [a.shape[-1] for a in acts] == [56, 28, 14, 7]
 
     def test_freeze(self):
-        self.model.freeze()
-        for p in self.model.parameters():
+        m = build_deep_cnn(preset="resnet10", input_size=64)
+        m.freeze()
+        for p in m.parameters():
             assert not p.requires_grad
 
-    def test_activation_spatial_consistency(self):
-        x = torch.randn(1, 1, 28, 28)
-        _, acts = self.model(x)
-        for i, act in enumerate(acts):
-            assert act.shape[2] == self.model.spatial_sizes[i + 1]
-            assert act.shape[1] == self.channels[i + 1]
+    def test_small_stem(self):
+        m = DeepCNNClassifier(in_channels=1, num_classes=4, input_size=64,
+                              stage_channels=(32, 64, 128, 256),
+                              blocks_per_stage=(1, 1, 1, 1), stem="small")
+        # /2 from stem, then /2 at each subsequent stage transition
+        assert m.spatial_sizes == [64, 32, 16, 8, 4]
+
+    def test_unknown_preset(self):
+        with pytest.raises(ValueError):
+            build_deep_cnn(preset="totally-fake")
 
 
-# ──────────────────────────────────────────────
-#  MLP Classifier
-# ──────────────────────────────────────────────
-
-class TestMLPClassifier:
-    def setup_method(self):
-        self.hidden = [512, 256, 128]
-        self.model = MLPClassifier(784, self.hidden, num_classes=4, input_size=28)
-
-    def test_output_shapes(self):
-        x = torch.randn(2, 1, 28, 28)
-        logits, acts = self.model(x)
-        assert logits.shape == (2, 4)
-        assert len(acts) == len(self.hidden)
-
-    def test_activation_dims(self):
-        x = torch.randn(3, 1, 28, 28)
-        _, acts = self.model(x)
-        for i, act in enumerate(acts):
-            assert act.shape == (3, self.hidden[i])
-
-    def test_freeze(self):
-        self.model.freeze()
-        for p in self.model.parameters():
-            assert not p.requires_grad
-
-
-# ──────────────────────────────────────────────
-#  CNN Decoder
-# ──────────────────────────────────────────────
+# ---------------------------------------------------------------------------
+# Decoders
+# ---------------------------------------------------------------------------
 
 class TestCNNDecoder:
     def test_reconstruction_shape(self):
-        channels = [1, 8, 16]
-        spatial = [28, 14, 7]
-        decoder = CNNDecoder(channels, spatial)
-        # Input: activation from layer 2 -> (B, 16, 7, 7)
-        x = torch.randn(2, 16, 7, 7)
-        out = decoder(x)
-        assert out.shape == (2, 1, 28, 28)
+        d = CNNDecoder(in_ch=128, out_ch=3, in_size=14, out_size=224)
+        x = torch.randn(2, 128, 14, 14)
+        out = d(x)
+        assert out.shape == (2, 3, 224, 224)
 
     def test_output_range(self):
-        channels = [1, 8]
-        spatial = [28, 14]
-        decoder = CNNDecoder(channels, spatial)
-        x = torch.randn(4, 8, 14, 14)
-        out = decoder(x)
-        # Sigmoid output -> [0, 1]
-        assert out.min() >= 0.0
-        assert out.max() <= 1.0
+        d = CNNDecoder(in_ch=64, out_ch=3, in_size=56, out_size=224)
+        out = d(torch.randn(1, 64, 56, 56))
+        assert 0.0 <= out.min().item() <= out.max().item() <= 1.0
 
-    def test_single_layer_decoder(self):
-        channels = [1, 16]
-        spatial = [28, 14]
-        decoder = CNNDecoder(channels, spatial)
-        x = torch.randn(1, 16, 14, 14)
-        out = decoder(x)
-        assert out.shape == (1, 1, 28, 28)
+    def test_build_decoders_aligns_with_classifier(self):
+        m = build_deep_cnn(preset="resnet10", input_size=224)
+        decs = build_decoders(m.stage_channels, m.spatial_sizes,
+                              in_channels=m.in_channels)
+        assert len(decs) == 4
+        x = torch.zeros(1, 3, 224, 224)
+        _, acts = m(x)
+        for d, a in zip(decs, acts):
+            assert d(a).shape == (1, 3, 224, 224)
 
 
-# ──────────────────────────────────────────────
-#  MLP Decoder
-# ──────────────────────────────────────────────
+# ---------------------------------------------------------------------------
+# LRADModel
+# ---------------------------------------------------------------------------
 
-class TestMLPDecoder:
-    def test_reconstruction_shape(self):
-        decoder = MLPDecoder(128, 784, output_shape=(1, 28, 28))
-        x = torch.randn(2, 128)
-        out = decoder(x)
-        assert out.shape == (2, 1, 28, 28)
+class TestLRADModel:
+    def test_full_pipeline(self):
+        m = build_deep_cnn(preset="resnet10", input_size=64)
+        lrad = LRADModel(m)
+        assert len(lrad.decoders) == 4
+        x = torch.zeros(1, 3, 64, 64)
+        out = lrad.compute_anomaly_maps(x, fusion="mean")
+        assert out["fused"].shape == (1, 1, 64, 64)
+        assert out["scores"].shape == (1,)
+        assert len(out["per_layer"]) == 4
 
-    def test_with_hidden_layers(self):
-        decoder = MLPDecoder(64, 784, hidden_dims=[256], output_shape=(1, 28, 28))
-        x = torch.randn(3, 64)
-        out = decoder(x)
-        assert out.shape == (3, 1, 28, 28)
-
-    def test_output_range(self):
-        decoder = MLPDecoder(128, 784, output_shape=(1, 28, 28))
-        x = torch.randn(4, 128)
-        out = decoder(x)
-        assert out.min() >= 0.0
-        assert out.max() <= 1.0
-
-
-# ──────────────────────────────────────────────
-#  Full LRAD Model
-# ──────────────────────────────────────────────
-
-class TestLRADModelCNN:
-    def setup_method(self):
-        channels = [1, 8, 16, 32]
-        self.classifier = CNNClassifier(channels, num_classes=4, input_size=28)
-        self.classifier.freeze()
-        self.model = LRADModel(self.classifier)
-
-    def test_forward_keys(self):
-        x = torch.randn(2, 1, 28, 28)
-        out = self.model(x)
-        assert "logits" in out
-        assert "reconstructions" in out
-        assert "activations" in out
-
-    def test_reconstruction_shapes(self):
-        x = torch.randn(2, 1, 28, 28)
-        out = self.model(x)
-        for recon in out["reconstructions"]:
-            assert recon.shape == (2, 1, 28, 28)
-
-    def test_anomaly_maps(self):
-        x = torch.randn(4, 1, 28, 28).clamp(0, 1)
-        result = self.model.compute_anomaly_maps(x, fusion="mean")
-        assert result["fused"].shape == (4, 1, 28, 28)
-        assert result["scores"].shape == (4,)
-        assert len(result["per_layer"]) == len(self.model.decoders)
-
-    def test_fusion_methods(self):
-        x = torch.randn(2, 1, 28, 28).clamp(0, 1)
-        for method in ["mean", "max", "weighted"]:
-            result = self.model.compute_anomaly_maps(x, fusion=method)
-            assert result["fused"].shape == (2, 1, 28, 28)
+    def test_subset_of_decoders(self):
+        m = build_deep_cnn(preset="resnet10", input_size=64)
+        lrad = LRADModel(m, decoder_layers=[0, 3])
+        assert len(lrad.decoders) == 2
+        out = lrad.compute_anomaly_maps(torch.zeros(2, 3, 64, 64))
+        assert len(out["per_layer"]) == 2
 
     def test_classifier_stays_frozen(self):
-        x = torch.randn(2, 1, 28, 28)
-        self.model(x)
-        for p in self.model.classifier.parameters():
+        m = build_deep_cnn(preset="resnet10", input_size=64)
+        lrad = LRADModel(m)
+        lrad(torch.zeros(1, 3, 64, 64))
+        for p in lrad.classifier.parameters():
             assert not p.requires_grad
 
-
-class TestLRADModelMLP:
-    def setup_method(self):
-        self.classifier = MLPClassifier(784, [256, 128], num_classes=4, input_size=28)
-        self.classifier.freeze()
-        self.model = LRADModel(self.classifier)
-
-    def test_forward(self):
-        x = torch.randn(2, 1, 28, 28)
-        out = self.model(x)
-        assert out["logits"].shape == (2, 4)
-        assert len(out["reconstructions"]) == 2
-
-    def test_anomaly_maps(self):
-        x = torch.randn(3, 1, 28, 28).clamp(0, 1)
-        result = self.model.compute_anomaly_maps(x)
-        assert result["fused"].shape == (3, 1, 28, 28)
-        assert result["scores"].shape == (3,)
-
-
-# ──────────────────────────────────────────────
-#  Edge cases
-# ──────────────────────────────────────────────
-
-class TestEdgeCases:
-    def test_single_decoder_layer(self):
-        classifier = CNNClassifier([1, 16, 32], num_classes=2, input_size=28)
-        classifier.freeze()
-        model = LRADModel(classifier, decoder_layers=[0])
-        assert len(model.decoders) == 1
-
-        x = torch.randn(1, 1, 28, 28).clamp(0, 1)
-        result = model.compute_anomaly_maps(x)
-        assert result["fused"].shape == (1, 1, 28, 28)
-
-    def test_rgb_input(self):
-        classifier = CNNClassifier([3, 16, 32], num_classes=5, input_size=32)
-        classifier.freeze()
-        model = LRADModel(classifier)
-
-        x = torch.randn(2, 3, 32, 32).clamp(0, 1)
-        result = model.compute_anomaly_maps(x)
-        assert result["fused"].shape == (2, 1, 32, 32)
+    def test_fusion_methods(self):
+        m = build_deep_cnn(preset="resnet10", input_size=64)
+        lrad = LRADModel(m)
+        x = torch.zeros(1, 3, 64, 64)
+        for method in ["mean", "max", "weighted"]:
+            assert lrad.compute_anomaly_maps(x, fusion=method)["fused"].shape \
+                   == (1, 1, 64, 64)
 
 
 if __name__ == "__main__":
