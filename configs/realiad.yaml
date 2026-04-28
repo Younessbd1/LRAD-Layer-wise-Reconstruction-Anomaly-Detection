@@ -1,0 +1,104 @@
+# ---------------------------------------------------------------------------
+# LRAD configuration for the Real-IAD dataset.
+#
+# Prepare data first (on Grid'5000 Nancy or any Linux box):
+#   python scripts/prepare_realiad.py --data-root $HOME/Real-IAD/realiad_1024
+#   python scripts/analyze_realiad.py
+#
+# Run the full pipeline:
+#   python scripts/run_realiad.py --config configs/realiad.yaml
+#
+# Override any key at the CLI:
+#   python scripts/run_realiad.py --config configs/realiad.yaml \
+#       --override model.preset=resnet34 training.decoders.epochs=80
+# ---------------------------------------------------------------------------
+
+experiment:
+  name: "realiad_resnet18_rotation"
+  seed: 42
+  output_dir: "outputs/realiad/run"
+
+# ---- Data --------------------------------------------------------------
+# All 30 categories share the same manifest; restrict to a subset here if
+# you only want to train on one category at a time.
+#
+# Splits (OK-only):
+#   train_ratio = 0.80  -> classifier + decoder training
+#   val_ratio   = 0.10  -> early-stopping / learning-curve diagnostics
+#   test_normal = 0.10  -> held-out normal images for AUROC
+# All NG samples go to test_anomaly (one-class constraint).
+dataset:
+  name: "realiad"
+  manifest: "outputs/realiad/manifest/manifest.csv"
+  categories: ["audiojack"]       # set to null for the full 30-category run
+  image_size: 224
+  batch_size: 32
+  num_workers: 4
+  train_ratio: 0.80
+  val_ratio: 0.10
+  load_masks: true                # enables pixel-level AUROC on NG
+  # Train-time augmentation. Real-IAD uses fixed camera views, so without
+  # augmentation the rotation pretext is trivially solved (val_acc=1.0
+  # within a few epochs) and the encoder learns useless orientation-only
+  # features. These augmentations preserve the global orientation of the
+  # image — no flips, no random rotations — so the rotation label remains
+  # valid while the appearance-level signal becomes non-trivial.
+  augmentation:
+    enabled: true
+    crop_scale: [0.85, 1.0]       # random resized crop scale range
+    color_jitter: 0.2             # +/- factor for brightness/contrast/saturation
+    blur_p: 0.1                   # probability of mild gaussian blur
+
+# ---- Model --------------------------------------------------------------
+# The shallow MNIST CNN (channels: [1,16,32,64,128]) does too much
+# downsampling too fast on 224x224 images. DeepCNNClassifier is a
+# ResNet-style backbone with one BasicBlock pair per stage; it exposes
+# the output of each stage so LRAD builds 4 decoders (one per scale).
+#
+# Available presets (from lrad/models/deep_cnn.py):
+#   resnet10       — 1 block/stage  (lightweight baseline)
+#   resnet18       — 2 blocks/stage (default)
+#   resnet34       — 3,4,6,3 blocks (deeper ablation point)
+#   resnet18_slim  — halved width   (low-memory runs)
+model:
+  preset: "resnet18"
+  in_channels: 3
+  input_size: 224
+  # The preset field supersedes stage_channels/blocks_per_stage, but you
+  # can override individual knobs via --override:
+  #   --override model.stage_channels='[32,64,128,256]'
+  stem: "large"                   # 7x7/2 + MaxPool/2 — standard ResNet stem
+
+# ---- Training -----------------------------------------------------------
+training:
+  classifier:
+    # pretext:
+    #   "rotation"  — self-supervised 4-way rotation classification.
+    #                 Required when training on a single category
+    #                 (num_classes of the real task would be 1).
+    #   "category"  — real supervised multi-class across the categories
+    #                 present in the training set. Useful for multi-category
+    #                 runs; set dataset.categories to a list with >1 entry.
+    pretext: "rotation"
+    epochs: 80
+    lr: 0.001
+    weight_decay: 0.0001
+    log_every: 5
+    # Stop Phase 1 once val loss plateaus. Without this the classifier
+    # often saturates within 5–10 epochs and burns the rest of the budget
+    # for nothing. Set early_stop_patience to null to disable.
+    early_stop_patience: 8
+    early_stop_min_delta: 0.0001
+    early_stop_min_epochs: 5
+  decoders:
+    epochs: 150
+    lr: 0.001
+    weight_decay: 0.00001
+    log_every: 5
+
+# ---- Evaluation ---------------------------------------------------------
+evaluation:
+  fusion: "weighted"              # mean | max | weighted
+  n_display: 10                   # rows in the qualitative grids
+  max_eval_batches: null          # cap for smoke-tests; null = full split
+  feat_max: 1000                  # samples for PCA feature-space scatter

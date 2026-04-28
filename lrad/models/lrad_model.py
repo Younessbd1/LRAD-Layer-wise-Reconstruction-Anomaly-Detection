@@ -1,159 +1,133 @@
-"""LRAD Pipeline - wraps a frozen classifier with N trainable decoders.
+"""LRADModel — frozen DeepCNN classifier wrapped with one decoder per stage.
 
-This is the main model class. It handles:
-  - Building decoders matched to each classifier layer
-  - Computing multi-scale reconstruction errors
-  - Fusing per-layer heatmaps into a single anomaly map
+At inference time:
+    1. Run the (frozen) classifier and capture per-stage activations.
+    2. For each stage k, the matching decoder produces an image-space
+       reconstruction \\hat{x}_k = D_k(a_k).
+    3. Per-pixel squared error e_k = (\\hat{x}_k - x)^2 (averaged over
+       channels) is the per-stage anomaly map.
+    4. Maps are fused (mean / max / weighted) into a single anomaly heatmap;
+       the image-level score is the maximum pixel of the fused map.
+
+The classifier is *only* used as a feature extractor — its logits are never
+read at inference. This is what lets us train it on any pretext task that
+encourages useful features (rotation, category, etc.).
 """
+
+from __future__ import annotations
 
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from .classifier import CNNClassifier, MLPClassifier
-from .decoder import CNNDecoder, MLPDecoder
+
+from .deep_cnn import DeepCNNClassifier
+from .decoder import CNNDecoder, build_decoders
 
 
 class LRADModel(nn.Module):
-    """Layer-wise Reconstruction Anomaly Detection model.
+    """Layer-wise Reconstruction Anomaly Detection on a deep CNN backbone.
 
     Args:
-        classifier: A pre-trained and frozen CNNClassifier or MLPClassifier.
-        decoder_layers: Which classifier layers to attach decoders to.
-                        Default None = all layers.
+        classifier: a (trained or untrained) DeepCNNClassifier; will be
+                    frozen on construction.
+        decoder_layers: indices of stages to attach decoders to.
+                        Default: every stage.
+        decoder_base_ch: width of the deepest decoder layer (see CNNDecoder).
     """
 
     def __init__(
         self,
-        classifier: CNNClassifier | MLPClassifier,
+        classifier: DeepCNNClassifier,
         decoder_layers: list[int] | None = None,
+        decoder_base_ch: int = 128,
     ):
         super().__init__()
         self.classifier = classifier
         self.classifier.freeze()
 
-        self.arch_type = "cnn" if isinstance(classifier, CNNClassifier) else "mlp"
-
-        # Determine which layers to decode
-        if self.arch_type == "cnn":
-            n_layers = len(classifier.blocks)
-        else:
-            n_layers = len(classifier.layers)
-
+        n_stages = len(classifier.stages)
         if decoder_layers is None:
-            decoder_layers = list(range(n_layers))
-        self.decoder_layers = decoder_layers
+            decoder_layers = list(range(n_stages))
+        if not decoder_layers:
+            raise ValueError("decoder_layers must be non-empty")
+        if any(i < 0 or i >= n_stages for i in decoder_layers):
+            raise ValueError(f"decoder_layers must be in [0, {n_stages})")
+        self.decoder_layers = sorted(set(decoder_layers))
 
-        # Build decoders
-        self.decoders = nn.ModuleList()
-        for layer_idx in decoder_layers:
-            self.decoders.append(self._build_decoder(layer_idx))
+        # Build decoders only for the requested stages.
+        all_decoders = build_decoders(
+            stage_channels=classifier.stage_channels,
+            spatial_sizes=classifier.spatial_sizes,
+            in_channels=classifier.in_channels,
+            base_ch=decoder_base_ch,
+        )
+        self.decoders = nn.ModuleList([all_decoders[i] for i in self.decoder_layers])
 
-    def _build_decoder(self, layer_idx: int) -> nn.Module:
-        """Construct the appropriate decoder for a given layer index."""
-        if self.arch_type == "cnn":
-            # channels[:layer_idx+2] gives [in_ch, ch1, ..., ch_{layer_idx+1}]
-            channels = self.classifier.channels[:layer_idx + 2]
-            spatial = self.classifier.spatial_sizes[:layer_idx + 2]
-            return CNNDecoder(channels, spatial)
-        else:
-            act_dim = self.classifier.hidden_dims[layer_idx]
-            out_dim = self.classifier.input_dim
-            # Add a hidden layer for deeper decoders
-            mid = (act_dim + out_dim) // 2
-            hidden = [mid] if act_dim < out_dim // 2 else []
-            return MLPDecoder(
-                activation_dim=act_dim,
-                output_dim=out_dim,
-                hidden_dims=hidden,
-                output_shape=(1, self.classifier.input_size, self.classifier.input_size),
-            )
-
+    # ------------------------------------------------------------------
     def forward(self, x: torch.Tensor) -> dict:
-        """Full forward pass.
-
-        Returns:
-            dict with keys:
-                'logits': classifier output (B, num_classes)
-                'reconstructions': list of (B, C, H, W) reconstructions
-                'activations': list of raw activations
-        """
+        """Run the classifier (no_grad) and every attached decoder."""
         with torch.no_grad():
             logits, all_activations = self.classifier(x)
 
-        # Select activations for decoded layers
         activations = [all_activations[i] for i in self.decoder_layers]
-        reconstructions = []
-
-        for decoder, act in zip(self.decoders, activations):
-            recon = decoder(act.detach())
-            reconstructions.append(recon)
-
+        reconstructions = [d(a.detach()) for d, a in zip(self.decoders, activations)]
         return {
             "logits": logits,
             "reconstructions": reconstructions,
             "activations": activations,
         }
 
+    # ------------------------------------------------------------------
     def compute_anomaly_maps(
         self,
         x: torch.Tensor,
         fusion: str = "mean",
     ) -> dict:
-        """Compute pixel-level anomaly heatmaps from reconstruction errors.
+        """Pixel-level anomaly heatmaps + image-level scores.
 
         Args:
-            x: Input images (B, C, H, W).
-            fusion: How to combine multi-scale maps. One of:
-                    'mean' - average across decoder levels
-                    'max'  - take pixel-wise maximum
-                    'weighted' - weight by inverse reconstruction quality
+            x: input batch (B, C, H, W) in [0, 1].
+            fusion: 'mean' | 'max' | 'weighted'.
 
-        Returns:
-            dict with keys:
-                'per_layer': list of (B, 1, H, W) error maps per decoder
-                'fused': (B, 1, H, W) combined anomaly map
-                'scores': (B,) image-level anomaly scores
-                'logits': (B, num_classes) classifier predictions
+        Returns dict with keys:
+            'per_layer'  : list of (B, 1, H, W) per-decoder error maps
+            'fused'      : (B, 1, H, W) combined map
+            'scores'     : (B,) image-level scores (max pixel of fused map)
+            'logits'     : (B, num_classes) classifier output (for record only)
         """
-        output = self.forward(x)
-        recons = output["reconstructions"]
+        out = self.forward(x)
+        recons = out["reconstructions"]
 
-        H, W = x.shape[2], x.shape[3]
-        per_layer_maps = []
+        H, W = x.shape[-2], x.shape[-1]
+        per_layer: list[torch.Tensor] = []
+        for r in recons:
+            err = (r - x).pow(2).mean(dim=1, keepdim=True)  # (B, 1, h, w)
+            if err.shape[-2:] != (H, W):
+                err = F.interpolate(err, size=(H, W), mode="bilinear",
+                                    align_corners=False)
+            per_layer.append(err)
 
-        for recon in recons:
-            # Pixel-wise squared error
-            error = (recon - x).pow(2).mean(dim=1, keepdim=True)  # (B, 1, h, w)
-            # Upsample to original resolution if needed
-            if error.shape[2] != H or error.shape[3] != W:
-                error = F.interpolate(error, size=(H, W), mode="bilinear", align_corners=False)
-            per_layer_maps.append(error)
-
-        # Fuse maps
-        stacked = torch.stack(per_layer_maps, dim=0)  # (N_decoders, B, 1, H, W)
+        stacked = torch.stack(per_layer, dim=0)  # (N, B, 1, H, W)
 
         if fusion == "mean":
             fused = stacked.mean(dim=0)
         elif fusion == "max":
-            fused = stacked.max(dim=0).values
+            fused = stacked.amax(dim=0)
         elif fusion == "weighted":
-            # Weight by global reconstruction quality (inverse MSE)
-            weights = []
-            for m in per_layer_maps:
-                w = 1.0 / (m.mean() + 1e-8)
-                weights.append(w)
-            weights = torch.stack(weights)
+            # Weight each decoder by inverse mean error (good decoders get
+            # more weight). Weights are computed per-batch so that a single
+            # rogue decoder can't dominate the fused map.
+            weights = torch.stack([1.0 / (m.mean() + 1e-8) for m in per_layer])
             weights = weights / weights.sum()
-            fused = sum(w * m for w, m in zip(weights, per_layer_maps))
+            fused = sum(w * m for w, m in zip(weights, per_layer))
         else:
-            raise ValueError(f"Unknown fusion method: {fusion}")
+            raise ValueError(f"unknown fusion {fusion!r}")
 
-        # Image-level scores: max pixel anomaly per image
-        scores = fused.flatten(1).max(dim=1).values  # (B,)
+        scores = fused.flatten(1).amax(dim=1)  # (B,)
 
         return {
-            "per_layer": per_layer_maps,
+            "per_layer": per_layer,
             "fused": fused,
             "scores": scores,
-            "logits": output["logits"],
+            "logits": out["logits"],
         }

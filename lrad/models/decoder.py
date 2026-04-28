@@ -1,120 +1,157 @@
-"""Decoder architectures for reconstructing images from classifier activations.
+"""Multi-scale convolutional decoders that mirror DeepCNNClassifier stages.
 
-CNNDecoder: Uses transposed convolutions to upsample spatial feature maps
-            back to the original image resolution. Produces pixel-aligned
-            reconstruction, so the error map is a direct spatial heatmap.
+A decoder takes the activation map of one classifier stage and reconstructs
+the original input image. Reconstruction error in image space is the
+anomaly signal LRAD operates on, so:
 
-MLPDecoder: Takes a 1D hidden activation vector from an MLP classifier and
-            reconstructs the flattened image via linear layers, then reshapes
-            to (C, H, W). The pixel-wise error after reshape gives the heatmap.
+  * **Output is pixel-aligned with the input** — no resampling on the
+    inference path.
+  * **Decoder depth matches the encoder depth** — a stage at /32 resolution
+    needs more upsampling steps than a stage at /4. We compute that
+    automatically from the spatial-size schedule.
+  * **Sigmoid output range [0, 1]** — input images are normalised to [0, 1]
+    before the loss is taken, so squared error is bounded and comparable
+    across decoders.
+  * **Upsample → Conv → BN → ReLU**, not strided ConvTranspose. Bilinear
+    upsample + 3x3 conv avoids the checkerboard artefact that contaminates
+    error maps when transposed convs are used; this materially improves
+    pixel-AUROC on textures.
 """
+
+from __future__ import annotations
 
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
+from typing import Sequence
+
+
+class _UpBlock(nn.Module):
+    """Bilinear upsample (×2) → 3x3 Conv → BN → ReLU."""
+
+    def __init__(self, in_ch: int, out_ch: int):
+        super().__init__()
+        self.up = nn.Upsample(scale_factor=2, mode="bilinear", align_corners=False)
+        self.conv = nn.Conv2d(in_ch, out_ch, 3, 1, 1, bias=False)
+        self.bn = nn.BatchNorm2d(out_ch)
+        self.relu = nn.ReLU(inplace=True)
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        return self.relu(self.bn(self.conv(self.up(x))))
+
+
+class _RefineBlock(nn.Module):
+    """Same-resolution 3x3 Conv → BN → ReLU, used between upsamples."""
+
+    def __init__(self, in_ch: int, out_ch: int):
+        super().__init__()
+        self.conv = nn.Conv2d(in_ch, out_ch, 3, 1, 1, bias=False)
+        self.bn = nn.BatchNorm2d(out_ch)
+        self.relu = nn.ReLU(inplace=True)
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        return self.relu(self.bn(self.conv(x)))
 
 
 class CNNDecoder(nn.Module):
-    """Transpose-convolution decoder from a specific CNN layer back to image space.
-
-    Mirrors the encoder's downsampling path in reverse using ConvTranspose2d.
-    output_padding is computed automatically to match target spatial sizes.
+    """Reconstruct an input image from one classifier stage's activations.
 
     Args:
-        channels: Channel dimensions from input to the layer being decoded.
-                  e.g. if decoding from block 2 of [1, 16, 32, 64], pass [1, 16, 32].
-        spatial_sizes: Spatial sizes at each level (including input).
-                       e.g. [28, 14, 7] for a 2-block encoder on 28×28 input.
-    """
-
-    def __init__(self, channels: list[int], spatial_sizes: list[int]):
-        super().__init__()
-        assert len(channels) == len(spatial_sizes), (
-            f"channels ({len(channels)}) and spatial_sizes ({len(spatial_sizes)}) "
-            f"must have the same length"
-        )
-
-        KERNEL, STRIDE, PADDING = 3, 2, 1
-
-        rev_ch = channels[::-1]
-        rev_sz = spatial_sizes[::-1]
-
-        layers = []
-        for i in range(len(rev_ch) - 1):
-            is_last = (i == len(rev_ch) - 2)
-
-            # Compute output_padding to match target spatial size
-            raw_out = (rev_sz[i] - 1) * STRIDE - 2 * PADDING + KERNEL
-            out_pad = 1 if rev_sz[i + 1] != raw_out else 0
-
-            layers.append(nn.ConvTranspose2d(
-                rev_ch[i], rev_ch[i + 1],
-                kernel_size=KERNEL, stride=STRIDE,
-                padding=PADDING, output_padding=out_pad,
-            ))
-
-            if not is_last:
-                layers.append(nn.BatchNorm2d(rev_ch[i + 1]))
-                layers.append(nn.ReLU())
-            else:
-                layers.append(nn.Sigmoid())
-
-        self.net = nn.Sequential(*layers)
-        self._source_channels = rev_ch[0]
-        self._target_size = rev_sz[-1]
-
-    def forward(self, x: torch.Tensor) -> torch.Tensor:
-        """Decode activation map back to image space. Returns (B, C, H, W)."""
-        return self.net(x)
-
-    def __repr__(self):
-        return (f"CNNDecoder(in_ch={self._source_channels}, "
-                f"target_size={self._target_size})")
-
-
-class MLPDecoder(nn.Module):
-    """Linear decoder from an MLP hidden layer back to image space.
-
-    Reconstructs the flattened image via a symmetric series of Linear layers,
-    then reshapes to (C, H, W).
-
-    Args:
-        activation_dim: Dimension of the hidden activation vector.
-        output_dim: Flattened image dimension (e.g. 784 = 1×28×28).
-        hidden_dims: Intermediate decoder widths (optional, for deeper decoders).
-        output_shape: Tuple (C, H, W) for final reshape.
+        in_ch:        channel dimension of the source activation.
+        out_ch:       channel dimension of the input image (1 grayscale,
+                      3 RGB).
+        in_size:      spatial size of the source activation (square).
+        out_size:     spatial size of the target image (square).
+        base_ch:      channel width at the deepest decoder layer (kept
+                      shallow to avoid dwarfing the encoder).
     """
 
     def __init__(
         self,
-        activation_dim: int,
-        output_dim: int,
-        hidden_dims: list[int] | None = None,
-        output_shape: tuple[int, int, int] = (1, 28, 28),
+        in_ch: int,
+        out_ch: int,
+        in_size: int,
+        out_size: int,
+        base_ch: int = 128,
     ):
         super().__init__()
-        self.output_shape = output_shape
+        if out_size % in_size != 0:
+            raise ValueError(
+                f"out_size ({out_size}) must be a power-of-2 multiple of in_size ({in_size})"
+            )
 
-        if hidden_dims is None:
-            hidden_dims = []
+        ratio = out_size // in_size
+        n_up = 0
+        r = ratio
+        while r > 1:
+            if r % 2 != 0:
+                raise ValueError(f"upsampling ratio {ratio} must be a power of 2")
+            r //= 2
+            n_up += 1
 
-        dims = [activation_dim] + hidden_dims + [output_dim]
-        layers = []
+        # Project source activations to the decoder's working width.
+        layers: list[nn.Module] = [_RefineBlock(in_ch, base_ch)]
+        ch = base_ch
 
-        for i in range(len(dims) - 1):
-            is_last = (i == len(dims) - 2)
-            layers.append(nn.Linear(dims[i], dims[i + 1]))
-            if not is_last:
-                layers.append(nn.BatchNorm1d(dims[i + 1]))
-                layers.append(nn.ReLU())
-            else:
-                layers.append(nn.Sigmoid())
+        # Halve the channel count at each upsample step (common decoder pattern).
+        for i in range(n_up):
+            next_ch = max(base_ch // (2 ** (i + 1)), 32)
+            layers.append(_UpBlock(ch, next_ch))
+            layers.append(_RefineBlock(next_ch, next_ch))
+            ch = next_ch
+
+        # Final 1x1 to image space + sigmoid.
+        layers.append(nn.Conv2d(ch, out_ch, 1, 1, 0))
+        layers.append(nn.Sigmoid())
 
         self.net = nn.Sequential(*layers)
+        self._in_ch = in_ch
+        self._out_ch = out_ch
+        self._in_size = in_size
+        self._out_size = out_size
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
-        """Decode 1D activation to image. Returns (B, C, H, W)."""
-        flat = self.net(x)
-        return flat.view(-1, *self.output_shape)
+        out = self.net(x)
+        # Defensive: guarantee exact target spatial size if rounding ever drifts.
+        if out.shape[-1] != self._out_size or out.shape[-2] != self._out_size:
+            out = F.interpolate(out, size=(self._out_size, self._out_size),
+                                mode="bilinear", align_corners=False)
+        return out
 
     def __repr__(self):
-        return f"MLPDecoder(output_shape={self.output_shape})"
+        return (
+            f"CNNDecoder(in={self._in_ch}@{self._in_size}, "
+            f"out={self._out_ch}@{self._out_size})"
+        )
+
+
+def build_decoders(
+    stage_channels: Sequence[int],
+    spatial_sizes: Sequence[int],
+    in_channels: int,
+    base_ch: int = 128,
+) -> list[CNNDecoder]:
+    """Construct one decoder per classifier stage.
+
+    spatial_sizes follows DeepCNNClassifier's convention:
+        [input_size, stage_0_size, stage_1_size, ...]
+
+    so spatial_sizes[i + 1] is the spatial size of the activation feeding
+    decoder i, and spatial_sizes[0] is the reconstruction target.
+    """
+    if len(spatial_sizes) != len(stage_channels) + 1:
+        raise ValueError(
+            f"spatial_sizes ({len(spatial_sizes)}) must equal "
+            f"len(stage_channels) + 1 ({len(stage_channels) + 1})"
+        )
+    target = spatial_sizes[0]
+    return [
+        CNNDecoder(
+            in_ch=ch,
+            out_ch=in_channels,
+            in_size=spatial_sizes[i + 1],
+            out_size=target,
+            base_ch=base_ch,
+        )
+        for i, ch in enumerate(stage_channels)
+    ]
