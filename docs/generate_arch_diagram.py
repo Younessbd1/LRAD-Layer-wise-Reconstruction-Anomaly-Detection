@@ -1,4 +1,4 @@
-"""Génère le diagramme d'architecture LRAD — fond blanc, épuré."""
+"""Diagramme LRAD — Entraînement + Pipeline uniquement, fond blanc, 4K."""
 import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
@@ -6,11 +6,9 @@ from matplotlib.patches import FancyBboxPatch
 import numpy as np
 
 DPI = 200
-FW, FH = 19.2, 10.8   # → 3840 × 2160 px
+FW, FH = 19.2, 10.8
 
 fig, ax = plt.subplots(figsize=(FW, FH), dpi=DPI)
-for spine in ax.spines.values():
-    spine.set_visible(False)
 ax.set_facecolor('#FAFBFC')
 fig.patch.set_facecolor('#FAFBFC')
 ax.set_xlim(0, FW)
@@ -18,348 +16,277 @@ ax.set_ylim(0, FH)
 ax.axis('off')
 
 # ── Palette ──────────────────────────────────────────────────────────────────
-DATA   = '#1D4ED8'; DATA_L  = '#EFF6FF'; DATA_B  = '#93C5FD'
-CLF    = '#6D28D9'; CLF_L   = '#F5F3FF'; CLF_B   = '#C4B5FD'
-DEC    = '#0F766E'; DEC_L   = '#ECFEFF'; DEC_B   = '#67E8F9'
-ERR    = '#B91C1C'; ERR_L   = '#FEF2F2'; ERR_B   = '#FCA5A5'
-FUS    = '#1E3A8A'; FUS_L   = '#EFF6FF'; FUS_B   = '#93C5FD'
-UQ_C   = '#C2410C'; UQ_L    = '#FFF7ED'; UQ_B    = '#FED7AA'
-TRN    = '#166534'; TRN_L   = '#F0FDF4'; TRN_B   = '#86EFAC'
-EVL    = '#9F1239'; EVL_L   = '#FFF1F2'; EVL_B   = '#FDA4AF'
-OUT    = '#5B21B6'; OUT_L   = '#F5F3FF'; OUT_B   = '#C4B5FD'
-ARROW  = '#64748B'
-SEC    = '#F1F5F9'; SEC_B   = '#CBD5E1'
-TXT_W  = '#FFFFFF'; TXT_D   = '#0F172A'; TXT_G   = '#64748B'
+CLF   = '#6D28D9'; CLF_L = '#F5F3FF'; CLF_B = '#C4B5FD'
+DEC   = '#0F766E'; DEC_L = '#ECFEFF'; DEC_B = '#67E8F9'
+ERR   = '#B91C1C'; ERR_L = '#FEF2F2'; ERR_B = '#FCA5A5'
+FUS   = '#1E3A8A'; FUS_L = '#EFF6FF'; FUS_B = '#93C5FD'
+TRN   = '#166534'; TRN_L = '#F0FDF4'; TRN_B = '#86EFAC'
+OUT   = '#5B21B6'; OUT_L = '#F5F3FF'; OUT_B = '#C4B5FD'
+ARR   = '#64748B'
+SEC   = '#F1F5F9'; SEC_B = '#CBD5E1'
+WT    = '#FFFFFF'; DK    = '#0F172A'; GY    = '#64748B'
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
-def blk(x, y, w, h, fc, ec, lw=1.4, rad=0.12, z=2, alpha=1.0):
+def box(x, y, w, h, fc, ec, lw=1.4, rad=0.12, z=2):
     ax.add_patch(FancyBboxPatch(
         (x, y), w, h,
         boxstyle=f"round,pad=0,rounding_size={rad}",
         facecolor=fc, edgecolor=ec, linewidth=lw,
-        zorder=z, clip_on=False, alpha=alpha,
+        zorder=z, clip_on=False,
     ))
 
-def t(x, y, s, fs=9, fw='bold', col=TXT_D, ha='center', va='center', z=5, **kw):
-    ax.text(x, y, s, ha=ha, va=va, fontsize=fs, fontweight=fw,
-            color=col, zorder=z, **kw)
-
-def sub(x, y, s, fs=7, col=TXT_G, ha='center', va='center', z=5, **kw):
-    ax.text(x, y, s, ha=ha, va=va, fontsize=fs, fontweight='normal',
-            color=col, zorder=z, **kw)
-
-def arr(x1, y1, x2, y2, col=ARROW, lw=1.6, hw=0.11, hl=0.14, z=3,
-        cs='arc3,rad=0.0'):
-    ax.annotate('', xy=(x2, y2), xytext=(x1, y1),
-                arrowprops=dict(
-                    arrowstyle=f"->,head_width={hw},head_length={hl}",
-                    color=col, lw=lw,
-                    connectionstyle=cs,
-                ), zorder=z)
-
-def darr(x1, y1, x2, y2, col=UQ_B, lw=1.1):
-    ax.annotate('', xy=(x2, y2), xytext=(x1, y1),
-                arrowprops=dict(
-                    arrowstyle="->,head_width=0.07,head_length=0.10",
-                    color=col, lw=lw, linestyle='dashed',
-                ), zorder=3)
-
-def sec_bg(x, y, w, h, label='', z=1):
+def hdr(x, y, w, hs, color, label, fs=10, rad=0.12, z=3):
+    """Header strip at the TOP of a box."""
     ax.add_patch(FancyBboxPatch(
-        (x, y), w, h,
-        boxstyle="round,pad=0,rounding_size=0.20",
-        facecolor=SEC, edgecolor=SEC_B, linewidth=0.8,
-        zorder=z, clip_on=False, alpha=0.55,
+        (x, y + hs*0.4), w, hs*0.6,          # invisible filler to hide bottom rounding
+        boxstyle="square,pad=0",
+        facecolor=color, edgecolor='none', linewidth=0, zorder=z, clip_on=False,
     ))
-    if label:
-        ax.text(x + 0.22, y + h - 0.15, label,
-                ha='left', va='top', fontsize=8, fontweight='bold',
-                color='#94A3B8', zorder=z + 1)
-
-def header_strip(x, y, w, h_strip, color, label, fs=9, rad=0.12, z=3):
-    """Full-width colored header inside a box."""
     ax.add_patch(FancyBboxPatch(
-        (x, y + h_strip - 0.001), w, 0.001,  # invisible: clip top corners
-        boxstyle="square,pad=0", facecolor='none', edgecolor='none', zorder=z-1,
-    ))
-    # Draw a rectangle that shares top radius with parent
-    ax.add_patch(FancyBboxPatch(
-        (x, y), w, h_strip,
+        (x, y), w, hs,
         boxstyle=f"round,pad=0,rounding_size={rad}",
         facecolor=color, edgecolor=color, linewidth=0,
         zorder=z, clip_on=False,
     ))
-    t(x + w/2, y + h_strip/2, label, fs=fs, col=TXT_W, z=z+1)
+    ax.text(x + w/2, y + hs/2, label,
+            ha='center', va='center', fontsize=fs, fontweight='bold',
+            color=WT, zorder=z+1)
+
+def t(x, y, s, fs=9, fw='bold', col=DK, ha='center', va='center', z=5, **kw):
+    ax.text(x, y, s, ha=ha, va=va, fontsize=fs, fontweight=fw, color=col, zorder=z, **kw)
+
+def s(x, y, txt, fs=7.5, col=GY, ha='center', va='center', z=5, **kw):
+    ax.text(x, y, txt, ha=ha, va=va, fontsize=fs, fontweight='normal', color=col, zorder=z, **kw)
+
+def arr(x1, y1, x2, y2, col=ARR, lw=1.7, hw=0.11, hl=0.14, z=3, cs='arc3,rad=0.0'):
+    ax.annotate('', xy=(x2, y2), xytext=(x1, y1),
+                arrowprops=dict(
+                    arrowstyle=f"->,head_width={hw},head_length={hl}",
+                    color=col, lw=lw, connectionstyle=cs,
+                ), zorder=z)
+
+def sec(x, y, w, h, label='', z=1):
+    ax.add_patch(FancyBboxPatch(
+        (x, y), w, h,
+        boxstyle="round,pad=0,rounding_size=0.22",
+        facecolor=SEC, edgecolor=SEC_B, linewidth=0.9,
+        zorder=z, clip_on=False, alpha=0.5,
+    ))
+    if label:
+        ax.text(x + 0.25, y + h - 0.18, label,
+                ha='left', va='top', fontsize=9, fontweight='bold',
+                color='#94A3B8', zorder=z+1)
 
 # ════════════════════════════════════════════════════════════════════════════
 #  TITRE
 # ════════════════════════════════════════════════════════════════════════════
-blk(0, FH - 0.70, FW, 0.70, '#0F172A', '#0F172A', lw=0, rad=0, z=2)
-t(FW/2, FH - 0.30, "LRAD  —  Layer-wise Reconstruction Anomaly Detection",
-  fs=15.5, col='#F8FAFC', fw='bold')
-t(FW/2, FH - 0.55, "Détection d'anomalies one-class par reconstruction multi-échelle d'activations",
-  fs=8.5, col='#94A3B8', fw='normal')
+ax.add_patch(FancyBboxPatch((0, FH-0.72), FW, 0.72,
+    boxstyle="square,pad=0", facecolor='#0F172A', edgecolor='none', zorder=2))
+t(FW/2, FH-0.30, "LRAD  —  Entraînement & Pipeline d'Inférence",
+  fs=16, col='#F8FAFC', fw='bold')
+t(FW/2, FH-0.57, "Détection d'anomalies one-class par reconstruction multi-échelle d'activations",
+  fs=9, col='#94A3B8', fw='normal')
 
 # ════════════════════════════════════════════════════════════════════════════
-#  SECTION A — DONNÉES
+#  ①  ENTRAÎNEMENT  (y = 7.65 → 9.98)
 # ════════════════════════════════════════════════════════════════════════════
-sec_bg(0.3, 8.88, FW - 0.6, 1.10, label='①  DONNÉES')
+sec(0.28, 7.65, FW - 0.56, 2.25, label='①  ENTRAÎNEMENT')
 
-BY = 9.02; BH = 0.82; HS = 0.30  # box y, height, header strip height
+TY = 7.80; TH = 1.95; HS = 0.40   # box y, height, header height
 
-# Real-IAD ──────────────────────────────────────────────────────────────────
-RX = 0.65; RW = 3.50
-blk(RX, BY, RW, BH, DATA_L, DATA_B, lw=1.2)
-header_strip(RX, BY + BH - HS, RW, HS, DATA, "Real-IAD", fs=9)
-t(RX + RW/2, BY + 0.34, "30 catégories industrielles", fs=8, col=DATA, fw='semibold')
-sub(RX + RW/2, BY + 0.14, "5 vues / pièce  ·  OK (normal)  ·  NG (défaut) + masques pixel")
+# ─── Phase 1 ─────────────────────────────────────────────────────────────
+P1X = 0.55; P1W = 8.55
+box(P1X, TY, P1W, TH, TRN_L, TRN_B)
+hdr(P1X, TY + TH - HS, P1W, HS, TRN, "Phase 1 — Entraînement du Classifieur", fs=10.5)
 
-# CelebA ─────────────────────────────────────────────────────────────────────
-CX = 4.45; CW = 3.50
-blk(CX, BY, CW, BH, DATA_L, DATA_B, lw=1.2)
-header_strip(CX, BY + BH - HS, CW, HS, DATA, "CelebA", fs=9)
-t(CX + CW/2, BY + 0.34, "202 599 images de visages RGB", fs=8, col=DATA, fw='semibold')
-sub(CX + CW/2, BY + 0.14, "normal = attribut 0  ·  anomalie = attribut 1  (ex. Lunettes)")
+SW = (P1W - 0.50) / 3 - 0.15   # sub-step width
+SY = TY + 0.14; SH = TH - HS - 0.28
 
-# Arrows → DataLoader ─────────────────────────────────────────────────────
-DLX = 8.30; DLW = 3.80
-arr(RX + RW, BY + BH/2, DLX, BY + BH/2, col=DATA, lw=1.5)
-arr(CX + CW, BY + BH/2, DLX, BY + BH/2, col=DATA, lw=1.5)
+steps1 = [
+    ("Données normales", "exemples OK uniquement",          TRN),
+    ("CrossEntropyLoss", "classification supervisée",        TRN),
+    ("Adam  →  Freeze",  "geler tous les poids\naprès entraînement", '#DC2626'),
+]
+for i, (title, desc, col) in enumerate(steps1):
+    sx = P1X + 0.25 + i * (SW + 0.22)
+    box(sx, SY, SW, SH, WT, TRN_B, lw=1.0, rad=0.10, z=3)
+    t(sx + SW/2, SY + SH - 0.22, title, fs=9, col=col, z=4)
+    for j, line in enumerate(desc.split('\n')):
+        s(sx + SW/2, SY + SH/2 - 0.06 + (0.5-j)*0.24, line, fs=7.8, z=4)
+    if i < 2:
+        arr(sx + SW, SY + SH/2, sx + SW + 0.22, SY + SH/2, col=TRN, lw=1.5, hw=0.09, hl=0.12)
 
-# DataLoader ──────────────────────────────────────────────────────────────
-blk(DLX, BY, DLW, BH, DATA_L, DATA_B, lw=1.2)
-header_strip(DLX, BY + BH - HS, DLW, HS, DATA, "DataLoader", fs=9)
-t(DLX + DLW/2, BY + 0.34, "train  ·  val  ·  test_normal  ·  test_anomaly", fs=8, col=DATA, fw='semibold')
-sub(DLX + DLW/2, BY + 0.14, "train_ratio=0.8  ·  val_ratio=0.1  ·  seed=42")
+# ─── Phase 2 ─────────────────────────────────────────────────────────────
+P2X = P1X + P1W + 0.28; P2W = FW - P2X - 0.45
+box(P2X, TY, P2W, TH, TRN_L, TRN_B)
+hdr(P2X, TY + TH - HS, P2W, HS, TRN, "Phase 2 — Entraînement des Décodeurs", fs=10.5)
 
-# Evaluation ──────────────────────────────────────────────────────────────
-EVX = 16.45; EVW = 2.55
-blk(EVX, BY, EVW, BH, EVL_L, EVL_B, lw=1.2)
-header_strip(EVX, BY + BH - HS, EVW, HS, EVL, "Évaluation", fs=9)
-t(EVX + EVW/2, BY + 0.34, "AUROC  ·  PR-AUC", fs=8, col=EVL, fw='semibold')
-sub(EVX + EVW/2, BY + 0.14, "Courbe ROC  ·  Heatmaps  ·  histogrammes")
+SW2 = (P2W - 0.50) / 3 - 0.15
+steps2 = [
+    ("Activations gelées",  "classifieur.eval()\nrequires_grad=False",   CLF),
+    ("MSELoss(recon_k, x)", "décodeur k reconstruit x\ndepuis act_k",      DEC),
+    ("Adam indépendant",    "un optimiseur\npar décodeur",                TRN),
+]
+for i, (title, desc, col) in enumerate(steps2):
+    sx = P2X + 0.25 + i * (SW2 + 0.22)
+    box(sx, SY, SW2, SH, WT, TRN_B, lw=1.0, rad=0.10, z=3)
+    t(sx + SW2/2, SY + SH - 0.22, title, fs=9, col=col, z=4)
+    for j, line in enumerate(desc.split('\n')):
+        s(sx + SW2/2, SY + SH/2 - 0.06 + (0.5-j)*0.24, line, fs=7.8, z=4)
+    if i < 2:
+        arr(sx + SW2, SY + SH/2, sx + SW2 + 0.22, SY + SH/2, col=TRN, lw=1.5, hw=0.09, hl=0.12)
 
-# ════════════════════════════════════════════════════════════════════════════
-#  SECTION B — ENTRAÎNEMENT
-# ════════════════════════════════════════════════════════════════════════════
-sec_bg(0.3, 7.62, FW - 0.6, 1.14, label='②  ENTRAÎNEMENT  (deux phases)')
-
-TY = 7.76; TH = 0.82
-
-# Phase 1 ─────────────────────────────────────────────────────────────────
-blk(0.65, TY, 5.60, TH, TRN_L, TRN_B, lw=1.2)
-header_strip(0.65, TY + TH - HS, 5.60, HS, TRN, "Phase 1 — Classifieur (données normales)", fs=8.5)
-t(0.65 + 2.80, TY + 0.34, "CrossEntropyLoss  +  Adam  →  geler tous les poids", fs=8, col=TRN, fw='semibold')
-sub(0.65 + 2.80, TY + 0.14, "Supervisé  ·  rotation pretext (CelebA)  ·  early stopping")
-
-# Phase 2 ─────────────────────────────────────────────────────────────────
-blk(6.50, TY, 5.60, TH, TRN_L, TRN_B, lw=1.2)
-header_strip(6.50, TY + TH - HS, 5.60, HS, TRN, "Phase 2 — Décodeurs (activations gelées)", fs=8.5)
-t(6.50 + 2.80, TY + 0.34, "MSELoss  +  un Adam par décodeur", fs=8, col=TRN, fw='semibold')
-sub(6.50 + 2.80, TY + 0.14, "Chaque décodeur entraîné indépendamment  ·  normal seulement")
-
-# UQ Phase (training note) ─────────────────────────────────────────────────
-blk(12.35, TY, 4.10, TH, UQ_L, UQ_B, lw=1.2)
-header_strip(12.35, TY + TH - HS, 4.10, HS, UQ_C, "UQ — Entraînement (LRADModelUQ)", fs=8.5)
-t(12.35 + 2.05, TY + 0.34, "MC Dropout : standard + dropout actif", fs=8, col=UQ_C, fw='semibold')
-sub(12.35 + 2.05, TY + 0.14, "Ensemble : M membres indépendants (seeds distincts)")
-
-# Arrows: DataLoader → training
-arr(DLX + DLW/2, BY, DLX + DLW/2, TY + TH, col=DATA, lw=1.4,
-    cs='arc3,rad=-0.18')
-arr(DLX + DLW/2, BY, 6.50 + 2.80, TY + TH, col=DATA, lw=1.4,
-    cs='arc3,rad=0.15')
-
-# Training → pipeline (down arrows)
-arr(0.65 + 2.80, TY, 0.65 + 2.80, TY - 0.05, col=TRN, lw=1.0)
-arr(6.50 + 2.80, TY, 6.50 + 2.80, TY - 0.05, col=TRN, lw=1.0)
+# Arrows Phase → Pipeline
+arr(P1X + P1W/2, TY, P1X + P1W/2, TY - 0.07, col=TRN, lw=1.2)
+arr(P2X + P2W/2, TY, P2X + P2W/2, TY - 0.07, col=TRN, lw=1.2)
 
 # ════════════════════════════════════════════════════════════════════════════
-#  SECTION C — PIPELINE D'INFÉRENCE
+#  ②  PIPELINE D'INFÉRENCE  (y = 0.18 → 7.56)
 # ════════════════════════════════════════════════════════════════════════════
-sec_bg(0.3, 2.55, FW - 0.6, 4.96, label="③  PIPELINE D'INFÉRENCE  (LRADModel)")
+sec(0.28, 0.18, FW - 0.56, 7.38, label="②  PIPELINE D'INFÉRENCE")
+
+# ── Positions ────────────────────────────────────────────────────────────
+IN_X  = 0.48;  IN_W  = 1.20
+CLX   = 1.92;  CLW   = 3.60;  CLY = 0.32;  CLH = 7.03
+DEC_X = 5.80;  DEC_W = 3.00
+ERR_X = 9.10;  ERR_W = 2.70
+FUX   = 12.12; FUW   = 2.05;  FUY = 1.52;  FUH = 4.68
+OTX   = 14.50; OTW   = 2.50;  OTY = 4.30;  OTH = 1.62
+SCX   = 14.50; SCW   = 2.50;  SCY = 3.22;  SCH = 0.82
+
+BH = 1.10; BG = 0.22   # block height and gap
+
+# ── Classifieur ──────────────────────────────────────────────────────────
+box(CLX, CLY, CLW, CLH, CLF_L, CLF_B, lw=1.8, rad=0.18, z=2)
+hdr(CLX, CLY + CLH - 0.46, CLW, 0.46, CLF, "Classifieur (gelé)", fs=11.5, rad=0.18, z=3)
+s(CLX + CLW/2, CLY + CLH - 0.64, "CNNClassifier  ou  MLPClassifier", fs=8.5, col='#7C3AED', z=4)
+
+# Pool + FC (bottom of classifier)
+pool_y = CLY + 0.16
+pool_h = 0.68
+box(CLX+0.22, pool_y, CLW-0.44, pool_h, '#EDE9FE', '#8B5CF6', lw=1.0, rad=0.10, z=3)
+t(CLX+CLW/2, pool_y+pool_h-0.24, "Avg Pool  →  FC  →  Logits", fs=9.5, col='#5B21B6', z=4)
+s(CLX+CLW/2, pool_y+0.22, "sortie classification", fs=8, col='#7C3AED', z=4)
+
+# 4 CNN blocks  (block 3 just above pool, block 0 near top)
+bots = []   # bottom y of each inner block: index 0 = Block 3, index 3 = Block 0
+base = pool_y + pool_h + BG
+for i in range(4):
+    bots.append(base + i*(BH+BG))
+
+for i, by in enumerate(bots):
+    label_num = 3 - i           # i=0 → Block 3 ... i=3 → Block 0
+    box(CLX+0.22, by, CLW-0.44, BH, '#EDE9FE', '#8B5CF6', lw=1.0, rad=0.10, z=3)
+    t(CLX+CLW/2, by+BH-0.28, f"Block {label_num}", fs=10.5, col='#5B21B6', z=4)
+    s(CLX+CLW/2, by+BH/2, "Conv 3×3  ·  BN  ·  ReLU", fs=8.5, col='#7C3AED', z=4)
+    s(CLX+CLW/2, by+0.22, "stride 2  →  downsampling ×2", fs=7.8, col='#8B5CF6', z=4)
+
+act_mids = [by + BH/2 for by in bots]   # [Block 3 mid, ..., Block 0 mid]
 
 # ── Image d'entrée ───────────────────────────────────────────────────────
-IX = 0.50; IY = 4.30; IW = 1.40; IH = 1.50
-blk(IX, IY, IW, IH, '#F8FAFC', '#CBD5E1', lw=1.2, rad=0.14)
-t(IX + IW/2, IY + IH/2 + 0.20, "Image", fs=9, col='#334155')
-t(IX + IW/2, IY + IH/2, "entrée", fs=9, col='#334155')
-sub(IX + IW/2, IY + 0.22, "(B, C, H, W)")
+# Centred vertically on Block 0 (bots[3])
+IN_H = 1.30
+in_y = bots[3] + BH/2 - IN_H/2
+box(IN_X, in_y, IN_W, IN_H, '#F8FAFC', '#94A3B8', lw=1.4, rad=0.14, z=3)
+t(IN_X+IN_W/2, in_y+IN_H/2+0.22, "Image", fs=10, col='#334155', z=4)
+t(IN_X+IN_W/2, in_y+IN_H/2-0.02, "entrée", fs=10, col='#334155', z=4)
+s(IN_X+IN_W/2, in_y+0.22, "(B, C, H, W)", fs=8, z=4)
+arr(IN_X+IN_W, in_y+IN_H/2, CLX, bots[3]+BH/2, col=ARR, lw=1.8)
 
-# Arrow: image → classifier
-arr(IX + IW, IY + IH/2, 2.10, IY + IH/2, col=ARROW)
+# ── Décodeurs ────────────────────────────────────────────────────────────
+sec(DEC_X-0.12, CLY, DEC_W+0.24, CLH, z=1)
+t(DEC_X+DEC_W/2, CLY+CLH-0.23, "DÉCODEURS", fs=10, col='#64748B', fw='bold', z=4)
+s(DEC_X+DEC_W/2, CLY+CLH-0.46, "reconstruction inverse", fs=8, col='#94A3B8', z=4)
 
-# ── CLASSIFIEUR GELÉ ─────────────────────────────────────────────────────
-CFL_X = 2.10; CFL_Y = 2.72; CFL_W = 3.25; CFL_H = 4.66
-blk(CFL_X, CFL_Y, CFL_W, CFL_H, CLF_L, CLF_B, lw=1.4, rad=0.16, z=2)
-header_strip(CFL_X, CFL_Y + CFL_H - 0.38, CFL_W, 0.38, CLF,
-             "Classifieur (gelé)", fs=9, rad=0.16)
-sub(CFL_X + CFL_W/2, CFL_Y + CFL_H - 0.52,
-    "CNNClassifier  ou  MLPClassifier", fs=7.2, col='#7C3AED')
+for i, by in enumerate(bots):
+    label_num = 3 - i
+    box(DEC_X, by, DEC_W, BH, DEC_L, DEC_B, lw=1.3, rad=0.12, z=3)
+    t(DEC_X+DEC_W/2, by+BH-0.28, f"Décodeur {label_num}", fs=10.5, col='#0F766E', z=4)
+    s(DEC_X+DEC_W/2, by+BH/2, "ConvTranspose2d  ×N  +  Sigmoid", fs=8.5, col='#0E7490', z=4)
+    s(DEC_X+DEC_W/2, by+0.22, f"recon_{label_num}  →  (B, C, H, W)", fs=8, col='#115E59', z=4)
+    arr(CLX+CLW, act_mids[i], DEC_X, by+BH/2, col='#8B5CF6', lw=1.5, hw=0.09, hl=0.12)
+    mid_x = CLX + CLW + (DEC_X - CLX - CLW)/2
+    t(mid_x, act_mids[i]+0.14, f"act_{label_num}", fs=8, col='#8B5CF6', fw='bold', z=5)
 
-# 4 CNN blocks inside classifier
-BLK_H = 0.58; BLK_GAP = 0.12
-# layout bottom-up: pool+fc at bottom, then blocks 3,2,1,0 above
-pool_y = CFL_Y + 0.14
-blk(CFL_X + 0.18, pool_y, CFL_W - 0.36, 0.48, '#EDE9FE', '#8B5CF6', lw=0.9, rad=0.10, z=3)
-t(CFL_X + CFL_W/2, pool_y + 0.32, "Avg Pool  →  FC  →  Logits", fs=7.5, col='#5B21B6', z=4)
-sub(CFL_X + CFL_W/2, pool_y + 0.13, "classification", col='#7C3AED', z=4)
+# ── Cartes d'erreur ───────────────────────────────────────────────────────
+sec(ERR_X-0.12, CLY, ERR_W+0.24, CLH, z=1)
+t(ERR_X+ERR_W/2, CLY+CLH-0.23, "CARTES D'ERREUR", fs=10, col='#64748B', fw='bold', z=4)
+t(ERR_X+ERR_W/2, CLY+CLH-0.46, "| recon − x |²", fs=9, col='#94A3B8', fw='bold', z=4)
 
-clf_blk_bot = pool_y + 0.48 + BLK_GAP  # bottom of block 3
-clf_blk_ys = []  # y of bottom edge for blocks 3,2,1,0
-for i in range(4):
-    by = clf_blk_bot + i * (BLK_H + BLK_GAP)
-    clf_blk_ys.append(by)
-    blk(CFL_X + 0.18, by, CFL_W - 0.36, BLK_H, '#EDE9FE', '#8B5CF6',
-        lw=0.9, rad=0.10, z=3)
-    t(CFL_X + CFL_W/2, by + BLK_H - 0.20, f"Block {3-i}", fs=8, col='#5B21B6', z=4)
-    sub(CFL_X + CFL_W/2, by + 0.20, "Conv 3×3  ·  BN  ·  ReLU", col='#7C3AED', z=4)
+for i, by in enumerate(bots):
+    label_num = 3 - i
+    box(ERR_X, by, ERR_W, BH, ERR_L, ERR_B, lw=1.3, rad=0.12, z=3)
+    t(ERR_X+ERR_W/2, by+BH-0.28, f"Carte {label_num}", fs=10.5, col='#991B1B', z=4)
+    s(ERR_X+ERR_W/2, by+BH/2, "erreur pixel par pixel", fs=8.5, col='#B91C1C', z=4)
+    s(ERR_X+ERR_W/2, by+0.22, "(B, 1, H, W)  →  upsampled  H×W", fs=8, col='#DC2626', z=4)
+    arr(DEC_X+DEC_W, by+BH/2, ERR_X, by+BH/2, col=DEC, lw=1.5, hw=0.08, hl=0.11)
 
-# act mid-y: block 3-i at clf_blk_ys[i]
-act_mids = [by + BLK_H/2 for by in clf_blk_ys]
-# Block 0 is at top (clf_blk_ys[3]), its act_mid is highest y
+# ── Fusion ────────────────────────────────────────────────────────────────
+for i, by in enumerate(bots):
+    arr(ERR_X+ERR_W, by+BH/2, FUX, FUY+FUH/2, col=ERR, lw=1.1, hw=0.07, hl=0.10)
 
-# ── DÉCODEURS ────────────────────────────────────────────────────────────
-DEC_X = 5.65; DEC_W = 2.55
-sec_bg(DEC_X - 0.12, CFL_Y, DEC_W + 0.24, CFL_H, label='', z=1)
-t(DEC_X + DEC_W/2, CFL_Y + CFL_H - 0.18, "DÉCODEURS", fs=8, col='#94A3B8', fw='bold', z=4)
-sub(DEC_X + DEC_W/2, CFL_Y + CFL_H - 0.36, "reconstruction inverse", col='#94A3B8', z=4)
+box(FUX, FUY, FUW, FUH, FUS_L, FUS_B, lw=1.8, rad=0.18, z=3)
+hdr(FUX, FUY+FUH-0.46, FUW, 0.46, FUS, "Fusion", fs=12, rad=0.18, z=4)
+s(FUX+FUW/2, FUY+FUH-0.66, "agrégation multi-échelle", fs=8.5, col='#1E40AF', z=4)
 
-for i in range(4):
-    dy = clf_blk_ys[i]
-    blk(DEC_X, dy, DEC_W, BLK_H, DEC_L, DEC_B, lw=1.1, rad=0.10, z=3)
-    t(DEC_X + DEC_W/2, dy + BLK_H - 0.20, f"Décodeur {3-i}", fs=8, col='#0F766E', z=4)
-    sub(DEC_X + DEC_W/2, dy + 0.20, "ConvTranspose  →  (B, C, H, W)", col='#0E7490', z=4)
-    # Arrow from classifier block to decoder
-    arr(CFL_X + CFL_W, act_mids[i], DEC_X, dy + BLK_H/2,
-        col='#8B5CF6', lw=1.2, hw=0.07, hl=0.10)
-    sub(CFL_X + CFL_W + 0.15, act_mids[i] + 0.10, f"act_{3-i}", fs=6.2, col='#8B5CF6',
-        ha='left', z=5)
-
-# ── CARTES D'ERREUR ───────────────────────────────────────────────────────
-ERR_X = 8.55; ERR_W = 2.45
-sec_bg(ERR_X - 0.12, CFL_Y, ERR_W + 0.24, CFL_H, label='', z=1)
-t(ERR_X + ERR_W/2, CFL_Y + CFL_H - 0.18, "CARTES D'ERREUR", fs=8, col='#94A3B8', fw='bold', z=4)
-sub(ERR_X + ERR_W/2, CFL_Y + CFL_H - 0.36, "|recon − x|²  par couche", col='#94A3B8', z=4)
-
-for i in range(4):
-    dy = clf_blk_ys[i]
-    blk(ERR_X, dy, ERR_W, BLK_H, ERR_L, ERR_B, lw=1.1, rad=0.10, z=3)
-    t(ERR_X + ERR_W/2, dy + BLK_H - 0.20, f"Carte {3-i}", fs=8, col='#991B1B', z=4)
-    sub(ERR_X + ERR_W/2, dy + 0.20, "(B, 1, H, W)  →  upsampled", col='#B91C1C', z=4)
-    arr(DEC_X + DEC_W, dy + BLK_H/2, ERR_X, dy + BLK_H/2,
-        col=DEC, lw=1.2, hw=0.07, hl=0.10)
-
-# ── FUSION ────────────────────────────────────────────────────────────────
-FX = 11.25; FY = 3.78; FW_ = 2.05; FH_ = 2.82
-# arrows from error maps to fusion
-for i in range(4):
-    arr(ERR_X + ERR_W, clf_blk_ys[i] + BLK_H/2, FX, FY + FH_/2,
-        col=ERR, lw=1.0, hw=0.06, hl=0.09)
-
-blk(FX, FY, FW_, FH_, FUS_L, FUS_B, lw=1.4, rad=0.14, z=3)
-header_strip(FX, FY + FH_ - 0.38, FW_, 0.38, FUS, "Fusion", fs=9, rad=0.14, z=4)
-sub(FX + FW_/2, FY + FH_ - 0.52, "multi-échelle", col='#1E40AF', z=4)
-
-fmodes = [("mean", "moyenne"), ("max", "max pixel"), ("weighted", "pondéré")]
-for j, (mode, desc) in enumerate(fmodes):
-    my = FY + FH_ - 0.80 - j * 0.68
-    blk(FX + 0.15, my, FW_ - 0.30, 0.50, '#DBEAFE', '#3B82F6', lw=0.8, rad=0.08, z=4)
-    t(FX + FW_/2, my + 0.33, f'"{mode}"', fs=8, col='#1E40AF', z=5)
-    sub(FX + FW_/2, my + 0.14, desc, col='#3B82F6', z=5)
-
-# ── CARTE FUSIONNÉE + SCORE ────────────────────────────────────────────────
-OX = 13.55; OH = 1.38
-OY = FY + FH_/2 - OH/2 + 0.35
-arr(FX + FW_, FY + FH_/2, OX, OY + OH/2, col=FUS, lw=1.6)
-
-blk(OX, OY, 2.2, OH, OUT_L, OUT_B, lw=1.4, rad=0.14, z=3)
-header_strip(OX, OY + OH - 0.34, 2.2, 0.34, OUT, "Carte d'anomalie", fs=9, rad=0.14, z=4)
-t(OX + 1.1, OY + 0.58, "Heatmap fusionnée", fs=8, col=OUT, fw='semibold', z=4)
-sub(OX + 1.1, OY + 0.32, "(B, 1, H, W)", z=4)
-
-# Score
-SC_Y = OY - 0.82
-blk(OX, SC_Y, 2.2, 0.62, UQ_L, UQ_B, lw=1.4, rad=0.12, z=3)
-t(OX + 1.1, SC_Y + 0.40, "Score d'anomalie", fs=8.5, col='#92400E', z=4)
-sub(OX + 1.1, SC_Y + 0.18, "max pixel par image  (B,)", z=4)
-arr(OX + 1.1, OY, OX + 1.1, SC_Y + 0.62, col=OUT, lw=1.2)
-
-# Arrow: anomaly output → evaluation
-arr(OX + 2.2, OY + OH/2, EVX, BY + BH/2, col=EVL, lw=1.4, cs='arc3,rad=-0.25')
-
-# ════════════════════════════════════════════════════════════════════════════
-#  SECTION D — EXTENSION UQ
-# ════════════════════════════════════════════════════════════════════════════
-sec_bg(0.3, 0.35, FW - 0.6, 2.10, label='④  EXTENSION UQ  (LRADModelUQ)')
-
-UY = 0.52; UH = 1.72
-
-# MC Dropout ──────────────────────────────────────────────────────────────
-UX1 = 0.60; UW1 = 5.50
-blk(UX1, UY, UW1, UH, UQ_L, UQ_B, lw=1.3, rad=0.14)
-header_strip(UX1, UY + UH - 0.36, UW1, 0.36, UQ_C, "MC Dropout", fs=9, rad=0.14)
-t(UX1 + UW1/2, UY + UH - 0.62, "T = 20 passes stochastiques", fs=8.5, col='#92400E', fw='semibold', z=4)
-t(UX1 + UW1/2, UY + 0.85, "Dropout actif à l'inférence", fs=8, col=TXT_D, fw='normal', z=4)
-sub(UX1 + UW1/2, UY + 0.58, "Chaque passe donne une reconstruction différente", z=4)
-sub(UX1 + UW1/2, UY + 0.34, "→  moyenne  +  variance pixel  =  incertitude épistémique", z=4)
-
-# Deep Ensemble ──────────────────────────────────────────────────────────
-UX2 = 6.40; UW2 = 5.50
-blk(UX2, UY, UW2, UH, UQ_L, UQ_B, lw=1.3, rad=0.14)
-header_strip(UX2, UY + UH - 0.36, UW2, 0.36, UQ_C, "Deep Ensemble", fs=9, rad=0.14)
-t(UX2 + UW2/2, UY + UH - 0.62, "M = 5 décodeurs indépendants", fs=8.5, col='#92400E', fw='semibold', z=4)
-t(UX2 + UW2/2, UY + 0.85, "Initialisations et graines différentes", fs=8, col=TXT_D, fw='normal', z=4)
-sub(UX2 + UW2/2, UY + 0.58, "Chaque membre prédit une reconstruction distincte", z=4)
-sub(UX2 + UW2/2, UY + 0.34, "→  désaccord entre membres  =  incertitude", z=4)
-
-# Score combiné ──────────────────────────────────────────────────────────
-UX3 = 12.20; UW3 = 6.70
-blk(UX3, UY, UW3, UH, '#F5F3FF', CLF_B, lw=1.3, rad=0.14)
-header_strip(UX3, UY + UH - 0.36, UW3, 0.36, CLF, "Score Combiné", fs=9, rad=0.14)
-t(UX3 + UW3/2, UY + UH - 0.65,
-  "combiné  =  erreur  ×  ( 1  +  incertitude normalisée )",
-  fs=9.5, col='#5B21B6', fw='bold', style='italic', z=4)
-t(UX3 + UW3/2, UY + 0.82, "Haute erreur + haute incertitude  →  zone très suspecte", fs=8, col=TXT_D, fw='normal', z=4)
-sub(UX3 + UW3/2, UY + 0.55, "Haute erreur + faible incertitude  →  anomalie confirmée", z=4)
-sub(UX3 + UW3/2, UY + 0.30, "3 scores distincts : erreur  ·  incertitude  ·  combiné  →  3 AUROC", z=4)
-
-# Dashed arrows: pipeline → UQ
-darr(DEC_X + DEC_W/2, CFL_Y, UX1 + UW1/2, UY + UH, col=UQ_B)
-darr(DEC_X + DEC_W/2, CFL_Y, UX2 + UW2/2, UY + UH, col=UQ_B)
-
-# ════════════════════════════════════════════════════════════════════════════
-#  LÉGENDE
-# ════════════════════════════════════════════════════════════════════════════
-LX = 16.38; LY = 3.00; LW = 2.62; LH = 4.45
-blk(LX, LY, LW, LH, 'white', SEC_B, lw=1.0, rad=0.16)
-t(LX + LW/2, LY + LH - 0.26, "LÉGENDE", fs=8.5, col='#334155')
-
-legend = [
-    (DATA,  'Données'),
-    (TRN,   'Entraînement'),
-    (CLF,   'Classifieur'),
-    (DEC,   'Décodeur'),
-    (ERR,   'Carte d\'erreur'),
-    (FUS,   'Fusion'),
-    (OUT,   'Sortie'),
-    (UQ_C,  'UQ'),
-    (EVL,   'Évaluation'),
+modes = [
+    ('"mean"',     "moyenne des\n4 cartes"),
+    ('"max"',      "maximum\npixel à pixel"),
+    ('"weighted"', "pondéré\n1 / MSE"),
 ]
-for k, (col, name) in enumerate(legend):
-    ley = LY + LH - 0.60 - k * 0.40
+slot_h = (FUH - 0.75) / 3 - 0.10
+for j, (mode, desc) in enumerate(modes):
+    my = FUY + FUH - 0.82 - j*(slot_h+0.12)
+    box(FUX+0.16, my, FUW-0.32, slot_h, '#DBEAFE', '#3B82F6', lw=0.9, rad=0.10, z=4)
+    t(FUX+FUW/2, my+slot_h-0.26, mode, fs=10, col='#1E40AF', z=5)
+    for k, line in enumerate(desc.split('\n')):
+        s(FUX+FUW/2, my+slot_h/2-0.12 + (0.5-k)*0.22, line, fs=8, col='#3B82F6', z=5)
+
+# ── Carte d'anomalie + Score ──────────────────────────────────────────────
+arr(FUX+FUW, FUY+FUH/2, OTX, OTY+OTH/2, col=FUS, lw=2.0, hw=0.12, hl=0.16)
+
+box(OTX, OTY, OTW, OTH, OUT_L, OUT_B, lw=1.8, rad=0.16, z=3)
+hdr(OTX, OTY+OTH-0.42, OTW, 0.42, OUT, "Carte d'anomalie", fs=10.5, rad=0.16, z=4)
+t(OTX+OTW/2, OTY+0.85, "Heatmap fusionnée", fs=9.5, col=OUT, fw='semibold', z=4)
+s(OTX+OTW/2, OTY+0.52, "(B, 1, H, W)", fs=8.5, z=4)
+s(OTX+OTW/2, OTY+0.28, "pixels chauds  =  zones anormales", fs=8, z=4)
+
+arr(OTX+OTW/2, OTY, OTX+OTW/2, SCY+SCH, col=OUT, lw=1.6)
+
+box(SCX, SCY, SCW, SCH, '#FFFBEB', '#FCD34D', lw=1.8, rad=0.14, z=3)
+t(SCX+SCW/2, SCY+SCH-0.28, "Score d'anomalie", fs=10, col='#92400E', z=4)
+s(SCX+SCW/2, SCY+0.24, "max pixel  →  scalaire par image  (B,)", fs=8.5, z=4)
+
+# ── AUROC (petit badge à droite) ─────────────────────────────────────────
+AUX = 17.35; AUY = SCY+0.03; AUW = 1.65; AUH = SCH-0.06
+box(AUX, AUY, AUW, AUH, '#FFF1F2', '#FDA4AF', lw=1.3, rad=0.12, z=3)
+t(AUX+AUW/2, AUY+AUH-0.26, "AUROC", fs=10, col='#9F1239', z=4)
+s(AUX+AUW/2, AUY+0.22, "évaluation", fs=8, z=4)
+arr(SCX+SCW, SCY+SCH/2, AUX, AUY+AUH/2, col='#F43F5E', lw=1.5)
+
+# ── Légende ────────────────────────────────────────────────────────────────
+LX = 17.18; LY = 4.48; LW = 1.82; LH = 2.68
+box(LX, LY, LW, LH, WT, SEC_B, lw=1.0, rad=0.16)
+t(LX+LW/2, LY+LH-0.26, "LÉGENDE", fs=9.5, col='#334155')
+for k, (col, name) in enumerate([
+    (TRN, 'Entraînement'),
+    (CLF, 'Classifieur'),
+    (DEC, 'Décodeur'),
+    (ERR, "Erreur"),
+    (FUS, 'Fusion'),
+    (OUT, 'Sortie'),
+]):
+    ey = LY + LH - 0.55 - k*0.36
     ax.add_patch(FancyBboxPatch(
-        (LX + 0.22, ley - 0.09), 0.32, 0.28,
-        boxstyle="round,pad=0,rounding_size=0.05",
+        (LX+0.20, ey-0.09), 0.28, 0.26,
+        boxstyle="round,pad=0,rounding_size=0.04",
         facecolor=col, edgecolor='none', zorder=6,
     ))
-    ax.text(LX + 0.70, ley + 0.05, name, ha='left', va='center',
-            fontsize=8, color=TXT_D, zorder=7)
+    ax.text(LX+0.62, ey+0.04, name, ha='left', va='center',
+            fontsize=9, color=DK, zorder=7)
 
-# ════════════════════════════════════════════════════════════════════════════
-#  SAVE
-# ════════════════════════════════════════════════════════════════════════════
-OUT_PATH = '/home/ybahaddo/lrad/docs/architecture_4k.png'
-fig.savefig(OUT_PATH, dpi=DPI, facecolor='#FAFBFC')
-print(f"Saved → {OUT_PATH}  ({int(FW*DPI)} × {int(FH*DPI)} px)")
+# ── Save ────────────────────────────────────────────────────────────────────
+OUT_FILE = '/home/ybahaddo/lrad/docs/architecture_4k.png'
+fig.savefig(OUT_FILE, dpi=DPI, facecolor='#FAFBFC')
+print(f"Saved → {OUT_FILE}  ({int(FW*DPI)} × {int(FH*DPI)} px)")
 plt.close(fig)
