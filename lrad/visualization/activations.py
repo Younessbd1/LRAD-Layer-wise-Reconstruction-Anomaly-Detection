@@ -89,9 +89,7 @@ def plot_feature_maps(
                 ax.imshow(a[ch], cmap=cmap)
                 clean_image_axis(ax)
                 if col == 0:
-                    row_label(ax, label, fontsize=8.5)
-                ax.set_title(f"ch{ch}  ({channel_strength[ch]:.2f})",
-                             fontsize=6.5, color=PALETTE["text_muted"], pad=3)
+                    row_label(ax, label, fontsize=8)
 
             for col in range(len(order), top_k):
                 axes[l_idx, col].axis("off")
@@ -118,22 +116,15 @@ def plot_feature_maps(
             padded[: a.shape[0]] = a
             grid = padded.reshape(side, side)
 
-            label = layer_labels[l_idx] if layer_labels else f"Layer {l_idx}"
             ax = axes[l_idx]
             ax.imshow(grid, cmap=cmap)
             clean_image_axis(ax)
-            ax.set_title(f"{label}  (dim = {a.shape[0]})", fontsize=10)
 
         attach_reference_colorbar(
             fig, axes, cmap=cmap, vmax=1.0,
             label="Activation intensity",
             endpoint_labels=("silent", "firing"),
         )
-
-    fig.suptitle(
-        f"{title}\nSample #{sample_idx}  ·  channels sorted by mean activation (strongest -> weakest)",
-        fontsize=12, fontweight="bold", color=PALETTE["text"], y=1.00,
-    )
 
     if save_path:
         ensure_dir(save_path)
@@ -183,38 +174,44 @@ def plot_activation_stats(
 
     fig, axes = plt.subplots(
         2, 3,
-        figsize=(13, 7),
-        gridspec_kw=dict(hspace=0.38, wspace=0.28),
+        figsize=(10.5, 5.6),
+        gridspec_kw=dict(hspace=0.36, wspace=0.26),
     )
-    fig.suptitle(title, fontsize=14, fontweight="bold", color=PALETTE["text"])
 
     panels = [
-        ("mean",          "Mean activation",         axes[0, 0], PALETTE["normal"],       ""),
-        ("std",           "Std. deviation",          axes[0, 1], PALETTE["accent"],       ""),
-        ("l2_norm",       "Mean L2 norm",            axes[0, 2], PALETTE["neutral"],      ""),
-        ("sparsity",      "Sparsity  (% zeros)",     axes[1, 0], PALETTE["anomaly"],      "%"),
-        ("dead_channels", "Dead channels  (%)",      axes[1, 1], PALETTE["anomaly_2"],    "%"),
-        ("max",           "Max activation",          axes[1, 2], PALETTE["accent_2"],     ""),
+        ("mean",          axes[0, 0], PALETTE["normal"],    ""),
+        ("std",           axes[0, 1], PALETTE["accent"],    ""),
+        ("l2_norm",       axes[0, 2], PALETTE["neutral"],   ""),
+        ("sparsity",      axes[1, 0], PALETTE["anomaly"],   "%"),
+        ("dead_channels", axes[1, 1], PALETTE["anomaly_2"], "%"),
+        ("max",           axes[1, 2], PALETTE["accent_2"],  ""),
     ]
+    ylabels = {
+        "mean": "Mean activation",
+        "std": "Std. deviation",
+        "l2_norm": "Mean L2 norm",
+        "sparsity": "Sparsity (% zeros)",
+        "dead_channels": "Dead channels (%)",
+        "max": "Max activation",
+    }
 
-    for key, title_txt, ax, color, suffix in panels:
+    for key, ax, color, suffix in panels:
         values = stats[key]
         if key in ("sparsity", "dead_channels"):
             values = [v * 100 for v in values]
 
         bars = ax.bar(x, values, color=color, width=0.7,
-                      edgecolor="white", linewidth=0.6, zorder=3)
+                      edgecolor="white", linewidth=0.4, zorder=3)
 
-        # value labels above bars
         vmax = max(values) if max(values) > 0 else 1
         for bar, v in zip(bars, values):
             ax.text(bar.get_x() + bar.get_width() / 2, v + vmax * 0.02,
                     f"{v:.2f}{suffix}", ha="center", va="bottom",
-                    fontsize=8, color=PALETTE["text"])
+                    fontsize=7, color=PALETTE["text"])
 
         ax.set_xticks(x)
         ax.set_xticklabels(labels)
-        ax.set_title(title_txt, fontsize=10.5)
+        ax.set_ylabel(ylabels[key], fontsize=8.5)
         soft_grid(ax, axis="y")
         ax.set_ylim(0 if min(values) >= 0 else None,
                     vmax * 1.18 if max(values) > 0 else 1)
@@ -249,12 +246,11 @@ def plot_per_layer_reconstructions(
 
     fig, axes = plt.subplots(
         n_rows, n,
-        figsize=(n * 1.9, n_rows * 1.9),
-        gridspec_kw=dict(hspace=0.18, wspace=0.06),
+        figsize=(n * 1.55, n_rows * 1.55),
+        gridspec_kw=dict(hspace=0.16, wspace=0.05),
     )
     if n == 1:
         axes = axes[:, np.newaxis]
-    fig.suptitle(title, fontsize=13, fontweight="bold", y=1.02, color=PALETTE["text"])
 
     for col in range(n):
         img = img_to_display(images[col])
@@ -315,14 +311,15 @@ def plot_per_layer_errors(
     rows_per_layer = 2 if has_recons else 1
     n_rows = 1 + n_layers * rows_per_layer
 
+    # Extra top margin so the suptitle and the first row never touch.
     fig, axes = plt.subplots(
         n_rows, n,
-        figsize=(n * 1.9, n_rows * 1.9),
-        gridspec_kw=dict(hspace=0.18, wspace=0.06),
+        figsize=(n * 1.55, n_rows * 1.55),
+        gridspec_kw=dict(hspace=0.18, wspace=0.05,
+                         left=0.07, right=0.92, top=0.99, bottom=0.02),
     )
     if n == 1:
         axes = axes[:, np.newaxis]
-    fig.suptitle(title, fontsize=13, fontweight="bold", y=0.995, color=PALETTE["text"])
 
     for col in range(n):
         img = img_to_display(images[col])
@@ -397,15 +394,13 @@ def plot_activation_distributions(
         figsize=(n_cols * 4.0, n_rows * 3.2),
         constrained_layout=True,
     )
-    suptitle = title + ("  ·  y-axis: log scale" if log_y else "")
-    fig.suptitle(suptitle, fontsize=13, fontweight="bold", color=PALETTE["text"])
     axes_flat = np.atleast_1d(axes).flatten()
 
     for i, act in enumerate(activations):
         a = _to_numpy(act).flatten()
         ax = axes_flat[i]
         ax.hist(a, bins=bins, color=PALETTE["accent_2"],
-                edgecolor="white", linewidth=0.3, zorder=3)
+                edgecolor="white", linewidth=0.25, zorder=3)
 
         sparsity = float((a == 0).mean())
         mean = float(a.mean())
@@ -413,9 +408,9 @@ def plot_activation_distributions(
         amax = float(a.max())
 
         ax.axvline(0, color=PALETTE["text_muted"], linestyle=":",
-                   linewidth=0.8, zorder=2, label="zero")
+                   linewidth=0.55, zorder=2, label="zero")
         ax.axvline(mean, color=PALETTE["anomaly"], linestyle="--",
-                   linewidth=0.9, zorder=4, label=f"mean = {mean:.2f}")
+                   linewidth=0.6, zorder=4, label=f"mean = {mean:.2f}")
 
         stats_txt = (
             f"sparsity  {sparsity * 100:5.1f}%\n"
@@ -426,17 +421,18 @@ def plot_activation_distributions(
         ax.text(
             0.98, 0.97, stats_txt,
             transform=ax.transAxes, ha="right", va="top",
-            fontsize=8, color=PALETTE["text"], family="monospace",
+            fontsize=7.5, color=PALETTE["text"], family="monospace",
             linespacing=1.35,
             bbox=dict(boxstyle="round,pad=0.35", facecolor="white",
-                      edgecolor=PALETTE["grid"], linewidth=0.6, alpha=0.95),
+                      edgecolor=PALETTE["grid"], linewidth=0.5, alpha=0.95),
         )
-        ax.set_title(f"Layer {i}   (n = {a.size:,})", fontsize=10.5)
-        ax.set_xlabel("Activation value")
+        ax.set_xlabel(f"Layer {i} activation value  (n = {a.size:,})")
         ax.set_ylabel("Count")
         if log_y:
             ax.set_yscale("log")
-        ax.legend(loc="upper left", fontsize=7.5, frameon=False)
+        ax.legend(loc="lower left", fontsize=7, frameon=True,
+                  facecolor="white", edgecolor=PALETTE["grid"],
+                  framealpha=0.9)
         soft_grid(ax, axis="y")
 
     for j in range(len(activations), len(axes_flat)):
