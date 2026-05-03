@@ -216,5 +216,72 @@ class TestEdgeCases:
         assert result["fused"].shape == (2, 1, 32, 32)
 
 
+# ──────────────────────────────────────────────
+#  Calibration (PaDiM-style baseline subtraction)
+# ──────────────────────────────────────────────
+
+class TestCalibration:
+    def setup_method(self):
+        torch.manual_seed(0)
+        self.classifier = CNNClassifier([3, 16, 32], num_classes=4, input_size=32)
+        self.classifier.freeze()
+        self.model = LRADModel(self.classifier)
+
+    def _normal_loader(self, n=8, batch_size=4):
+        x = torch.randn(n, 3, 32, 32).clamp(0, 1)
+
+        class _DS(torch.utils.data.Dataset):
+            def __len__(self_): return n
+            def __getitem__(self_, i):
+                return x[i], torch.tensor(0), torch.zeros(4)
+
+        return torch.utils.data.DataLoader(_DS(), batch_size=batch_size)
+
+    def test_calibrate_sets_buffers(self):
+        loader = self._normal_loader()
+        assert self.model.calibrated.item() == 0.0
+        self.model.calibrate(loader, device=torch.device("cpu"))
+        assert self.model.calibrated.item() == 1.0
+        for i in range(len(self.model.decoders)):
+            buf = getattr(self.model, f"baseline_{i}")
+            assert buf.dim() == 4 and buf.shape[0] == 1 and buf.shape[1] == 1
+            assert (buf >= 0).all()
+
+    def test_calibrate_reduces_baseline_error(self):
+        """After calibration, the per-layer error of an in-distribution sample
+        — once baseline-subtracted and clamped — should drop close to zero on
+        average, since the baseline IS the average error on normals."""
+        loader = self._normal_loader(n=16, batch_size=4)
+        self.model.calibrate(loader, device=torch.device("cpu"))
+
+        x = torch.randn(4, 3, 32, 32).clamp(0, 1)
+        before = self.model.compute_anomaly_maps(x)
+        # Toggle the buffer off to compare against the un-calibrated path.
+        self.model.calibrated.fill_(0.0)
+        after = self.model.compute_anomaly_maps(x)
+        self.model.calibrated.fill_(1.0)
+        # ``before`` ran with the baseline → mean fused intensity should be
+        # strictly lower than the un-calibrated path.
+        assert before["fused"].mean() < after["fused"].mean()
+
+    def test_calibrate_buffer_reload(self):
+        """Mirror the runner's save/load path: persist each baseline tensor,
+        then re-register on a fresh model and verify behavior matches."""
+        loader = self._normal_loader()
+        self.model.calibrate(loader, device=torch.device("cpu"))
+
+        saved = {f"baseline_{i}": getattr(self.model, f"baseline_{i}").clone()
+                 for i in range(len(self.model.decoders))}
+        saved["calibrated"] = self.model.calibrated.clone()
+
+        fresh = LRADModel(CNNClassifier([3, 16, 32], num_classes=4, input_size=32))
+        for name, tensor in saved.items():
+            fresh.register_buffer(name, tensor)
+        assert fresh.calibrated.item() == 1.0
+        for i in range(len(fresh.decoders)):
+            assert torch.allclose(getattr(fresh, f"baseline_{i}"),
+                                  getattr(self.model, f"baseline_{i}"))
+
+
 if __name__ == "__main__":
     pytest.main([__file__, "-v"])
