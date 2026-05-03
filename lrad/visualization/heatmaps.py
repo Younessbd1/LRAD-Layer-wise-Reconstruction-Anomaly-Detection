@@ -67,15 +67,15 @@ def plot_heatmap_grid(
     rows_per_layer = 2 if has_recons else 1
     n_rows = 1 + n_layers * rows_per_layer + 2
 
+    # Compact layout — no title, so use the full vertical space for tiles.
     fig, axes = plt.subplots(
         n_rows, n,
-        figsize=(n * 1.9, n_rows * 1.85),
-        gridspec_kw=dict(hspace=0.18, wspace=0.06),
+        figsize=(n * 1.55, n_rows * 1.50),
+        gridspec_kw=dict(hspace=0.18, wspace=0.05,
+                         left=0.07, right=0.92, top=0.99, bottom=0.02),
     )
     if n == 1:
         axes = axes[:, np.newaxis]
-    fig.suptitle(title, fontsize=14, fontweight="bold", y=0.995,
-                 color=PALETTE["text"])
 
     for col in range(n):
         img = images[col]
@@ -141,7 +141,7 @@ def plot_heatmap_grid(
     # Reference colorbar (shared gradient legend)
     attach_reference_colorbar(
         fig, axes, cmap=cmap_heat, vmax=1.0,
-        label="Squared reconstruction error  (absolute scale 0-1)",
+        label="Squared reconstruction error  [0, 1]",
     )
 
     if save_path:
@@ -189,12 +189,11 @@ def plot_score_distributions(
     n_splits = len(anomaly_scores_dict)
     fig, axes = plt.subplots(
         1, n_splits,
-        figsize=(5.6 * n_splits, 4.6),
+        figsize=(4.6 * n_splits, 3.8),
         squeeze=False,
         constrained_layout=True,
     )
     axes = axes[0]
-    fig.suptitle(title, fontsize=14, fontweight="bold", color=PALETTE["text"])
 
     # Shared operating threshold derived from the normal distribution only
     threshold = float(np.percentile(normal_scores, threshold_percentile))
@@ -211,21 +210,23 @@ def plot_score_distributions(
         bins = np.linspace(all_vals.min(), all_vals.max(), 55)
 
         ax.hist(normal_scores, bins=bins, alpha=0.55,
-                color=PALETTE["normal"], edgecolor="white", linewidth=0.3,
+                color=PALETTE["normal"], edgecolor="white", linewidth=0.25,
                 density=True, label=f"Normal  (n = {len(normal_scores)})", zorder=2)
         ax.hist(anomaly_scores, bins=bins, alpha=0.55,
-                color=PALETTE["anomaly"], edgecolor="white", linewidth=0.3,
+                color=PALETTE["anomaly"], edgecolor="white", linewidth=0.25,
                 density=True, label=f"Anomaly  (n = {len(anomaly_scores)})", zorder=2)
 
         grid = np.linspace(all_vals.min(), all_vals.max(), 400)
-        ax.plot(grid, _kde(normal_scores, grid),
-                color=PALETTE["normal"], linewidth=1.8, zorder=3)
-        ax.plot(grid, _kde(anomaly_scores, grid),
-                color=PALETTE["anomaly"], linewidth=1.8, zorder=3)
+        kde_n = _kde(normal_scores, grid)
+        kde_a = _kde(anomaly_scores, grid)
+        ax.plot(grid, kde_n,
+                color=PALETTE["normal"], linewidth=1.0, zorder=3)
+        ax.plot(grid, kde_a,
+                color=PALETTE["anomaly"], linewidth=1.0, zorder=3)
 
         # Operating threshold marker
         ax.axvline(threshold, color=PALETTE["text_muted"], linestyle="--",
-                   linewidth=1.0, zorder=4,
+                   linewidth=0.7, zorder=4,
                    label=f"τ at p{int(threshold_percentile)} normal = {threshold:.3f}")
 
         # Stats: separation, AUROC, detection rate at threshold
@@ -236,11 +237,17 @@ def plot_score_distributions(
         tpr_at_t = float((anomaly_scores >= threshold).mean())
         fpr_at_t = float((normal_scores >= threshold).mean())
 
+        # Reserve headroom so the stats box and legend never sit on top of
+        # bars or KDE peaks. The factor 1.45 leaves room for the annotation
+        # boxes pinned to the upper corners.
+        peak = float(max(kde_n.max(), kde_a.max()))
+        ax.set_ylim(0.0, peak * 1.45 if peak > 0 else 1.0)
+
         stats_txt = (
             f"AUROC = {auroc:.3f}\n"
-            f"separation  Δμ/σ̄ = {sep:.2f}\n"
-            f"TPR @ τ = {tpr_at_t * 100:.1f}%\n"
-            f"FPR @ τ = {fpr_at_t * 100:.1f}%"
+            f"separation = {sep:.2f}\n"
+            f"TPR @ tau = {tpr_at_t * 100:.1f}%\n"
+            f"FPR @ tau = {fpr_at_t * 100:.1f}%"
         )
         ax.text(
             0.02, 0.97, stats_txt,
@@ -248,12 +255,12 @@ def plot_score_distributions(
             color=PALETTE["text"], linespacing=1.35,
             bbox=dict(boxstyle="round,pad=0.35", facecolor="white",
                       edgecolor=PALETTE["grid"], linewidth=0.6, alpha=0.95),
+            zorder=6,
         )
 
-        ax.set_title(name, fontsize=11, color=PALETTE["text"])
         ax.set_xlabel("Anomaly score  (image-level, fused)")
         ax.set_ylabel("Density")
-        ax.legend(loc="upper right", fontsize=8.5, framealpha=0.95,
+        ax.legend(loc="upper right", fontsize=7.5, framealpha=0.95,
                   facecolor="white", edgecolor=PALETTE["grid"])
         soft_grid(ax, axis="y")
 
@@ -276,10 +283,10 @@ def plot_roc_curves(
     operating point (max TPR − FPR) highlighted on each curve.
     """
     apply_style()
-    fig, ax = plt.subplots(1, 1, figsize=(6.8, 6.0), constrained_layout=True)
+    fig, ax = plt.subplots(1, 1, figsize=(5.4, 4.8), constrained_layout=True)
 
     ax.plot([0, 1], [0, 1], color=PALETTE["text_muted"],
-            linestyle="--", linewidth=0.9, alpha=0.6, zorder=1,
+            linestyle="--", linewidth=0.6, alpha=0.6, zorder=1,
             label="Chance  (AUROC = 0.50)")
 
     for i, (name, roc) in enumerate(auroc_results.items()):
@@ -288,26 +295,29 @@ def plot_roc_curves(
         tpr = np.asarray(roc["tpr"])
         ax.plot(fpr, tpr,
                 label=f"{name}  (AUROC = {roc['auroc']:.3f})",
-                color=color, linewidth=2.0, zorder=3)
+                color=color, linewidth=1.1, zorder=3)
         ax.fill_between(fpr, tpr, 0, color=color, alpha=0.06, zorder=2)
 
         j_idx = int(np.argmax(tpr - fpr))
         ax.scatter([fpr[j_idx]], [tpr[j_idx]], color=color,
-                   s=38, edgecolor="white", linewidth=1.0, zorder=5)
+                   s=22, edgecolor="white", linewidth=0.6, zorder=5)
 
     ax.set_xlabel("False positive rate")
     ax.set_ylabel("True positive rate")
-    ax.set_title(title, fontsize=13, fontweight="bold")
     ax.set_xlim(-0.01, 1.01)
     ax.set_ylim(-0.01, 1.01)
     ax.set_aspect("equal", adjustable="box")
-    ax.legend(loc="lower right", fontsize=9, frameon=True,
+    ax.legend(loc="lower right", fontsize=7.5, frameon=True,
               facecolor="white", edgecolor=PALETTE["grid"])
+    # Caption pinned to the upper-left where ROC curves are sparse, so
+    # neither the curves nor the legend (lower-right) overlap with it.
     ax.text(
-        0.02, 0.02,
+        0.02, 0.97,
         "● Youden-J operating point  (max TPR − FPR)",
-        transform=ax.transAxes, ha="left", va="bottom",
-        fontsize=8.5, color=PALETTE["text_muted"],
+        transform=ax.transAxes, ha="left", va="top",
+        fontsize=7.5, color=PALETTE["text"],
+        bbox=dict(boxstyle="round,pad=0.3", facecolor="white",
+                  edgecolor=PALETTE["grid"], linewidth=0.5, alpha=0.92),
     )
     soft_grid(ax, axis="both")
 
@@ -337,27 +347,31 @@ def plot_reconstruction_comparison(
 
     fig, axes = plt.subplots(
         n_rows, 2 * n,
-        figsize=(2 * n * 1.6, n_rows * 1.6),
-        gridspec_kw=dict(wspace=0.05, hspace=0.18),
+        figsize=(2 * n * 1.35, n_rows * 1.35 + 0.35),
+        gridspec_kw=dict(wspace=0.04, hspace=0.18,
+                         left=0.06, right=0.99, top=0.94, bottom=0.04),
     )
     if n_rows == 1:
         axes = axes[np.newaxis, :]
-    fig.suptitle(title, fontsize=13, fontweight="bold", color=PALETTE["text"])
+
+    # Soft column-group separator: a thin label band above each half.
+    fig.text(0.27, 0.965, "Normal samples", ha="center", va="bottom",
+             fontsize=9, color=PALETTE["normal"], fontweight="regular")
+    fig.text(0.78, 0.965, "Anomaly samples", ha="center", va="bottom",
+             fontsize=9, color=PALETTE["anomaly"], fontweight="regular")
 
     for col in range(n):
         for r in range(n_decoders):
-            nr = normal_recons[r][col]
-            if nr.ndim == 3 and nr.shape[0] == 1:
-                nr = nr[0]
+            nr = img_to_display(normal_recons[r][col])
             ax_n = axes[r, col]
-            ax_n.imshow(nr, cmap=IMG_CMAP, vmin=0, vmax=1)
+            n_gray = is_grayscale(normal_recons[r][col])
+            ax_n.imshow(nr, cmap=IMG_CMAP if n_gray else None, vmin=0, vmax=1)
             clean_image_axis(ax_n, frame_color=PALETTE["normal"])
 
-            ar = anomaly_recons[r][col]
-            if ar.ndim == 3 and ar.shape[0] == 1:
-                ar = ar[0]
+            ar = img_to_display(anomaly_recons[r][col])
             ax_a = axes[r, n + col]
-            ax_a.imshow(ar, cmap=IMG_CMAP, vmin=0, vmax=1)
+            a_gray = is_grayscale(anomaly_recons[r][col])
+            ax_a.imshow(ar, cmap=IMG_CMAP if a_gray else None, vmin=0, vmax=1)
             clean_image_axis(ax_a, frame_color=PALETTE["anomaly"])
 
             if col == 0:
