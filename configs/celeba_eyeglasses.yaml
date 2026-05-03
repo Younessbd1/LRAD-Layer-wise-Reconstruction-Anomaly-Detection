@@ -1,0 +1,116 @@
+# ---------------------------------------------------------------------------
+# LRAD configuration for CelebA — one-class anomaly detection on Eyeglasses.
+#
+# Protocol:
+#   normals  = images with Eyeglasses == 0 (~189k faces)
+#   anomaly  = images with Eyeglasses == 1 (~13k faces, ~6.5% of CelebA)
+#
+# Run:
+#   python scripts/run_celeba.py --config configs/celeba_eyeglasses.yaml
+# ---------------------------------------------------------------------------
+
+experiment:
+  name: "celeba_eyeglasses"
+  seed: 42
+  output_dir: "outputs/celeba/run"
+
+# ---- Data --------------------------------------------------------------
+# Splits over the normal pool (Eyeglasses == 0):
+#   train_ratio = 0.80  -> attribute pretext + decoder training
+#   val_ratio   = 0.10  -> early stopping + learning curves
+#   test_normal = 0.10  -> held-out normals for AUROC
+# Every Eyeglasses == 1 image goes to test_anomaly.
+#
+# pretext_attrs are facial attributes used to train the encoder via
+# multi-label classification (BCE loss). They must be present in the
+# eyeglasses-free training set. To localize sunglasses we deliberately
+# weight the pretext task toward the eye region: Bags_Under_Eyes,
+# Narrow_Eyes, Arched_Eyebrows, Bushy_Eyebrows and Heavy_Makeup all
+# require the encoder to encode eye-region pixels richly. At test time
+# sunglasses occlude exactly those pixels, so the activations the
+# decoders receive look out-of-distribution there, and the reconstruction
+# error at the eye region spikes. Male/Young/Smiling are kept as
+# global-shape regularizers so the encoder doesn't collapse to an
+# eye-only feature.
+dataset:
+  anomaly_attr: "Eyeglasses"
+  pretext_attrs:
+    - "Bags_Under_Eyes"
+    - "Narrow_Eyes"
+    - "Arched_Eyebrows"
+    - "Bushy_Eyebrows"
+    - "Heavy_Makeup"
+    - "Male"
+    - "Young"
+    - "Smiling"
+  root: "./data"                  # parent dir of the celeba/ folder
+  download: false                 # set true if not pre-downloaded
+  image_size: 64
+  batch_size: 64
+  num_workers: 4
+  train_ratio: 0.80
+  val_ratio: 0.10
+  pin_memory: true
+
+# ---- Model --------------------------------------------------------------
+# CNNClassifier: each block is Conv3x3 stride-2 + BN + ReLU. The first
+# entry of `channels` is the input channel count (3 for RGB CelebA), the
+# rest are the per-block widths. With image_size=64 and 4 blocks the
+# spatial sizes are 64 -> 32 -> 16 -> 8 -> 4 — four LRAD decoders.
+model:
+  channels: [3, 32, 64, 128, 256]
+  input_size: 64
+
+# ---- Training -----------------------------------------------------------
+# Phase 1: multi-label attribute pretext. The encoder is trained to predict
+#          ``pretext_attrs`` (Male / Young / Smiling) jointly via sigmoid +
+#          BCE. Compared to the rotation pretext, the encoder is forced to
+#          attend to the actual face (eyes, mouth, jaw, hair), which yields
+#          much sharper localization at the sunglasses region.
+# Phase 2: train a decoder per stage to reconstruct the input from that
+#          stage's frozen activations. MSE loss.
+training:
+  classifier:
+    epochs: 40
+    lr: 0.001
+    weight_decay: 0.0001
+    log_every: 5
+    early_stop_patience: 8
+    early_stop_min_delta: 0.0001
+    early_stop_min_epochs: 5
+  decoders:
+    epochs: 60
+    lr: 0.001
+    weight_decay: 0.00001
+    log_every: 5
+
+# ---- Evaluation ---------------------------------------------------------
+# CelebA has no pixel masks, so only image-level metrics are reported:
+# AUROC, PR-AUC, F1 at the best-F1 threshold.
+#
+# smooth_sigma          Gaussian σ (px) applied to each per-layer error
+#                       map before fusion. Sunglasses span tens of pixels;
+#                       smoothing kills single-pixel reconstruction noise.
+# normalize_per_layer   Per-image min-max each decoder map to [0, 1]
+#                       before fusion. Without this, the deepest decoder
+#                       (4×4 → upsampled, blurry) and the shallowest
+#                       decoder (32×32, sharp) live on different scales
+#                       and the deeper layer dominates ``mean`` fusion.
+# score_top_k_pct       Image-level score = mean of the top-k% of fused
+#                       pixels. Replaces the previous single-pixel max,
+#                       which was dominated by per-image edge noise.
+# calibrate             If true, fit a per-pixel reconstruction-error
+#                       baseline on the normal val set and subtract it at
+#                       test time (PaDiM-style background calibration).
+#                       Cancels out regions that are *consistently* hard to
+#                       reconstruct on normals (face edges, hair, lighting
+#                       hotspots) so the heatmap brightens only on what is
+#                       actually anomalous about each test image.
+evaluation:
+  fusion: "mean"                  # mean | max | weighted
+  smooth_sigma: 1.5
+  normalize_per_layer: true
+  score_top_k_pct: 1.0
+  calibrate: true
+  n_display: 10
+  max_eval_batches: null
