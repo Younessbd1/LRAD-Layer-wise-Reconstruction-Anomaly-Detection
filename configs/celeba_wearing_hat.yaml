@@ -1,0 +1,100 @@
+# ---------------------------------------------------------------------------
+# LRAD configuration for CelebA — one-class anomaly detection on Wearing_Hat.
+#
+# Why Wearing_Hat (and not Eyeglasses):
+#   Sunglasses are small dark blobs that shallow decoders happily copy
+#   pixel-for-pixel, so reconstruction error at the eye region is ~0 even on
+#   anomalies. Hats occupy a much larger fraction of the upper-image region
+#   AND occlude features the pretext task forces the encoder to attend to
+#   (hair colour, hair texture, hairline). At test time those features are
+#   missing/scrambled, the decoders cannot reconstruct the masked hair, and
+#   the error spikes over the whole hat region.
+#
+# Protocol:
+#   normals  = images with Wearing_Hat == 0  (~96% of CelebA)
+#   anomaly  = images with Wearing_Hat == 1  (~4%, ~8.6k faces)
+#
+# Run:
+#   python scripts/run_celeba.py --config configs/celeba_wearing_hat.yaml
+# ---------------------------------------------------------------------------
+
+experiment:
+  name: "celeba_wearing_hat"
+  seed: 42
+  output_dir: "outputs/celeba_hat/run"
+
+# ---- Data --------------------------------------------------------------
+# pretext_attrs are chosen so the encoder MUST encode the upper-face /
+# scalp / forehead region to predict them. When a hat is present those
+# regions are occluded, the encoder produces out-of-distribution features
+# there, the decoders fail to reconstruct them, and the error map peaks
+# over the hat. Concretely:
+#
+#   Bald, Receding_Hairline       — top-of-head / hairline geometry
+#   Bangs                         — forehead occlusion by hair
+#   Straight_Hair, Wavy_Hair      — hair texture (needs visible hair)
+#   Black_Hair, Blond_Hair,       — hair colour (needs visible hair)
+#     Brown_Hair, Gray_Hair
+#   Male, Young                   — global-shape regularizers so the encoder
+#                                   doesn't collapse onto hair-only features
+dataset:
+  anomaly_attr: "Wearing_Hat"
+  pretext_attrs:
+    - "Bald"
+    - "Bangs"
+    - "Receding_Hairline"
+    - "Straight_Hair"
+    - "Wavy_Hair"
+    - "Black_Hair"
+    - "Blond_Hair"
+    - "Brown_Hair"
+    - "Gray_Hair"
+    - "Male"
+    - "Young"
+  root: "./data"
+  download: false
+  image_size: 64
+  batch_size: 64
+  num_workers: 4
+  train_ratio: 0.80
+  val_ratio: 0.10
+  pin_memory: true
+
+# ---- Model --------------------------------------------------------------
+# Identical CNN backbone — hat detection doesn't need a different topology.
+model:
+  channels: [3, 32, 64, 128, 256]
+  input_size: 64
+
+# ---- Training -----------------------------------------------------------
+training:
+  classifier:
+    epochs: 40
+    lr: 0.001
+    weight_decay: 0.0001
+    log_every: 5
+    early_stop_patience: 8
+    early_stop_min_delta: 0.0001
+    early_stop_min_epochs: 5
+  decoders:
+    epochs: 60
+    lr: 0.001
+    weight_decay: 0.00001
+    log_every: 5
+
+# ---- Evaluation ---------------------------------------------------------
+# Hats are spatially much larger than sunglasses, so:
+#   - score_top_k_pct goes from 1.0 -> 4.0: a hat covers ~hundreds of
+#     fused pixels, not tens; a 1% top-k under-reports its signal.
+#   - smooth_sigma is bumped from 1.5 -> 2.0 to merge the broader
+#     activation cluster into a single hot region.
+# Calibration (PaDiM-style baseline subtraction) stays on — same purpose
+# as for eyeglasses: cancel out always-bright regions on normals.
+evaluation:
+  fusion: "mean"
+  smooth_sigma: 2.0
+  normalize_per_layer: true
+  score_top_k_pct: 4.0
+  calibrate: true
+  n_display: 10
+  max_eval_batches: null
