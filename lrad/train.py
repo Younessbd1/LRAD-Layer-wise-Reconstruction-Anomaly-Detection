@@ -1,4 +1,14 @@
-"""Training loop: combined cross-entropy (gender) + BCE (attrs) loss."""
+"""Training loops.
+
+Two stages live here:
+
+1. ``train_model`` — supervised training of the multi-head classifier
+   on combined CE(gender) + BCE(attrs) loss. This is the OOD detector.
+2. ``train_decoders`` — pure-visualization stage. Freezes the classifier
+   and trains one ``BlockDecoder`` per conv block to reconstruct the
+   input from that block's activations (MSE loss). The decoders are
+   never used for OOD scoring; they only feed the per-block plots.
+"""
 
 from __future__ import annotations
 
@@ -185,4 +195,103 @@ def train_model(
         logger.info(f"restored best weights (val_loss={best_val:.4f})")
 
     history["best_val_loss"] = best_val
+    return history
+
+
+# ---------------------------------------------------------------------------
+# Decoder training (visualization only)
+# ---------------------------------------------------------------------------
+
+@torch.no_grad()
+def _decoder_eval(
+    model: FacialCNN,
+    decoders: nn.ModuleList,
+    loader: DataLoader,
+    device: torch.device,
+) -> tuple[float, list[float]]:
+    """Return (combined_val_loss, per_block_val_loss)."""
+    model.eval()
+    for d in decoders:
+        d.eval()
+    n = 0
+    total_sum = 0.0
+    per_block_sum = [0.0 for _ in decoders]
+    for img, _, _, _ in loader:
+        img = img.to(device, non_blocking=True)
+        _, acts = model.forward_features(img)
+        bs = img.size(0)
+        n += bs
+        for k, d in enumerate(decoders):
+            mse = F.mse_loss(d(acts[k]), img)
+            per_block_sum[k] += mse.item() * bs
+            total_sum += mse.item() * bs
+    return total_sum / max(n, 1), [s / max(n, 1) for s in per_block_sum]
+
+
+def train_decoders(
+    model: FacialCNN,
+    decoders: nn.ModuleList,
+    train_loader: DataLoader,
+    val_loader: DataLoader,
+    *,
+    epochs: int = 20,
+    lr: float = 1e-3,
+    weight_decay: float = 1e-5,
+    device: torch.device,
+    log_every: int = 1,
+) -> dict:
+    """Train per-block decoders to reconstruct the input from frozen
+    classifier activations. Sum-of-MSE objective across all blocks."""
+    model.eval()
+    for p in model.parameters():
+        p.requires_grad = False
+    decoders.to(device)
+
+    params = [p for d in decoders for p in d.parameters()]
+    optimizer = torch.optim.Adam(params, lr=lr, weight_decay=weight_decay)
+
+    history = {
+        "train_loss": [],
+        "val_loss": [],
+        "val_loss_per_block": [],
+    }
+
+    for epoch in range(1, epochs + 1):
+        t0 = time.time()
+        for d in decoders:
+            d.train()
+
+        n = 0
+        loss_sum = 0.0
+        for img, _, _, _ in train_loader:
+            img = img.to(device, non_blocking=True)
+            with torch.no_grad():
+                _, acts = model.forward_features(img)
+
+            optimizer.zero_grad(set_to_none=True)
+            total = img.new_zeros(())
+            for k, d in enumerate(decoders):
+                total = total + F.mse_loss(d(acts[k]), img)
+            total.backward()
+            optimizer.step()
+
+            bs = img.size(0)
+            n += bs
+            loss_sum += total.item() * bs
+
+        train_loss = loss_sum / max(n, 1)
+        val_loss, per_block = _decoder_eval(model, decoders, val_loader, device)
+
+        history["train_loss"].append(train_loss)
+        history["val_loss"].append(val_loss)
+        history["val_loss_per_block"].append(per_block)
+
+        if epoch == 1 or epoch % log_every == 0 or epoch == epochs:
+            blocks_str = " ".join(f"{v:.4f}" for v in per_block)
+            logger.info(
+                f"[decoders] epoch {epoch:>3}/{epochs}  "
+                f"train={train_loss:.4f}  val={val_loss:.4f}  "
+                f"per_block=[{blocks_str}]  ({time.time() - t0:.1f}s)"
+            )
+
     return history
