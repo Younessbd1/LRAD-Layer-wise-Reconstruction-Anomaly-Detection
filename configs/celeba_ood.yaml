@@ -54,3 +54,19 @@ training:
   early_stop_patience: 6
   early_stop_min_delta: 0.0001
   early_stop_min_epochs: 5
+
+  # --- Per-block decoders (visualization only) ---------------------------
+  # After classifier training, freeze the classifier and train one small
+  # decoder per conv block to reconstruct the input from that block's
+  # activations. These decoders are NEVER used for OOD scoring — they
+  # only feed the per_block_breakdown.png and recons_only.png plots.
+  # Set this section to ~null~ to skip decoder training entirely.
+  decoders:
+    epochs: 20
+    lr: 0.001
+    weight_decay: 0.00001
+    log_every: 1
+
+# ---- Evaluation ---------------------------------------------------------
+evaluation:
+  n_viz_samples: 4   # in-dist + OOD samples to render in per-block plots
