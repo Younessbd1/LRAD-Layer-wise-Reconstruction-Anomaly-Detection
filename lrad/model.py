@@ -41,7 +41,13 @@ def _conv_block(
 
 
 class FacialCNN(nn.Module):
-    """Multi-head CNN: shared conv trunk + (gender, attrs) heads."""
+    """Multi-head CNN: shared conv trunk + (gender, attrs) heads.
+
+    Each conv block exposes its post-activation tensor. ``forward(x)``
+    returns logits as before; ``forward_with_activations(x)`` additionally
+    returns the list of per-block activations, used downstream by
+    per-block reconstruction decoders.
+    """
 
     def __init__(
         self,
@@ -50,13 +56,16 @@ class FacialCNN(nn.Module):
         n_attrs: int = 6,
         n_gender: int = 2,
         dropout: float = 0.3,
+        input_size: int = 64,
     ):
         super().__init__()
         if len(channels) < 2:
             raise ValueError("need at least 2 conv blocks")
         self.channels = list(channels)
+        self.block_out_channels = list(channels)
         self.n_attrs = n_attrs
         self.n_gender = n_gender
+        self.input_size = input_size
 
         blocks: list[nn.Module] = []
         prev = in_channels
@@ -66,13 +75,20 @@ class FacialCNN(nn.Module):
             pool = i < len(channels) - 1
             blocks.append(_conv_block(prev, ch, pool=pool))
             prev = ch
-        self.features = nn.Sequential(*blocks)
+        self.blocks = nn.ModuleList(blocks)
         self.pool = nn.AdaptiveAvgPool2d((1, 1))
         self.dropout = nn.Dropout(dropout)
         self.head_gender = nn.Linear(prev, n_gender)
         self.head_attrs = nn.Linear(prev, n_attrs)
 
         self._init_weights()
+
+        # Probe spatial sizes once so per-block decoders can be built
+        # without another forward pass.
+        with torch.no_grad():
+            dummy = torch.zeros(1, in_channels, input_size, input_size)
+            _, acts = self.forward_features(dummy)
+            self.block_spatial_sizes = [int(a.shape[-1]) for a in acts]
 
     def _init_weights(self) -> None:
         for m in self.modules():
@@ -86,24 +102,45 @@ class FacialCNN(nn.Module):
                 nn.init.kaiming_uniform_(m.weight, nonlinearity="linear")
                 nn.init.zeros_(m.bias)
 
-    def forward(self, x: torch.Tensor) -> dict[str, torch.Tensor]:
-        h = self.features(x)
-        h = self.pool(h).flatten(1)
+    def forward_features(
+        self, x: torch.Tensor,
+    ) -> tuple[torch.Tensor, list[torch.Tensor]]:
+        """Run the conv trunk and return (final_feature_map, [acts_per_block])."""
+        acts: list[torch.Tensor] = []
+        for blk in self.blocks:
+            x = blk(x)
+            acts.append(x)
+        return x, acts
+
+    def _heads(self, feat: torch.Tensor) -> dict[str, torch.Tensor]:
+        h = self.pool(feat).flatten(1)
         h = self.dropout(h)
         return {
             "gender_logits": self.head_gender(h),
             "attr_logits": self.head_attrs(h),
         }
 
+    def forward(self, x: torch.Tensor) -> dict[str, torch.Tensor]:
+        feat, _ = self.forward_features(x)
+        return self._heads(feat)
+
+    def forward_with_activations(
+        self, x: torch.Tensor,
+    ) -> tuple[dict[str, torch.Tensor], list[torch.Tensor]]:
+        feat, acts = self.forward_features(x)
+        return self._heads(feat), acts
+
 
 def build_model(cfg: dict) -> FacialCNN:
     mcfg = cfg.get("model", {})
+    dcfg = cfg.get("dataset", {})
     return FacialCNN(
         in_channels=mcfg.get("in_channels", 3),
         channels=mcfg.get("channels", (32, 64, 128, 256, 256)),
         n_attrs=mcfg.get("n_attrs", 6),
         n_gender=mcfg.get("n_gender", 2),
         dropout=mcfg.get("dropout", 0.3),
+        input_size=mcfg.get("input_size", dcfg.get("image_size", 64)),
     )
 
 
