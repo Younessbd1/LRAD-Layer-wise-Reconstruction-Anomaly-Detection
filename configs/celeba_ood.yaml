@@ -1,0 +1,56 @@
+# ---------------------------------------------------------------------------
+# CelebA OOD configuration.
+#
+# Task:
+#   In-distribution = CelebA images with Eyeglasses == 0
+#   OOD             = CelebA images with Eyeglasses == 1 (sunglasses included)
+#
+# Targets:
+#   gender (Male/Female) — 2-way softmax + CrossEntropyLoss
+#   6 binary attributes  — sigmoid + BCEWithLogitsLoss
+#     [Young, Smiling, Mouth_Slightly_Open, High_Cheekbones,
+#      Pointy_Nose, Oval_Face]
+#
+# Run:
+#   python scripts/run_celeba.py --config configs/celeba_ood.yaml
+# ---------------------------------------------------------------------------
+
+experiment:
+  name: "celeba_ood"
+  seed: 42
+  output_dir: "outputs/celeba_ood/run"
+
+# ---- Data --------------------------------------------------------------
+dataset:
+  root: "./data"          # parent dir of the celeba/ folder
+  download: false         # set true to let torchvision download
+  image_size: 64
+  batch_size: 64
+  num_workers: 4
+  train_ratio: 0.80
+  val_ratio: 0.10
+  pin_memory: true
+  seed: 42
+
+# ---- Model --------------------------------------------------------------
+# 5 conv blocks, no pretrained weights. Each block:
+#   Conv3x3 + BN + ReLU + MaxPool2x2 (last block: no pool)
+model:
+  in_channels: 3
+  channels: [32, 64, 128, 256, 256]
+  n_attrs: 6
+  n_gender: 2
+  dropout: 0.3
+
+# ---- Training -----------------------------------------------------------
+# Combined loss = CrossEntropy(gender) + attr_loss_weight * BCE(attrs).
+# Single .backward() per step.
+training:
+  epochs: 30
+  lr: 0.001
+  weight_decay: 0.0001
+  attr_loss_weight: 1.0
+  log_every: 1
+  early_stop_patience: 6
+  early_stop_min_delta: 0.0001
+  early_stop_min_epochs: 5

@@ -1,11 +1,14 @@
-from setuptools import setup, find_packages
+from setuptools import find_packages, setup
 
 setup(
     name="lrad",
-    version="0.2.0",
-    description="Layer-wise Reconstruction Anomaly Detection (deep CNN backbone)",
+    version="0.3.0",
+    description=(
+        "CelebA multi-task CNN (gender softmax + attribute BCE) with "
+        "confidence-based OOD detection for sunglasses."
+    ),
     author="BAHADDOU Youness",
-    packages=find_packages(exclude=("tests", "scripts", "configs", "docs")),
+    packages=find_packages(exclude=("tests", "scripts", "configs")),
     python_requires=">=3.10",
     install_requires=[
         "torch>=2.0",
