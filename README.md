@@ -1,7 +1,7 @@
-# LRAD - Layer-wise Reconstruction Anomaly Detection
+# CelebA Multi-Task CNN — Confidence-Based OOD Detection
 
-> Train a classifier on normal data. Freeze it. Train decoders on its hidden activations.  
-> At test time, reconstruction error = anomaly heatmap.
+> Train a multi-head CNN from scratch on CelebA faces *without sunglasses*.
+> Use the model's predictive confidence to flag sunglasses as OOD.
 
 ![Python](https://img.shields.io/badge/python-3.10+-blue)
 ![PyTorch](https://img.shields.io/badge/pytorch-2.0+-red)
@@ -11,24 +11,48 @@
 
 ## Concept
 
-LRAD exploits the fact that a classifier's intermediate representations are **tuned to its training distribution**. When an out-of-distribution (OOD) input passes through the frozen classifier, its activations in anomalous spatial regions become unusual - decoders trained to reconstruct normal images from those activations **fail locally**, producing high reconstruction error exactly where the anomaly is.
+A classifier trained only on glasses-free faces never learns features that
+explain occluded eye regions. When a sunglasses face arrives at test time,
+the classifier becomes uncertain on every head → **high predictive
+entropy** = OOD.
 
 ```
-                    TRAINING                              TESTING
-                    ────────                              ───────
-  Normal Image ──► Classifier (freeze) ──► Activations    Test Image ──► Same Classifier ──► Activations
-                                               │                                                  │
-                                               ▼                                                  ▼
-                                     Decoder_k(act_k) ──► Recon      Decoder_k(act_k) ──► Recon
-                                           │                               │
-                                     Loss(Recon, Image) = 0          |Recon - Image|² = HEATMAP
+                  TRAINING (no glasses)                          TESTING
+                  ──────────────────────                         ───────
+   Image (Eyeglasses=0)                                  Image (Eyeglasses=1)
+        │                                                      │
+        ▼                                                      ▼
+   Conv backbone ─┬─► gender head  (softmax, CE)        same model
+                  │                                            │
+                  └─► attrs  head  (sigmoid, BCE × 6)          ▼
+                                                       confused predictions
+                                                       → high entropy = OOD
 ```
 
-### Key innovations over vanilla autoencoders
+In-distribution targets:
 
-1. **Multi-scale heatmaps** - Each decoder level captures anomalies at a different granularity (fine texture vs. structural), then they're fused into one map.
-2. **Classifier bias** - The frozen classifier acts as a learned feature extractor biased toward normal-class semantics, making OOD reconstruction harder than a generic autoencoder would.
-3. **No anomaly labels needed** - Pure one-class learning. Only normal samples required for training.
+| Head    | Attribute(s)                                                                 | Loss                |
+|---------|------------------------------------------------------------------------------|---------------------|
+| gender  | Male / Female                                                                | CrossEntropy        |
+| attrs   | Young, Smiling, Mouth_Slightly_Open, High_Cheekbones, Pointy_Nose, Oval_Face | BCEWithLogitsLoss   |
+
+Combined loss:
+
+```
+loss = CE(gender_logits, gender_target)
+     + BCE(attr_logits,  attr_target)
+loss.backward()
+```
+
+OOD score variants exposed at evaluation:
+* `score_msp`              = 1 − max softmax probability of the gender head
+* `score_entropy_gender`   = entropy of gender softmax
+* `score_entropy_attrs`    = mean Bernoulli entropy across the 6 attribute heads
+* `score_entropy_combined` = `score_entropy_gender + score_entropy_attrs`
+  (default — uses signal from every head)
+
+AUROC is computed by labelling glasses-free test images as 0 and Eyeglasses=1
+images as 1 on each score above.
 
 ---
 
@@ -36,30 +60,20 @@ LRAD exploits the fact that a classifier's intermediate representations are **tu
 
 ```
 lrad/
-├── lrad/                        # Core library
-│   ├── models/
-│   │   ├── classifier.py        # CNN and MLP classifiers
-│   │   ├── decoder.py           # Spatial (CNN) and reshape (MLP) decoders
-│   │   └── lrad_model.py        # Full LRAD pipeline (classifier + decoders)
-│   ├── data/
-│   │   └── datasets.py          # Dataset loading, filtering, OOD splits
-│   ├── engine/
-│   │   ├── trainer.py           # Training loops for classifier & decoders
-│   │   └── evaluator.py         # Anomaly scoring, metrics (AUROC, pixel-AUROC)
-│   ├── visualization/
-│   │   └── heatmaps.py          # Heatmap rendering, multi-scale fusion
-│   └── utils/
-│       └── helpers.py           # Device, seeding, logging utilities
+├── lrad/                       # core library (flat layout)
+│   ├── dataset.py              # CelebA loaders: filters Eyeglasses=1 from train
+│   ├── model.py                # FacialCNN: 5-block conv trunk + 2 heads
+│   ├── train.py                # combined CE + BCE training loop
+│   ├── evaluate.py             # accuracy + OOD AUROC (entropy / MSP)
+│   ├── utils.py                # device, seeding, logging
+│   └── __init__.py
 ├── configs/
-│   ├── mnist_mlp.yaml           # MLP config for MNIST protocol
-│   ├── mnist_cnn.yaml           # CNN config for MNIST protocol
-│   └── cifar10_cnn.yaml         # CNN config for CIFAR-10 protocol
+│   └── celeba_ood.yaml         # single config — used by run_celeba.py
 ├── scripts/
-│   └── run_experiment.py        # Main entry point
-├── tests/
-│   └── test_models.py           # Unit tests
-├── docs/
-│   └── METHODOLOGY.md           # Detailed methodology writeup
+│   ├── run_celeba.py           # CLI orchestrator
+│   └── oar_run_celeba.sh       # Grid'5000 / OAR submission wrapper
+├── tests/__init__.py
+├── data/celeba/...             # standard torchvision CelebA layout
 ├── requirements.txt
 ├── setup.py
 └── README.md
@@ -70,67 +84,52 @@ lrad/
 ## Quick start
 
 ```bash
-# Install
 pip install -e .
 
-# Run MNIST MLP experiment (Protocol 1)
-python scripts/run_experiment.py --config configs/mnist_mlp.yaml
+# Local run
+python scripts/run_celeba.py --config configs/celeba_ood.yaml
 
-# Run MNIST CNN experiment
-python scripts/run_experiment.py --config configs/mnist_cnn.yaml
+# Eval only (load weights from output_dir)
+python scripts/run_celeba.py --config configs/celeba_ood.yaml --eval-only
 
-# Run CIFAR-10 experiment
-python scripts/run_experiment.py --config configs/cifar10_cnn.yaml
-
-# Run the Real-IAD pipeline (deep CNN backbone, 224x224 RGB).
-# Full end-to-end guide: docs/REALIAD_GUIDE.md
-python scripts/prepare_realiad.py --data-root $HOME/Real-IAD/realiad_1024
-python scripts/run_realiad.py --config configs/realiad.yaml
+# Override config keys ad-hoc
+python scripts/run_celeba.py --config configs/celeba_ood.yaml \
+    --override training.epochs=50 dataset.batch_size=128
 ```
 
-Running on Grid'5000 at LORIA (Nancy)? The SLURM batch scripts are in
-`scripts/slurm/`:
+Outputs land in `outputs/celeba_ood/run/`:
+* `weights/model.pt`           — best-val checkpoint
+* `history.json`               — per-epoch training metrics
+* `summary.json`                — final accuracies + OOD AUROC numbers
+* `plots/training_history.png`  — loss + accuracy curves
+* `plots/score_dist_*.png`      — in-dist vs OOD score histograms
+* `plots/roc_ood.png`           — ROC curves for every OOD-score variant
+
+### Grid'5000 / OAR
 
 ```bash
-sbatch scripts/slurm/prepare_realiad.sbatch    # CPU, builds the manifest
-sbatch scripts/slurm/train_realiad.sbatch      # GPU, full train + eval
-sbatch scripts/slurm/ablation_depth.sbatch     # GPU, resnet10/18/34 sweep
+./scripts/oar_run_celeba.sh         # creates log dirs and submits the job
+oarstat -u $USER
+tail -f outputs/celeba_ood/run/logs/oar.<jobid>.stdout
 ```
 
----
+### CelebA download
 
-## Protocols
+If the standard torchvision Google-Drive download fails on a compute node,
+fetch the archive once on the frontend and unpack it under
+`data/celeba/` with the layout:
 
-## Protocol 1 - MNIST + MLP
-Train an MLP classifier on digits `[0,1,2,3]`. Train N decoders (one per hidden layer) to reconstruct 28×28 images from each layer's activations. Test on held-out `[0,1,2,3]` (should reconstruct well) and on `[4,...,9]` + Fashion-MNIST (should reconstruct poorly -> anomaly heatmap).
-
-## Protocol 2 - MNIST + CNN
-Same as Protocol 1, but with spatial convolutions. Decoders use transposed convolutions, preserving spatial structure. Heatmaps are naturally pixel-aligned.
-
-## Protocol 3 - CIFAR-10 + CNN
-Train on one CIFAR-10 class (e.g., "airplane"). Test against other classes. Demonstrates scaling to RGB, 32×32, more complex textures.
-
-## Protocol 4 - Real-IAD + Deep CNN (ResNet-style)
-
-Full industrial anomaly detection pipeline: OK-only train/val/test_normal split (deterministic by part), all NG samples in test_anomaly, per-stage decoders feeding a fused heatmap, image-level AUROC/PR-AUC/F1 and pixel-level AUROC. Uses a ResNet-18-shaped backbone with rotation pretext or category classification for Phase 1, and runs end-to-end on a single Grid'5000 GPU. See [`docs/REALIAD_GUIDE.md`](docs/REALIAD_GUIDE.md).
-
----
-
-## Citation
-
-If you use this work in your research, please cite:
-
-```bibtex
-@misc{lrad2025,
-  title={LRAD: Layer-wise Reconstruction Anomaly Detection},
-  author={Youness},
-  year={2025},
-  note={Research internship project - Uncertainty Quantification for Anomaly Detection}
-}
+```
+data/celeba/img_align_celeba/        (202,599 .jpg files)
+data/celeba/list_attr_celeba.txt
+data/celeba/list_eval_partition.txt
+data/celeba/identity_CelebA.txt
+data/celeba/list_bbox_celeba.txt
+data/celeba/list_landmarks_align_celeba.txt
 ```
 
 ---
 
 ## License
 
-MIT - see [LICENSE](LICENSE).
+MIT — see [LICENSE](LICENSE).

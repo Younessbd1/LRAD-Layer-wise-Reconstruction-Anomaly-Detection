@@ -1,4 +1,4 @@
-"""Utility functions: device selection, seeding, logging."""
+"""Device selection, seeding, and logging helpers."""
 
 from __future__ import annotations
 
@@ -13,16 +13,14 @@ import torch
 
 
 def get_device() -> torch.device:
-    """Select best available device."""
     if torch.cuda.is_available():
         return torch.device("cuda")
-    elif hasattr(torch.backends, "mps") and torch.backends.mps.is_available():
+    if hasattr(torch.backends, "mps") and torch.backends.mps.is_available():
         return torch.device("mps")
     return torch.device("cpu")
 
 
 def seed_everything(seed: int = 42) -> None:
-    """Set all random seeds for reproducibility."""
     random.seed(seed)
     np.random.seed(seed)
     torch.manual_seed(seed)
@@ -33,10 +31,6 @@ def seed_everything(seed: int = 42) -> None:
 
 
 class _FlushingStreamHandler(logging.StreamHandler):
-    """Stream handler that flushes after every record so OAR's `tail -f`
-    on the captured stdout/stderr shows progress live instead of in
-    multi-MB bursts when Python's stdio buffer fills."""
-
     def emit(self, record: logging.LogRecord) -> None:  # type: ignore[override]
         super().emit(record)
         try:
@@ -49,19 +43,11 @@ def setup_logging(
     log_dir: str = "logs",
     level: int = logging.INFO,
     run_tag: Optional[str] = None,
+    name: str = "celeba_ood",
 ) -> logging.Logger:
-    """Configure project-wide logger.
-
-    Writes to both stdout and a file under ``log_dir``. The file name
-    includes a timestamp (and optional ``run_tag``) so successive OAR
-    submissions don't clobber each other's logs.
-
-    Also installs a ``sys.excepthook`` that routes uncaught exceptions to
-    the same logger — so a crash on the GPU node still leaves a trace in
-    the log file even when stderr capture is unreliable.
-    """
+    """Configure a project-wide logger that writes to stdout and a file."""
     Path(log_dir).mkdir(parents=True, exist_ok=True)
-    logger = logging.getLogger("lrad")
+    logger = logging.getLogger(name)
     logger.setLevel(level)
 
     if not logger.handlers:
@@ -72,7 +58,7 @@ def setup_logging(
         logger.addHandler(ch)
 
         suffix = f"_{run_tag}" if run_tag else ""
-        log_path = Path(log_dir) / f"lrad{suffix}.log"
+        log_path = Path(log_dir) / f"{name}{suffix}.log"
         fh = logging.FileHandler(log_path, mode="w")
         fh.setFormatter(logging.Formatter(
             "%(asctime)s | %(levelname)s | %(name)s | %(message)s"
@@ -93,8 +79,3 @@ def setup_logging(
         sys.excepthook = _log_uncaught
 
     return logger
-
-
-def count_parameters(model: torch.nn.Module) -> int:
-    """Count trainable parameters in a model."""
-    return sum(p.numel() for p in model.parameters() if p.requires_grad)
