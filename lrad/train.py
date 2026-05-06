@@ -105,6 +105,9 @@ def train_model(
         "val_gender_acc": [],
         "train_attr_acc": [],
         "val_attr_acc": [],
+        "batch_gender_acc": [],
+        "batch_attr_acc_mean": [],
+        "epoch_ends": [],
     }
 
     best_val = float("inf")
@@ -143,6 +146,15 @@ def train_model(
             ).sum().item()
             attr_pred = (torch.sigmoid(out["attr_logits"]) >= 0.5).float()
             attr_correct += (attr_pred == attrs).float().sum(dim=0)
+
+            history["batch_gender_acc"].append(
+                (out["gender_logits"].argmax(dim=1) == gender).float().mean().item()
+            )
+            history["batch_attr_acc_mean"].append(
+                (attr_pred == attrs).float().mean().item()
+            )
+
+        history["epoch_ends"].append(len(history["batch_gender_acc"]) - 1)
 
         train_metrics = {
             "loss": loss_sum / max(n, 1),
