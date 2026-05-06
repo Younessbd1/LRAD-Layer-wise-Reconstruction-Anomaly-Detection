@@ -48,9 +48,11 @@ if str(_ROOT) not in sys.path:
     sys.path.insert(0, str(_ROOT))
 
 from lrad.dataset import get_celeba_loaders
+from lrad.decoder import build_decoders
 from lrad.evaluate import evaluate
 from lrad.model import build_model, count_parameters
-from lrad.train import train_model
+from lrad.plots import plot_batch_accuracy, plot_per_block_breakdown, plot_recons_only
+from lrad.train import train_decoders, train_model
 from lrad.utils import get_device, seed_everything, setup_logging
 
 logger = logging.getLogger("celeba_ood")
@@ -144,6 +146,18 @@ def _plot_score_distribution(
     ax.legend()
     fig.savefig(save_path)
     plt.close(fig)
+
+
+def _gather_samples(loader, n: int) -> torch.Tensor:
+    """Take the first ``n`` images from a (non-shuffled) loader."""
+    chunks: list[torch.Tensor] = []
+    have = 0
+    for batch in loader:
+        chunks.append(batch[0])
+        have += batch[0].size(0)
+        if have >= n:
+            break
+    return torch.cat(chunks, dim=0)[:n]
 
 
 def _plot_roc(auroc: dict, save_path: Path) -> None:
@@ -287,6 +301,54 @@ def main() -> None:
         with open(output_dir / "history.json", "w") as f:
             json.dump(_to_jsonable(history), f, indent=2)
 
+    # --- Decoders (visualization only) ---
+    image_size = cfg.get("dataset", {}).get("image_size", 64)
+    decoders = build_decoders(model, image_size=image_size).to(device)
+    dec_history: dict | None = None
+    decoders_path = output_dir / "weights" / "decoders.pt"
+    dec_cfg = cfg.get("training", {}).get("decoders")
+
+    if args.eval_only:
+        if decoders_path.exists():
+            decoders.load_state_dict(
+                torch.load(decoders_path, map_location=device),
+            )
+            logger.info(f"Loaded decoder weights from {decoders_path}")
+        else:
+            logger.info(
+                "No decoder weights found; skipping per-block plots."
+            )
+            decoders = None  # type: ignore[assignment]
+    elif dec_cfg:
+        logger.info("=" * 70)
+        logger.info("PHASE 2 — training per-block decoders (visualization)")
+        logger.info("=" * 70)
+        for k, d in enumerate(decoders):
+            logger.info(
+                f"  decoder L{k}: in=(C={model.block_out_channels[k]}, "
+                f"H={model.block_spatial_sizes[k]}) → "
+                f"out=(3, {image_size}, {image_size})  "
+                f"params={sum(p.numel() for p in d.parameters()):,}"
+            )
+        t0 = time.time()
+        dec_history = train_decoders(
+            model,
+            decoders,
+            loaders["train"],
+            loaders["val"],
+            epochs=dec_cfg.get("epochs", 20),
+            lr=dec_cfg.get("lr", 1e-3),
+            weight_decay=dec_cfg.get("weight_decay", 1e-5),
+            device=device,
+            log_every=dec_cfg.get("log_every", 1),
+        )
+        logger.info(f"Decoder training done in {time.time() - t0:.1f}s")
+        torch.save(decoders.state_dict(), decoders_path)
+        with open(output_dir / "decoders_history.json", "w") as f:
+            json.dump(_to_jsonable(dec_history), f, indent=2)
+    else:
+        decoders = None  # type: ignore[assignment]
+
     # --- Evaluate ---
     logger.info("=" * 70)
     logger.info("EVALUATION — per-attribute accuracy + OOD AUROC")
@@ -298,6 +360,7 @@ def main() -> None:
         plot_dir = output_dir / "plots"
         if history is not None:
             _plot_history(history, plot_dir / "training_history.png")
+            plot_batch_accuracy(history, plot_dir / "batch_accuracy.png")
         for key, label in [
             ("score_msp", "1 - max softmax prob (gender)"),
             ("score_entropy_combined", "Combined predictive entropy"),
@@ -309,6 +372,45 @@ def main() -> None:
                 plot_dir / f"score_dist_{key}.png",
             )
         _plot_roc(results["auroc"], plot_dir / "roc_ood.png")
+
+        # --- Per-block reconstruction plots (visualization only) ----------
+        if decoders is not None:
+            n_viz = int(cfg.get("evaluation", {}).get("n_viz_samples", 4))
+            samples_in = _gather_samples(loaders["test_in"], n_viz).to(device)
+            samples_ood = _gather_samples(loaders["test_ood"], n_viz).to(device)
+
+            decoders.eval()
+            with torch.no_grad():
+                _, acts_in = model.forward_features(samples_in)
+                _, acts_ood = model.forward_features(samples_ood)
+                recons_in = [d(acts_in[k]) for k, d in enumerate(decoders)]
+                recons_ood = [d(acts_ood[k]) for k, d in enumerate(decoders)]
+
+            all_images = torch.cat([samples_in, samples_ood], dim=0)
+            all_recons = [
+                torch.cat([ri, ro], dim=0)
+                for ri, ro in zip(recons_in, recons_ood)
+            ]
+            row_labels = (
+                [f"ID  {i+1}" for i in range(samples_in.size(0))]
+                + [f"OOD {i+1}" for i in range(samples_ood.size(0))]
+            )
+
+            plot_per_block_breakdown(
+                all_images, all_recons,
+                plot_dir / "per_block_breakdown.png",
+                row_labels=row_labels,
+                title="Original | Err Lk | Recon Lk  per conv block",
+            )
+            plot_recons_only(
+                all_images, all_recons,
+                plot_dir / "recons_only.png",
+                row_labels=row_labels,
+                title="Per-block reconstructions",
+            )
+            logger.info(
+                "Wrote per-block plots: per_block_breakdown.png, recons_only.png"
+            )
 
     # --- Summary ---
     summary = {
