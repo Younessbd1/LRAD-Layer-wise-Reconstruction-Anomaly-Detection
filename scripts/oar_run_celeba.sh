@@ -19,23 +19,26 @@
 
 #OAR -n celeba-ood
 #OAR -l host=1/gpu=1,walltime=04:00:00
-#OAR -O outputs/celeba_ood/run/logs/oar.%jobid%.stdout
-#OAR -E outputs/celeba_ood/run/logs/oar.%jobid%.stderr
+#OAR -O outputs/celeba_ood/_oar/oar.%jobid%.stdout
+#OAR -E outputs/celeba_ood/_oar/oar.%jobid%.stderr
 
 set -euo pipefail
 
-OUTPUT_DIR="outputs/celeba_ood/run"
-
-# If invoked directly (not through oarsub), bootstrap the log dir and submit.
+# If invoked directly (not through oarsub), bootstrap and submit.
 if [[ -z "${OAR_JOB_ID:-}" ]]; then
     cd "$HOME/lrad"
-    mkdir -p "$OUTPUT_DIR"/logs "$OUTPUT_DIR"/plots "$OUTPUT_DIR"/weights
+    mkdir -p outputs/celeba_ood/_oar
     echo "Submitting via oarsub -S $0"
     exec oarsub -S "$0"
 fi
 
 cd "$HOME/lrad"
+
+# Each OAR run gets its own folder under outputs/celeba_ood/.
+RUN_TS="$(date +%Y%m%d_%H%M%S)"
+OUTPUT_DIR="outputs/celeba_ood/run_${RUN_TS}_${OAR_JOB_ID}"
 mkdir -p "$OUTPUT_DIR"/logs "$OUTPUT_DIR"/plots "$OUTPUT_DIR"/weights
+echo "OUTPUT_DIR=$OUTPUT_DIR"
 
 # --- Environment ---------------------------------------------------------
 PYTHON="$HOME/.conda/envs/lrad/bin/python3"
@@ -62,6 +65,7 @@ DATA_ROOT="$HOME/lrad/data"
 set +e
 "$PYTHON" -u scripts/run_celeba.py \
     --config configs/celeba_ood.yaml \
+    --output-dir "$OUTPUT_DIR" \
     --override dataset.root="$DATA_ROOT" dataset.download=false dataset.num_workers=4
 RC=$?
 set -e
