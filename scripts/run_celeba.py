@@ -51,7 +51,12 @@ from lrad.dataset import get_celeba_loaders
 from lrad.decoder import build_decoders
 from lrad.evaluate import evaluate
 from lrad.model import build_model, count_parameters
-from lrad.plots import plot_batch_accuracy, plot_per_block_breakdown, plot_recons_only
+from lrad.plots import (
+    plot_activations,
+    plot_batch_accuracy,
+    plot_per_block_breakdown,
+    plot_recons_only,
+)
 from lrad.train import train_decoders, train_model
 from lrad.utils import get_device, seed_everything, setup_logging
 
@@ -408,8 +413,20 @@ def main() -> None:
                 row_labels=row_labels,
                 title="Per-block reconstructions",
             )
+
+            all_acts = [
+                torch.cat([ai, ao], dim=0)
+                for ai, ao in zip(acts_in, acts_ood)
+            ]
+            plot_activations(
+                all_images, all_acts,
+                plot_dir / "activations.png",
+                row_labels=row_labels,
+                title="Per-block classifier activations (channel-mean)",
+            )
             logger.info(
-                "Wrote per-block plots: per_block_breakdown.png, recons_only.png"
+                "Wrote per-block plots: per_block_breakdown.png, "
+                "recons_only.png, activations.png"
             )
 
     # --- Summary ---
