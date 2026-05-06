@@ -25,7 +25,7 @@ dataset:
   root: "./data"          # parent dir of the celeba/ folder
   download: false         # set true to let torchvision download
   image_size: 64
-  batch_size: 64
+  batch_size: 256
   num_workers: 4
   train_ratio: 0.80
   val_ratio: 0.10
@@ -46,7 +46,7 @@ model:
 # Combined loss = CrossEntropy(gender) + attr_loss_weight * BCE(attrs).
 # Single .backward() per step.
 training:
-  epochs: 30
+  epochs: 50
   lr: 0.001
   weight_decay: 0.0001
   attr_loss_weight: 1.0
@@ -62,7 +62,7 @@ training:
   # only feed the per_block_breakdown.png and recons_only.png plots.
   # Set this section to ~null~ to skip decoder training entirely.
   decoders:
-    epochs: 20
+    epochs: 120
     lr: 0.001
     weight_decay: 0.00001
     log_every: 1
