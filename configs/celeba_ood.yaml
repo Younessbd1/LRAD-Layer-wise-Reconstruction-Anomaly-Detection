@@ -40,20 +40,20 @@ model:
   channels: [32, 64, 128, 256, 256]
   n_attrs: 6
   n_gender: 2
-  dropout: 0.3
+  dropout: 0.4
 
 # ---- Training -----------------------------------------------------------
 # Combined loss = CrossEntropy(gender) + attr_loss_weight * BCE(attrs).
 # Single .backward() per step.
 training:
-  epochs: 50
-  lr: 0.001
-  weight_decay: 0.0001
-  attr_loss_weight: 1.0
+  epochs: 60
+  lr: 0.0003
+  weight_decay: 0.001
+  attr_loss_weight: 2.0
   log_every: 1
-  early_stop_patience: 6
+  early_stop_patience: 10
   early_stop_min_delta: 0.0001
-  early_stop_min_epochs: 5
+  early_stop_min_epochs: 15
 
   # --- Per-block decoders (visualization only) ---------------------------
   # After classifier training, freeze the classifier and train one small
@@ -62,7 +62,7 @@ training:
   # only feed the per_block_breakdown.png and recons_only.png plots.
   # Set this section to ~null~ to skip decoder training entirely.
   decoders:
-    epochs: 120
+    epochs: 80
     lr: 0.001
     weight_decay: 0.00001
     log_every: 1
