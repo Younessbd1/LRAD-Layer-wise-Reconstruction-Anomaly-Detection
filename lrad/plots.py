@@ -293,6 +293,204 @@ def plot_activations(
     plt.close(fig)
 
 
+def plot_fusion_overlay(
+    images: torch.Tensor,
+    recons: Sequence[torch.Tensor],
+    save_path: str | Path,
+    *,
+    row_labels: Iterable[str] | None = None,
+    title: str | None = None,
+) -> None:
+    """Multi-scale fusion of per-block error maps + overlay on the input.
+
+    For every sample row, draws::
+
+        Original  Err L0  Err L1  ...  Err Ln  Fused (max)  Overlay
+
+    where ``err_map_k = |x − recon_k|`` averaged over RGB, the fused map
+    is the per-pixel max across all blocks, and the overlay renders the
+    fused heatmap on top of the original image. The scalar anomaly score
+    annotated under each fused tile is ``fused.max()`` — the most
+    surprising pixel for that sample.
+
+    Error tiles, the fused tile, and the overlay all share a single
+    global colour scale and a single colour bar on the right.
+    """
+    import matplotlib.patheffects as pe
+
+    images_np = _to_image_grid(images)
+    recons_np = [_to_image_grid(r) for r in recons]
+    n_rows = images_np.shape[0]
+    n_blocks = len(recons_np)
+    H, W = images_np.shape[1], images_np.shape[2]
+    n_cols = 1 + n_blocks + 2  # Original | Err Lk × n | Fused | Overlay
+
+    err_maps: list[list[np.ndarray]] = []
+    fused_maps: list[np.ndarray] = []
+    anomaly_scores: list[float] = []
+    global_max = 0.0
+    for r in range(n_rows):
+        row = []
+        for k in range(n_blocks):
+            err = _abs_error(images_np[r], recons_np[k][r])
+            row.append(err)
+            global_max = max(global_max, float(err.max()))
+        err_maps.append(row)
+        fused = np.maximum.reduce(row)  # per-pixel max across blocks
+        fused_maps.append(fused)
+        anomaly_scores.append(float(fused.max()))
+        global_max = max(global_max, float(fused.max()))
+    vmax = global_max if global_max > 0 else 1.0
+
+    fig, axes = plt.subplots(
+        n_rows, n_cols,
+        figsize=(1.4 * n_cols + 0.6, 1.55 * n_rows + 0.3),
+        layout="constrained",
+    )
+    axes = np.atleast_2d(axes)
+    labels = list(row_labels) if row_labels is not None else [None] * n_rows
+    text_pe = [pe.withStroke(linewidth=1.6, foreground="black")]
+
+    err_im = None
+    for r in range(n_rows):
+        ax = axes[r, 0]
+        ax.imshow(images_np[r])
+        _bare(ax)
+        if r == 0:
+            ax.set_title("Original", fontsize=_LABEL_FS)
+        if labels[r] is not None:
+            _row_label(ax, labels[r])
+
+        for k in range(n_blocks):
+            err = err_maps[r][k]
+            ax_err = axes[r, 1 + k]
+            im = ax_err.imshow(err, cmap="viridis", vmin=0.0, vmax=vmax)
+            err_im = im
+            _bare(ax_err)
+            if r == 0:
+                ax_err.set_title(f"Err L{k}", fontsize=_LABEL_FS)
+            ax_err.text(
+                0.5, 0.04, f"{float(err.mean()):.3f}",
+                transform=ax_err.transAxes,
+                ha="center", va="bottom",
+                fontsize=8.5, color="white",
+                path_effects=text_pe,
+            )
+
+        fused = fused_maps[r]
+        ax_fused = axes[r, 1 + n_blocks]
+        im = ax_fused.imshow(fused, cmap="viridis", vmin=0.0, vmax=vmax)
+        err_im = im
+        _bare(ax_fused)
+        if r == 0:
+            ax_fused.set_title("Fused (max)", fontsize=_LABEL_FS)
+        ax_fused.text(
+            0.5, 0.04, f"score={anomaly_scores[r]:.3f}",
+            transform=ax_fused.transAxes,
+            ha="center", va="bottom",
+            fontsize=8.5, color="white",
+            path_effects=text_pe,
+        )
+
+        ax_ov = axes[r, 2 + n_blocks]
+        ax_ov.imshow(images_np[r] * 0.45)
+        ax_ov.imshow(
+            fused, cmap="viridis", alpha=0.65,
+            extent=(0, W, H, 0),
+            vmin=0.0, vmax=vmax,
+            interpolation="bilinear",
+        )
+        _bare(ax_ov)
+        if r == 0:
+            ax_ov.set_title("Overlay", fontsize=_LABEL_FS)
+
+    if err_im is not None:
+        heat_axes = np.concatenate([
+            axes[:, 1:1 + n_blocks].ravel(),
+            axes[:, 1 + n_blocks:1 + n_blocks + 1].ravel(),
+            axes[:, 2 + n_blocks:3 + n_blocks].ravel(),
+        ]).tolist()
+        cbar = fig.colorbar(
+            err_im, ax=heat_axes,
+            location="right", shrink=0.85, pad=0.015, aspect=30,
+        )
+        cbar.set_label("|x − recon|  (mean over RGB)", fontsize=_LABEL_FS)
+        cbar.ax.tick_params(labelsize=_TICK_FS)
+
+    if title:
+        fig.suptitle(title, fontsize=_TITLE_FS)
+    fig.savefig(save_path, dpi=150, bbox_inches="tight")
+    plt.close(fig)
+
+
+def plot_fusion_auroc(
+    in_scores: np.ndarray,
+    ood_scores: np.ndarray,
+    save_path: str | Path,
+    *,
+    title: str | None = None,
+) -> float:
+    """ROC curve for the per-image fusion-based anomaly score.
+
+    ``in_scores`` and ``ood_scores`` are scalar per-image scores
+    (typically ``fused.max()``). Returns the AUROC value.
+
+    The figure has two panels:
+
+      * left  — score histogram for in-dist vs OOD (density-normalized).
+      * right — ROC curve with AUROC annotated and the ``y = x`` chance
+                line for reference.
+    """
+    from sklearn.metrics import roc_auc_score, roc_curve
+
+    in_scores = np.asarray(in_scores).ravel()
+    ood_scores = np.asarray(ood_scores).ravel()
+    labels = np.concatenate([
+        np.zeros(in_scores.shape[0]),
+        np.ones(ood_scores.shape[0]),
+    ])
+    scores = np.concatenate([in_scores, ood_scores])
+    auroc = float(roc_auc_score(labels, scores))
+    fpr, tpr, _ = roc_curve(labels, scores)
+
+    fig, axes = plt.subplots(1, 2, figsize=(11, 4.4),
+                             constrained_layout=True)
+
+    ax_h = axes[0]
+    bins = 50
+    ax_h.hist(in_scores, bins=bins, alpha=0.55, density=True,
+              color="#377eb8", label=f"normal  (n={in_scores.size})")
+    ax_h.hist(ood_scores, bins=bins, alpha=0.55, density=True,
+              color="#e41a1c", label=f"anomaly (n={ood_scores.size})")
+    ax_h.set_xlabel("Fused anomaly score  (max of per-pixel fused map)",
+                    fontsize=_LABEL_FS)
+    ax_h.set_ylabel("Density", fontsize=_LABEL_FS)
+    ax_h.set_title("Score distribution", fontsize=_LABEL_FS)
+    ax_h.tick_params(labelsize=_TICK_FS)
+    ax_h.grid(alpha=0.3)
+    ax_h.legend(fontsize=9)
+
+    ax_r = axes[1]
+    ax_r.plot(fpr, tpr, color="#1f4e79", linewidth=1.6,
+              label=f"fused (max)  AUROC = {auroc:.3f}")
+    ax_r.plot([0, 1], [0, 1], color="gray", linestyle=":", linewidth=0.7)
+    ax_r.set_xlabel("False Positive Rate", fontsize=_LABEL_FS)
+    ax_r.set_ylabel("True Positive Rate", fontsize=_LABEL_FS)
+    ax_r.set_xlim(0, 1)
+    ax_r.set_ylim(0, 1)
+    ax_r.set_aspect("equal", adjustable="box")
+    ax_r.set_title("ROC — anomaly vs normal", fontsize=_LABEL_FS)
+    ax_r.tick_params(labelsize=_TICK_FS)
+    ax_r.grid(alpha=0.3)
+    ax_r.legend(loc="lower right", fontsize=9)
+
+    if title:
+        fig.suptitle(title, fontsize=_TITLE_FS)
+    fig.savefig(save_path, dpi=150, bbox_inches="tight")
+    plt.close(fig)
+    return auroc
+
+
 def plot_recons_only(
     images: torch.Tensor,
     recons: Sequence[torch.Tensor],
