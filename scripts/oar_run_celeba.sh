@@ -18,7 +18,7 @@
 # ---------------------------------------------------------------------------
 
 #OAR -n celeba-ood
-#OAR -l host=1/gpu=1,walltime=04:00:00
+#OAR -l host=1/gpu=1,walltime=10:00:00
 #OAR -O outputs/celeba_ood/_oar/oar.%jobid%.stdout
 #OAR -E outputs/celeba_ood/_oar/oar.%jobid%.stderr
 
