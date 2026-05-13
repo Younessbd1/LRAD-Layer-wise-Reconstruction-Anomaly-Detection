@@ -54,6 +54,8 @@ from lrad.model import build_model, count_parameters
 from lrad.plots import (
     plot_activations,
     plot_batch_accuracy,
+    plot_fusion_auroc,
+    plot_fusion_overlay,
     plot_per_block_breakdown,
     plot_recons_only,
 )
@@ -151,6 +153,27 @@ def _plot_score_distribution(
     ax.legend()
     fig.savefig(save_path)
     plt.close(fig)
+
+
+@torch.no_grad()
+def _compute_fusion_scores(model, decoders, loader, device) -> np.ndarray:
+    """Per-image fused anomaly score = max of per-pixel max over per-block
+    error maps. Returns shape (N,) over the full loader."""
+    model.eval()
+    decoders.eval()
+    scores: list[np.ndarray] = []
+    for batch in loader:
+        img = batch[0].to(device, non_blocking=True)
+        _, acts = model.forward_features(img)
+        recons = [d(acts[k]) for k, d in enumerate(decoders)]
+        # Per-block pixel error, mean over RGB → (B, H, W)
+        errs = torch.stack(
+            [(img - r).abs().mean(dim=1) for r in recons], dim=0,
+        )  # (n_blocks, B, H, W)
+        fused, _ = errs.max(dim=0)        # (B, H, W) — per-pixel max
+        s = fused.flatten(1).max(dim=1).values  # (B,) — most surprising pixel
+        scores.append(s.cpu().numpy())
+    return np.concatenate(scores) if scores else np.zeros(0)
 
 
 def _gather_samples(loader, n: int) -> torch.Tensor:
@@ -424,9 +447,41 @@ def main() -> None:
                 row_labels=row_labels,
                 title="Per-block classifier activations (channel-mean)",
             )
+
+            plot_fusion_overlay(
+                all_images, all_recons,
+                plot_dir / "fusion_overlay.png",
+                row_labels=row_labels,
+                title="Multi-scale fusion (per-pixel max) + overlay",
+            )
+
+            in_fusion = _compute_fusion_scores(
+                model, decoders, loaders["test_in"], device,
+            )
+            ood_fusion = _compute_fusion_scores(
+                model, decoders, loaders["test_ood"], device,
+            )
+            fusion_auroc = plot_fusion_auroc(
+                in_fusion, ood_fusion,
+                plot_dir / "fusion_auroc.png",
+                title="Fusion-based anomaly detection",
+            )
+            logger.info(
+                f"Fusion-based AUROC (max-pixel) = {fusion_auroc:.4f}  "
+                f"(in_mean={in_fusion.mean():.4f}, "
+                f"ood_mean={ood_fusion.mean():.4f})"
+            )
+            results["fusion"] = {
+                "auroc": fusion_auroc,
+                "in_mean": float(in_fusion.mean()),
+                "ood_mean": float(ood_fusion.mean()),
+                "n_in": int(in_fusion.size),
+                "n_ood": int(ood_fusion.size),
+            }
             logger.info(
                 "Wrote per-block plots: per_block_breakdown.png, "
-                "recons_only.png, activations.png"
+                "recons_only.png, activations.png, "
+                "fusion_overlay.png, fusion_auroc.png"
             )
 
     # --- Summary ---
@@ -451,6 +506,7 @@ def main() -> None:
             if isinstance(v, dict) else v
             for k, v in results["auroc"].items()
         }),
+        "fusion": _to_jsonable(results.get("fusion", {})),
     }
     with open(output_dir / "summary.json", "w") as f:
         json.dump(summary, f, indent=2)
