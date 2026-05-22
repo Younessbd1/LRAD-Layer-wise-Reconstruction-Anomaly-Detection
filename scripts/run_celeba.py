@@ -49,15 +49,19 @@ if str(_ROOT) not in sys.path:
 
 from lrad.dataset import get_celeba_loaders
 from lrad.decoder import build_decoders
-from lrad.evaluate import evaluate
+from lrad.evaluate import evaluate, evaluate_with_debiasing
 from lrad.model import build_model, count_parameters
 from lrad.plots import (
     plot_activations,
+    plot_anomaly_cleaning_comparison,
     plot_batch_accuracy,
+    plot_bias_variance_maps,
     plot_fusion_auroc,
     plot_fusion_overlay,
+    plot_per_block_auroc_bars,
     plot_per_block_breakdown,
     plot_recons_only,
+    plot_score_distribution_comparison,
 )
 from lrad.train import train_decoders, train_model
 from lrad.utils import get_device, seed_everything, setup_logging
@@ -383,6 +387,31 @@ def main() -> None:
     logger.info("=" * 70)
     results = evaluate(model, loaders, device)
 
+    # --- Debiased reconstruction-error OOD score ---
+    # Estimate the per-pixel error bias (mu) and variance (sigma) on the
+    # *clean held-out* test_in split (never on train, to avoid leaking
+    # the training-set bias), then strip them from the raw error so only
+    # the true anomaly survives. Cheap (3 passes), so run it whenever
+    # decoders are available, independent of --no-plots.
+    deb: dict | None = None
+    if decoders is not None:
+        agg = str(cfg.get("evaluation", {}).get("anomaly_agg", "p95"))
+        deb = evaluate_with_debiasing(
+            model, decoders, loaders, device, agg=agg,
+        )
+        results["auroc"].update(deb["auroc"])
+        results["debiasing"] = {
+            "agg": deb["agg"],
+            "blocks": deb["blocks"],
+            "per_block_auroc_raw": deb["per_block_auroc_raw"],
+            "per_block_auroc_debiased": deb["per_block_auroc_debiased"],
+            "aggregated_raw_auroc": deb["auroc"]["score_rawerr_aggregated"]
+            .get("auroc"),
+            "aggregated_debiased_auroc": deb["auroc"][
+                "score_debiased_aggregated"
+            ].get("auroc"),
+        }
+
     # --- Plots ---
     if not args.no_plots:
         plot_dir = output_dir / "plots"
@@ -484,6 +513,51 @@ def main() -> None:
                 "fusion_overlay.png, fusion_auroc.png"
             )
 
+            # --- Debiasing comparison plots --------------------------------
+            if deb is not None:
+                bs = deb["baseline_stats"]
+                plot_bias_variance_maps(
+                    bs, plot_dir / "bias_variance_maps.png",
+                    title="Estimated error bias (μ) & variance (σ) per block",
+                )
+                plot_anomaly_cleaning_comparison(
+                    all_images, all_recons, bs,
+                    plot_dir / "anomaly_cleaning.png",
+                    row_labels=row_labels,
+                    title="Raw vs debiased reconstruction error "
+                          "(ID error vanishes, OOD anomaly survives)",
+                )
+                plot_score_distribution_comparison(
+                    deb["scores_in"]["aggregated_raw"],
+                    deb["scores_ood"]["aggregated_raw"],
+                    deb["scores_in"]["aggregated_debiased"],
+                    deb["scores_ood"]["aggregated_debiased"],
+                    plot_dir / "score_dist_debiased.png",
+                    raw_auroc=deb["auroc"]["score_rawerr_aggregated"]
+                    .get("auroc"),
+                    clean_auroc=deb["auroc"]["score_debiased_aggregated"]
+                    .get("auroc"),
+                    title=f"Aggregated score (agg='{deb['agg']}') — "
+                          "raw vs debiased",
+                )
+                plot_per_block_auroc_bars(
+                    deb["per_block_auroc_raw"],
+                    deb["per_block_auroc_debiased"],
+                    plot_dir / "per_block_auroc.png",
+                    block_labels=[f"Block {k}" for k in deb["blocks"]],
+                    aggregated=(
+                        deb["auroc"]["score_rawerr_aggregated"].get("auroc"),
+                        deb["auroc"]["score_debiased_aggregated"]
+                        .get("auroc"),
+                    ),
+                    title="Per-block OOD AUROC — raw vs debiased",
+                )
+                logger.info(
+                    "Wrote debiasing plots: bias_variance_maps.png, "
+                    "anomaly_cleaning.png, score_dist_debiased.png, "
+                    "per_block_auroc.png"
+                )
+
     # --- Summary ---
     summary = {
         "experiment": exp["name"],
@@ -507,6 +581,7 @@ def main() -> None:
             for k, v in results["auroc"].items()
         }),
         "fusion": _to_jsonable(results.get("fusion", {})),
+        "debiasing": _to_jsonable(results.get("debiasing", {})),
     }
     with open(output_dir / "summary.json", "w") as f:
         json.dump(summary, f, indent=2)
