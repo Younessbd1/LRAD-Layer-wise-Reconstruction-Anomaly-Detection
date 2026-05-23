@@ -55,7 +55,6 @@ class FacialCNN(nn.Module):
         channels: Sequence[int] = (32, 64, 128, 256, 256),
         n_attrs: int = 6,
         n_gender: int = 2,
-        dropout: float = 0.3,
         input_size: int = 64,
     ):
         super().__init__()
@@ -77,7 +76,6 @@ class FacialCNN(nn.Module):
             prev = ch
         self.blocks = nn.ModuleList(blocks)
         self.pool = nn.AdaptiveAvgPool2d((1, 1))
-        self.dropout = nn.Dropout(dropout)
         self.head_gender = nn.Linear(prev, n_gender)
         self.head_attrs = nn.Linear(prev, n_attrs)
 
@@ -114,7 +112,6 @@ class FacialCNN(nn.Module):
 
     def _heads(self, feat: torch.Tensor) -> dict[str, torch.Tensor]:
         h = self.pool(feat).flatten(1)
-        h = self.dropout(h)
         return {
             "gender_logits": self.head_gender(h),
             "attr_logits": self.head_attrs(h),
@@ -139,7 +136,6 @@ def build_model(cfg: dict) -> FacialCNN:
         channels=mcfg.get("channels", (32, 64, 128, 256, 256)),
         n_attrs=mcfg.get("n_attrs", 6),
         n_gender=mcfg.get("n_gender", 2),
-        dropout=mcfg.get("dropout", 0.3),
         input_size=mcfg.get("input_size", dcfg.get("image_size", 64)),
     )
 
