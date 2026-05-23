@@ -881,3 +881,198 @@ def plot_per_block_auroc_bars(
     )
     fig.savefig(save_path, dpi=150, bbox_inches="tight")
     plt.close(fig)
+
+
+# ---------------------------------------------------------------------------
+# Ensemble bias/variance decomposition (see lrad.ensemble)
+# ---------------------------------------------------------------------------
+
+def plot_ensemble_decomposition(
+    images: torch.Tensor,
+    maps: dict,
+    save_path: str | Path,
+    *,
+    row_labels: Iterable[str] | None = None,
+    title: str | None = None,
+) -> None:
+    """Per-block Risk / Bias / Variance maps for each sample image.
+
+    ``maps`` is the ``{k: {'risk','bias','variance', ...}}`` dict produced
+    by ``lrad.ensemble.decomposition_maps``. For every conv block ``k``
+    three tiles are drawn: the Risk map (mean per-model squared error),
+    the Bias map (squared error of the ensemble-mean reconstruction) and
+    the Variance map (model disagreement). All three share one colour
+    scale — because ``Risk = Bias + Variance`` pixel by pixel, the Bias
+    and Variance tiles visibly sum to the Risk tile. Each tile is
+    annotated with its mean value.
+    """
+    import matplotlib.patheffects as pe
+
+    images_np = _to_image_grid(images)
+    n_rows = images_np.shape[0]
+    blocks = sorted(maps.keys())
+    n_blocks = len(blocks)
+    n_cols = 1 + 3 * n_blocks
+
+    term_order = ("risk", "bias", "variance")
+    term_title = {"risk": "Risk", "bias": "Bias", "variance": "Var"}
+
+    np_maps = {
+        k: {t: maps[k][t].detach().cpu().numpy() for t in term_order}
+        for k in blocks
+    }
+    global_max = 0.0
+    for k in blocks:
+        for t in term_order:
+            global_max = max(global_max, float(np_maps[k][t].max()))
+    vmax = global_max if global_max > 0 else 1.0
+
+    fig, axes = plt.subplots(
+        n_rows, n_cols,
+        figsize=(1.4 * n_cols + 0.6, 1.55 * n_rows + 0.3),
+        layout="constrained",
+    )
+    axes = np.atleast_2d(axes)
+    labels = list(row_labels) if row_labels is not None else [None] * n_rows
+    text_pe = [pe.withStroke(linewidth=1.6, foreground="black")]
+    im = None
+
+    for r in range(n_rows):
+        ax = axes[r, 0]
+        ax.imshow(images_np[r])
+        _bare(ax)
+        if r == 0:
+            ax.set_title("Original", fontsize=_LABEL_FS)
+        if labels[r] is not None:
+            _row_label(ax, labels[r])
+
+        for bi, k in enumerate(blocks):
+            for ti, t in enumerate(term_order):
+                ax_m = axes[r, 1 + 3 * bi + ti]
+                mp = np_maps[k][t][r]
+                im = ax_m.imshow(mp, cmap="viridis", vmin=0.0, vmax=vmax)
+                _bare(ax_m)
+                if r == 0:
+                    ax_m.set_title(f"{term_title[t]} L{k}",
+                                   fontsize=_LABEL_FS)
+                ax_m.text(
+                    0.5, 0.04, f"{float(mp.mean()):.4f}",
+                    transform=ax_m.transAxes, ha="center", va="bottom",
+                    fontsize=8.0, color="white", path_effects=text_pe,
+                )
+
+    if im is not None:
+        cbar = fig.colorbar(
+            im, ax=axes[:, 1:].ravel().tolist(),
+            location="right", shrink=0.85, pad=0.015, aspect=30,
+        )
+        cbar.set_label("squared error  (mean over RGB)", fontsize=_LABEL_FS)
+        cbar.ax.tick_params(labelsize=_TICK_FS)
+
+    if title:
+        fig.suptitle(title, fontsize=_TITLE_FS)
+    fig.savefig(save_path, dpi=150, bbox_inches="tight")
+    plt.close(fig)
+
+
+def plot_decomposition_auroc_bars(
+    per_block_auroc: dict,
+    save_path: str | Path,
+    *,
+    block_labels: Sequence[str] | None = None,
+    aggregated: dict | None = None,
+    title: str | None = None,
+) -> None:
+    """Per-block OOD AUROC for the Risk / Bias / Variance scores.
+
+    ``per_block_auroc`` maps each term to its per-block AUROC list (block
+    order). Three horizontal bars per block. ``aggregated`` optionally
+    maps each term to its all-blocks AUROC, appended as a final group.
+    """
+    terms = ("risk", "bias", "variance")
+    colors = {"risk": "#9bbcd6", "bias": "#1f4e79", "variance": "#e08214"}
+    series = {t: list(per_block_auroc[t]) for t in terms}
+    n = len(series["risk"])
+    names = (
+        list(block_labels) if block_labels is not None
+        else [f"Block {k}" for k in range(n)]
+    )
+    if aggregated is not None:
+        for t in terms:
+            series[t] = series[t] + [aggregated[t]]
+        names = names + ["Aggregated"]
+
+    y = np.arange(len(names))[::-1]
+    h = 0.26
+    offsets = {"risk": h, "bias": 0.0, "variance": -h}
+
+    fig, ax = plt.subplots(
+        figsize=(7.8, 0.85 * len(names) + 1.4), constrained_layout=True,
+    )
+    for t in terms:
+        bars = ax.barh(y + offsets[t], series[t], height=h,
+                       color=colors[t], label=t)
+        ax.bar_label(bars, fmt="%.3f", fontsize=7.5, padding=2)
+
+    ax.axvline(0.5, color="gray", linestyle=":", linewidth=0.8)
+    ax.set_yticks(y)
+    ax.set_yticklabels(names, fontsize=_LABEL_FS)
+    ax.set_xlabel("OOD AUROC", fontsize=_LABEL_FS)
+    ax.set_xlim(0.0, 1.05)
+    ax.tick_params(labelsize=_TICK_FS)
+    ax.grid(alpha=0.3, axis="x")
+    ax.legend(loc="lower right", fontsize=9)
+
+    fig.suptitle(
+        title or "Per-block OOD AUROC — Risk / Bias / Variance",
+        fontsize=_TITLE_FS,
+    )
+    fig.savefig(save_path, dpi=150, bbox_inches="tight")
+    plt.close(fig)
+
+
+def plot_ensemble_score_hists(
+    scores_in: dict,
+    scores_ood: dict,
+    save_path: str | Path,
+    *,
+    auroc: dict | None = None,
+    title: str | None = None,
+) -> None:
+    """ID vs OOD histograms for the aggregated Risk / Bias / Variance scores.
+
+    ``scores_in`` / ``scores_ood`` map each term name to a 1-D array of
+    per-image scores. ``auroc`` optionally maps each term to its AUROC,
+    annotated in the panel title.
+    """
+    terms = ("risk", "bias", "variance")
+    label = {
+        "risk": "Risk score", "bias": "Bias score",
+        "variance": "Variance score",
+    }
+    fig, axes = plt.subplots(1, 3, figsize=(15, 4.4),
+                             constrained_layout=True)
+    for ax, t in zip(axes, terms):
+        in_s = np.asarray(scores_in[t]).ravel()
+        ood_s = np.asarray(scores_ood[t]).ravel()
+        bins = 50
+        ax.hist(in_s, bins=bins, alpha=0.55, density=True,
+                color="#377eb8", label=f"in-dist (n={in_s.size})")
+        ax.hist(ood_s, bins=bins, alpha=0.55, density=True,
+                color="#e41a1c", label=f"OOD (n={ood_s.size})")
+        ax.set_xlabel(label[t], fontsize=_LABEL_FS)
+        ax.set_ylabel("Density", fontsize=_LABEL_FS)
+        ttl = label[t]
+        if auroc is not None and t in auroc:
+            ttl += f"\nAUROC = {auroc[t]:.3f}"
+        ax.set_title(ttl, fontsize=_LABEL_FS)
+        ax.tick_params(labelsize=_TICK_FS)
+        ax.grid(alpha=0.3)
+        ax.legend(fontsize=9)
+
+    fig.suptitle(
+        title or "Ensemble decomposition — score distributions",
+        fontsize=_TITLE_FS,
+    )
+    fig.savefig(save_path, dpi=150, bbox_inches="tight")
+    plt.close(fig)
