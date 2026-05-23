@@ -35,12 +35,14 @@ dataset:
 # ---- Model --------------------------------------------------------------
 # 5 conv blocks, no pretrained weights. Each block:
 #   Conv3x3 + BN + ReLU + MaxPool2x2 (last block: no pool)
+# No Dropout: ensemble diversity for the bias/variance decomposition comes
+# from independent weight init + SGD shuffle order (deep ensemble), not
+# from MC-Dropout.
 model:
   in_channels: 3
   channels: [32, 64, 128, 256, 256]
   n_attrs: 6
   n_gender: 2
-  dropout: 0.4
 
 # ---- Training -----------------------------------------------------------
 # Combined loss = CrossEntropy(gender) + attr_loss_weight * BCE(attrs).
@@ -70,3 +72,16 @@ training:
 # ---- Evaluation ---------------------------------------------------------
 evaluation:
   n_viz_samples: 4   # in-dist + OOD samples to render in per-block plots
+
+# ---- Ensemble (bias/variance decomposition) -----------------------------
+# scripts/run_ensemble.py trains `size` independent models (classifier +
+# decoders), each seeded with base_seed + i, then decomposes the per-block
+# reconstruction risk into:
+#   Risk      = E_D[ E[(x - f_hat(x))^2] ]   (per-model error, averaged)
+#   Bias      = E[(x - E_D[f_hat(x)])^2]     (error of the mean recon)
+#   Variance  = E[ E_D[(f_hat(x) - E_D[f_hat(x)])^2] ]   (model spread)
+# with the exact per-pixel identity Risk = Bias + Variance.
+ensemble:
+  size: 5
+  base_seed: 42      # models are seeded 42, 43, 44, 45, 46
+  agg: p95           # pixel -> scalar reduction for the decomposition scores
