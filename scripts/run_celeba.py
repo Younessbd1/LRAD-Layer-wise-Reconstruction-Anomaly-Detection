@@ -234,65 +234,40 @@ def _to_jsonable(obj):
 
 
 # ---------------------------------------------------------------------------
-# Main
+# Single-model pipeline (build -> train -> evaluate -> plot)
 # ---------------------------------------------------------------------------
 
-def main() -> None:
-    ap = argparse.ArgumentParser(description="Run the CelebA OOD experiment.")
-    ap.add_argument("--config", type=Path, required=True)
-    ap.add_argument("--output-dir", type=Path, default=None,
-                    help="Override experiment.output_dir from the config.")
-    ap.add_argument("--eval-only", action="store_true",
-                    help="Load weights from output_dir and skip training.")
-    ap.add_argument("--override", nargs="*", default=[],
-                    help="Dotted overrides, e.g. training.epochs=50.")
-    ap.add_argument("--no-plots", action="store_true")
-    args = ap.parse_args()
+def build_and_run(
+    cfg: dict,
+    loaders: dict,
+    device: torch.device,
+    output_dir: Path,
+    *,
+    seed: int = 42,
+    eval_only: bool = False,
+    no_plots: bool = False,
+) -> tuple:
+    """Build a FacialCNN, train classifier + decoders, evaluate, and write
+    plots/summary into ``output_dir``.
 
-    cfg = load_config(args.config)
-    cfg = apply_overrides(cfg, args.override)
+    The RNGs are seeded with ``seed`` right before model construction, so
+    the weight init and SGD shuffle order are reproducible — and, when
+    this is called repeatedly with different seeds, the runs form an
+    independent deep ensemble (the basis of the bias/variance
+    decomposition in ``scripts/run_ensemble.py``).
 
-    exp = cfg["experiment"]
-    output_dir = Path(args.output_dir or exp["output_dir"])
+    Returns ``(model, decoders, results)``. ``decoders`` is ``None`` when
+    no decoder section is configured, or when ``--eval-only`` finds no
+    decoder weights.
+    """
     (output_dir / "logs").mkdir(parents=True, exist_ok=True)
     (output_dir / "plots").mkdir(parents=True, exist_ok=True)
     (output_dir / "weights").mkdir(parents=True, exist_ok=True)
-
-    seed_everything(exp.get("seed", 42))
-    job_id = os.environ.get("OAR_JOB_ID", "")
-    run_tag = f"{exp['name']}{('_oar' + job_id) if job_id else ''}"
-    setup_logging(str(output_dir / "logs"), run_tag=run_tag)
-    device = get_device()
-
-    logger.info("=" * 70)
-    logger.info(f"Experiment  : {exp['name']}")
-    logger.info(f"Config      : {args.config}")
-    logger.info(f"Output dir  : {output_dir}")
-    logger.info(f"Device      : {device}")
-    if device.type == "cuda":
-        try:
-            logger.info(
-                f"GPU         : {torch.cuda.get_device_name(0)}  "
-                f"(torch {torch.__version__}, cuda {torch.version.cuda})"
-            )
-        except Exception:
-            pass
-    logger.info("=" * 70)
-
     with open(output_dir / "config.resolved.yaml", "w") as f:
         yaml.safe_dump(cfg, f, sort_keys=False)
 
-    # --- Data ---
-    loaders = get_celeba_loaders(cfg)
-    logger.info(
-        f"Dataloaders  train={len(loaders['train'].dataset)}  "
-        f"val={len(loaders['val'].dataset)}  "
-        f"test_in={len(loaders['test_in'].dataset)}  "
-        f"test_ood={len(loaders['test_ood'].dataset)}"
-    )
-    logger.info(f"Targets      : gender={loaders['gender_attr']}, "
-                f"attrs={loaders['attr_targets']}, "
-                f"ood={loaders['ood_attr']}")
+    seed_everything(seed)
+    exp = cfg["experiment"]
 
     # --- Model ---
     model = build_model(cfg).to(device)
@@ -303,7 +278,7 @@ def main() -> None:
     weights_path = output_dir / "weights" / "model.pt"
 
     # --- Train ---
-    if args.eval_only:
+    if eval_only:
         if not weights_path.exists():
             raise FileNotFoundError(f"missing weights at {weights_path}")
         model.load_state_dict(torch.load(weights_path, map_location=device))
@@ -340,7 +315,7 @@ def main() -> None:
     decoders_path = output_dir / "weights" / "decoders.pt"
     dec_cfg = cfg.get("training", {}).get("decoders")
 
-    if args.eval_only:
+    if eval_only:
         if decoders_path.exists():
             decoders.load_state_dict(
                 torch.load(decoders_path, map_location=device),
@@ -413,7 +388,7 @@ def main() -> None:
         }
 
     # --- Plots ---
-    if not args.no_plots:
+    if not no_plots:
         plot_dir = output_dir / "plots"
         if history is not None:
             _plot_history(history, plot_dir / "training_history.png")
@@ -561,7 +536,7 @@ def main() -> None:
     # --- Summary ---
     summary = {
         "experiment": exp["name"],
-        "seed": exp.get("seed", 42),
+        "seed": seed,
         "device": str(device),
         "n_train": len(loaders["train"].dataset),
         "n_val": len(loaders["val"].dataset),
@@ -586,6 +561,71 @@ def main() -> None:
     with open(output_dir / "summary.json", "w") as f:
         json.dump(summary, f, indent=2)
     logger.info(f"Summary written to {output_dir / 'summary.json'}")
+
+    return model, decoders, results
+
+
+# ---------------------------------------------------------------------------
+# Main
+# ---------------------------------------------------------------------------
+
+def main() -> None:
+    ap = argparse.ArgumentParser(description="Run the CelebA OOD experiment.")
+    ap.add_argument("--config", type=Path, required=True)
+    ap.add_argument("--output-dir", type=Path, default=None,
+                    help="Override experiment.output_dir from the config.")
+    ap.add_argument("--eval-only", action="store_true",
+                    help="Load weights from output_dir and skip training.")
+    ap.add_argument("--override", nargs="*", default=[],
+                    help="Dotted overrides, e.g. training.epochs=50.")
+    ap.add_argument("--no-plots", action="store_true")
+    args = ap.parse_args()
+
+    cfg = load_config(args.config)
+    cfg = apply_overrides(cfg, args.override)
+
+    exp = cfg["experiment"]
+    output_dir = Path(args.output_dir or exp["output_dir"])
+    (output_dir / "logs").mkdir(parents=True, exist_ok=True)
+
+    seed = int(exp.get("seed", 42))
+    seed_everything(seed)
+    job_id = os.environ.get("OAR_JOB_ID", "")
+    run_tag = f"{exp['name']}{('_oar' + job_id) if job_id else ''}"
+    setup_logging(str(output_dir / "logs"), run_tag=run_tag)
+    device = get_device()
+
+    logger.info("=" * 70)
+    logger.info(f"Experiment  : {exp['name']}")
+    logger.info(f"Config      : {args.config}")
+    logger.info(f"Output dir  : {output_dir}")
+    logger.info(f"Device      : {device}")
+    if device.type == "cuda":
+        try:
+            logger.info(
+                f"GPU         : {torch.cuda.get_device_name(0)}  "
+                f"(torch {torch.__version__}, cuda {torch.version.cuda})"
+            )
+        except Exception:
+            pass
+    logger.info("=" * 70)
+
+    # --- Data ---
+    loaders = get_celeba_loaders(cfg)
+    logger.info(
+        f"Dataloaders  train={len(loaders['train'].dataset)}  "
+        f"val={len(loaders['val'].dataset)}  "
+        f"test_in={len(loaders['test_in'].dataset)}  "
+        f"test_ood={len(loaders['test_ood'].dataset)}"
+    )
+    logger.info(f"Targets      : gender={loaders['gender_attr']}, "
+                f"attrs={loaders['attr_targets']}, "
+                f"ood={loaders['ood_attr']}")
+
+    build_and_run(
+        cfg, loaders, device, output_dir,
+        seed=seed, eval_only=args.eval_only, no_plots=args.no_plots,
+    )
     logger.info("All done.")
 
 
