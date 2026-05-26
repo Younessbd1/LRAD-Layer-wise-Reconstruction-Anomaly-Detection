@@ -63,16 +63,22 @@ lrad/
 ├── lrad/                       # core library (flat layout)
 │   ├── dataset.py              # CelebA loaders: filters Eyeglasses=1 from train
 │   ├── model.py                # FacialCNN: 5-block conv trunk + 2 heads
+│   ├── decoder.py              # per-block reconstruction decoders
 │   ├── train.py                # combined CE + BCE training loop
 │   ├── evaluate.py             # accuracy + OOD AUROC (entropy / MSP)
+│   ├── anomaly_score.py        # per-pixel error debiasing (single model)
+│   ├── ensemble.py             # deep-ensemble bias/variance decomposition
+│   ├── plots.py                # all figures
 │   ├── utils.py                # device, seeding, logging
 │   └── __init__.py
 ├── configs/
-│   └── celeba_ood.yaml         # single config — used by run_celeba.py
+│   └── celeba_ood.yaml         # single config — used by both runners
 ├── scripts/
-│   ├── run_celeba.py           # CLI orchestrator
-│   └── oar_run_celeba.sh       # Grid'5000 / OAR submission wrapper
-├── tests/__init__.py
+│   ├── run_celeba.py           # single-model CLI orchestrator
+│   ├── run_ensemble.py         # deep-ensemble orchestrator + decomposition
+│   ├── oar_run_celeba.sh       # Grid'5000 / OAR submission wrapper
+│   └── oar_run_ensemble.sh     # OAR wrapper for the ensemble run
+├── tests/                      # pytest: anomaly score + ensemble
 ├── data/celeba/...             # standard torchvision CelebA layout
 ├── requirements.txt
 ├── setup.py
@@ -105,10 +111,48 @@ Outputs land in `outputs/celeba_ood/run/`:
 * `plots/score_dist_*.png`      — in-dist vs OOD score histograms
 * `plots/roc_ood.png`           — ROC curves for every OOD-score variant
 
+### Deep ensemble — bias/variance decomposition
+
+`run_ensemble.py` trains several independent models (no Dropout — the
+ensemble diversity comes from the random init + SGD shuffle order) and
+decomposes the per-block reconstruction risk:
+
+```
+Risk      = E_D[ E[(x - f_hat(x))^2] ]     per-model error, averaged
+Bias      = E[(x - E_D[f_hat(x)])^2]       error of the ensemble-mean recon
+Variance  = E[ E_D[(f_hat(x) - E_D[f_hat(x)])^2] ]   model disagreement
+```
+
+with the exact per-pixel identity `Risk = Bias + Variance`. The Bias term
+is what survives ensembling; the Variance term is a new epistemic-
+uncertainty OOD score.
+
+```bash
+# Train 5 models + decompose (size / base_seed come from the cfg ensemble: block)
+python scripts/run_ensemble.py --config configs/celeba_ood.yaml
+
+# Custom size / output dir
+python scripts/run_ensemble.py --config configs/celeba_ood.yaml \
+    --output-dir outputs/celeba_ood/ensemble_run --ensemble-size 5
+
+# Re-run the decomposition on already-trained models
+python scripts/run_ensemble.py --config configs/celeba_ood.yaml \
+    --output-dir outputs/celeba_ood/ensemble_run --eval-only
+```
+
+Outputs land under the ensemble dir:
+* `model_<i>/`                       — full per-model results (plots + summary), one per model
+* `ensemble/summary.json`            — per-model + decomposition AUROC, identity residual
+* `ensemble/plots/ensemble_decomposition.png` — per-block Risk | Bias | Variance maps
+* `ensemble/plots/decomposition_auroc.png`    — per-block OOD AUROC for the three terms
+* `ensemble/plots/ensemble_score_hists.png`   — ID vs OOD score distributions
+* `ensemble/plots/mean_recon_breakdown.png`   — results on the ensemble-mean recon (Bias view)
+
 ### Grid'5000 / OAR
 
 ```bash
-./scripts/oar_run_celeba.sh         # creates log dirs and submits the job
+./scripts/oar_run_celeba.sh           # single-model run
+./scripts/oar_run_ensemble.sh         # deep-ensemble run (trains 5 models, ~5-6h)
 oarstat -u $USER
 tail -f outputs/celeba_ood/run/logs/oar.<jobid>.stdout
 ```
