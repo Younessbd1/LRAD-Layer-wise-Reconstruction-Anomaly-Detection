@@ -1,0 +1,37 @@
+2026-05-28 11:13:00,059 | INFO | celeba_ood | ======================================================================
+2026-05-28 11:13:00,059 | INFO | celeba_ood | Ensemble experiment : celeba_ood
+2026-05-28 11:13:00,060 | INFO | celeba_ood | Config              : configs/celeba_ood.yaml
+2026-05-28 11:13:00,060 | INFO | celeba_ood | Output dir          : outputs/celeba_ood/ensemble_20260527_194912_6458836
+2026-05-28 11:13:00,061 | INFO | celeba_ood | Device              : cpu
+2026-05-28 11:13:00,061 | INFO | celeba_ood | Ensemble size       : 10   seeds = [42, 43, 44, 45, 46, 47, 48, 49, 50, 51]
+2026-05-28 11:13:00,061 | INFO | celeba_ood | Decomposition agg   : p95
+2026-05-28 11:13:00,062 | INFO | celeba_ood | ======================================================================
+2026-05-28 11:13:10,513 | INFO | celeba_ood | Train pos rates: Male=39.0%  Young=79.9%  Smiling=48.7%  Mouth_Slightly_Open=48.4%  High_Cheekbones=46.7%  Pointy_Nose=28.9%  Oval_Face=29.1%
+2026-05-28 11:13:10,631 | INFO | celeba_ood | Dataloaders  train=170465  val=0  test_in=18941  test_ood=13193
+2026-05-28 11:13:10,631 | INFO | celeba_ood | ######################################################################
+2026-05-28 11:13:10,631 | INFO | celeba_ood | # MODEL 1/10   (seed=42)
+2026-05-28 11:13:10,633 | INFO | celeba_ood | ######################################################################
+2026-05-28 11:13:11,798 | INFO | celeba_ood | Model        : FacialCNN  (1,571,624 params)
+2026-05-28 11:13:11,901 | INFO | celeba_ood | Loaded weights from outputs/celeba_ood/ensemble_20260527_194912_6458836/model_0/weights/model.pt
+2026-05-28 11:13:12,116 | INFO | celeba_ood | Loaded decoder weights from outputs/celeba_ood/ensemble_20260527_194912_6458836/model_0/weights/decoders.pt
+2026-05-28 11:13:12,117 | INFO | celeba_ood | ======================================================================
+2026-05-28 11:13:12,118 | INFO | celeba_ood | EVALUATION — per-attribute accuracy + OOD AUROC
+2026-05-28 11:13:12,118 | INFO | celeba_ood | ======================================================================
+2026-05-28 11:13:12,124 | INFO | celeba_ood | Collecting predictions on test_in...
+2026-05-28 11:18:31,868 | INFO | celeba_ood |   test_in size = 18941, OOD score (combined entropy) mean = 0.2388
+2026-05-28 11:18:31,869 | INFO | celeba_ood | Collecting predictions on test_ood (Eyeglasses)...
+2026-05-28 11:22:07,396 | INFO | celeba_ood |   test_ood size = 13193, OOD score (combined entropy) mean = 0.3124
+2026-05-28 11:22:07,462 | INFO | celeba_ood | Per-attribute accuracy (in-distribution test set):
+2026-05-28 11:22:07,462 | INFO | celeba_ood |   Male/Female : 97.32%
+2026-05-28 11:22:07,463 | INFO | celeba_ood |   Young                 : 87.16%
+2026-05-28 11:22:07,463 | INFO | celeba_ood |   Smiling               : 91.66%
+2026-05-28 11:22:07,464 | INFO | celeba_ood |   Mouth_Slightly_Open   : 91.93%
+2026-05-28 11:22:07,464 | INFO | celeba_ood |   High_Cheekbones       : 85.37%
+2026-05-28 11:22:07,464 | INFO | celeba_ood |   Pointy_Nose           : 73.44%
+2026-05-28 11:22:07,465 | INFO | celeba_ood |   Oval_Face             : 68.64%
+2026-05-28 11:22:07,465 | INFO | celeba_ood | OOD AUROC (in-dist vs Eyeglasses):
+2026-05-28 11:22:07,465 | INFO | celeba_ood |   score_msp                AUROC = 0.6984  (in_mean=0.011, ood_mean=0.037)
+2026-05-28 11:22:07,466 | INFO | celeba_ood |   score_entropy_gender     AUROC = 0.6984  (in_mean=0.031, ood_mean=0.094)
+2026-05-28 11:22:07,466 | INFO | celeba_ood |   score_entropy_attrs      AUROC = 0.5310  (in_mean=0.208, ood_mean=0.218)
+2026-05-28 11:22:07,466 | INFO | celeba_ood |   score_entropy_combined   AUROC = 0.6083  (in_mean=0.239, ood_mean=0.312)
+2026-05-28 11:22:07,467 | INFO | celeba_ood | Estimating reconstruction-error bias/variance on test_in (clean reference, no training leakage)...
