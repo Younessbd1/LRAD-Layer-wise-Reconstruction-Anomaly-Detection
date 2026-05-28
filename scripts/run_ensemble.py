@@ -60,11 +60,15 @@ from lrad.ensemble import (  # noqa: E402
     sample_decomposition,
 )
 from lrad.plots import (  # noqa: E402
+    plot_bias_variance_vs_block,
+    plot_bias_variance_vs_percentile,
     plot_decomposition_auroc_bars,
     plot_ensemble_decomposition,
     plot_ensemble_score_hists,
+    plot_mean_abs_bias,
     plot_per_block_breakdown,
     plot_recons_only,
+    plot_variance_heatmaps,
 )
 from lrad.utils import get_device, seed_everything, setup_logging  # noqa: E402
 
@@ -161,9 +165,11 @@ def main() -> None:
 
     # --- Data (built once; identical split for every model) --------------
     loaders = get_celeba_loaders(cfg)
+    n_val = (len(loaders['val'].dataset)
+             if loaders.get('val') is not None else 0)
     logger.info(
         f"Dataloaders  train={len(loaders['train'].dataset)}  "
-        f"val={len(loaders['val'].dataset)}  "
+        f"val={n_val}  "
         f"test_in={len(loaders['test_in'].dataset)}  "
         f"test_ood={len(loaders['test_ood'].dataset)}"
     )
@@ -232,9 +238,21 @@ def main() -> None:
     # --- Plots ------------------------------------------------------------
     if not args.no_plots:
         plot_dir = ens_dir / "plots"
-        n_viz = int(cfg.get("evaluation", {}).get("n_viz_samples", 4))
-        samples_in = _gather_samples(loaders["test_in"], n_viz)
-        samples_ood = _gather_samples(loaders["test_ood"], n_viz)
+        ecfg_v = cfg.get("evaluation", {})
+        n_viz_in = int(ecfg_v.get(
+            "n_viz_in_samples", ecfg_v.get("n_viz_samples", 4),
+        ))
+        n_viz_ood = int(ecfg_v.get(
+            "n_viz_ood_samples", ecfg_v.get("n_viz_samples", 4),
+        ))
+        viz_seed = ecfg_v.get("viz_seed")
+        samples_in = _gather_samples(
+            loaders["test_in"], n_viz_in, seed=viz_seed,
+        )
+        samples_ood = _gather_samples(
+            loaders["test_ood"], n_viz_ood,
+            seed=(viz_seed + 1) if viz_seed is not None else None,
+        )
         all_images = torch.cat([samples_in, samples_ood], dim=0)
         row_labels = (
             [f"ID  {i + 1}" for i in range(samples_in.size(0))]
@@ -245,7 +263,8 @@ def main() -> None:
         residual = identity_residual(maps)
         logger.info(
             f"Risk = Bias + Variance identity — max abs residual on "
-            f"{all_images.size(0)} samples: {residual:.2e}"
+            f"{all_images.size(0)} samples ({n_viz_in} ID + {n_viz_ood} "
+            f"OOD): {residual:.2e}"
         )
 
         plot_ensemble_decomposition(
@@ -280,10 +299,51 @@ def main() -> None:
             row_labels=row_labels,
             title="Per-block ensemble-mean reconstructions  E_D[f_hat]",
         )
+
+        # --- New plots requested by the user ---------------------------
+        # |x − f̂| per block (L1 bias-only view).
+        plot_mean_abs_bias(
+            all_images, mean_recons, plot_dir / "mean_abs_bias.png",
+            row_labels=row_labels,
+            title="Ensemble bias  |x − f̂|  per conv block  "
+                  f"({size}-model ensemble)",
+        )
+        # Variance heatmaps on OOD (and ID for reference), overlaid.
+        plot_variance_heatmaps(
+            samples_ood,
+            {k: {"variance": maps[k]["variance"]
+                 [n_viz_in:]} for k in blocks},
+            plot_dir / "variance_heatmaps_ood.png",
+            row_labels=[f"OOD {i + 1}" for i in range(samples_ood.size(0))],
+            title="Ensemble variance heatmap — OOD samples",
+        )
+        plot_variance_heatmaps(
+            all_images, maps,
+            plot_dir / "variance_heatmaps_all.png",
+            row_labels=row_labels,
+            title="Ensemble variance heatmap — ID + OOD samples",
+        )
+
+        # Bias/Variance evolution curves (full test loaders).
+        plot_bias_variance_vs_block(
+            deb["scores_in"]["per_block"],
+            deb["scores_ood"]["per_block"],
+            plot_dir / "bias_variance_vs_block.png",
+            blocks=blocks,
+        )
+        plot_bias_variance_vs_percentile(
+            {t: deb["scores_in"]["aggregated"][t] for t in TERMS},
+            {t: deb["scores_ood"]["aggregated"][t] for t in TERMS},
+            plot_dir / "bias_variance_vs_percentile.png",
+        )
+
         logger.info(
             "Wrote ensemble plots: ensemble_decomposition.png, "
             "decomposition_auroc.png, ensemble_score_hists.png, "
-            "mean_recon_breakdown.png, mean_recons_only.png"
+            "mean_recon_breakdown.png, mean_recons_only.png, "
+            "mean_abs_bias.png, variance_heatmaps_ood.png, "
+            "variance_heatmaps_all.png, bias_variance_vs_block.png, "
+            "bias_variance_vs_percentile.png"
         )
     else:
         residual = None
