@@ -1,0 +1,171 @@
+{
+  "experiment": "celeba_ood",
+  "seed": 50,
+  "device": "cuda",
+  "n_train": 170465,
+  "n_val": 0,
+  "n_test_in": 18941,
+  "n_test_ood": 13193,
+  "gender_attr": "Male",
+  "attr_targets": [
+    "Young",
+    "Smiling",
+    "Mouth_Slightly_Open",
+    "High_Cheekbones",
+    "Pointy_Nose",
+    "Oval_Face"
+  ],
+  "ood_attr": "Eyeglasses",
+  "model": {
+    "channels": [
+      32,
+      64,
+      128,
+      256,
+      256,
+      256
+    ],
+    "parameters": 0
+  },
+  "accuracy": {
+    "gender": 0.9763476057230347,
+    "attrs": {
+      "Young": 0.8695422628161132,
+      "Smiling": 0.9141016841771817,
+      "Mouth_Slightly_Open": 0.9175333931682593,
+      "High_Cheekbones": 0.8475793252732168,
+      "Pointy_Nose": 0.7422522570086056,
+      "Oval_Face": 0.6724037801594425
+    }
+  },
+  "auroc": {
+    "n_in": 18941,
+    "n_ood": 13193,
+    "score_msp": {
+      "auroc": 0.5839957181242188,
+      "in_mean": 0.009204825386404991,
+      "ood_mean": 0.030173348262906075
+    },
+    "score_entropy_gender": {
+      "auroc": 0.5839956921126294,
+      "in_mean": 0.025707364082336426,
+      "ood_mean": 0.07469797134399414
+    },
+    "score_entropy_attrs": {
+      "auroc": 0.5345888549951654,
+      "in_mean": 0.20140844583511353,
+      "ood_mean": 0.2128041833639145
+    },
+    "score_entropy_combined": {
+      "auroc": 0.5892784318267436,
+      "in_mean": 0.22711582481861115,
+      "ood_mean": 0.28750213980674744
+    },
+    "score_rawerr_per_block_0": {
+      "auroc": 0.5748295121394746,
+      "in_mean": 0.03600523529732503,
+      "ood_mean": 0.037782956834834215
+    },
+    "score_debiased_per_block_0": {
+      "auroc": 0.6016937194333061,
+      "in_mean": 1.719890000649789,
+      "ood_mean": 1.9319009037542532
+    },
+    "score_rawerr_per_block_1": {
+      "auroc": 0.5911914981896355,
+      "in_mean": 0.07946774906350834,
+      "ood_mean": 0.08482573161370821
+    },
+    "score_debiased_per_block_1": {
+      "auroc": 0.5895492965099615,
+      "in_mean": 1.8314410498148725,
+      "ood_mean": 2.0408067078144883
+    },
+    "score_rawerr_per_block_2": {
+      "auroc": 0.6167971387315676,
+      "in_mean": 0.13202526975893356,
+      "ood_mean": 0.1437526031513125
+    },
+    "score_debiased_per_block_2": {
+      "auroc": 0.6146396134504937,
+      "in_mean": 1.855929287978421,
+      "ood_mean": 2.1314140210663512
+    },
+    "score_rawerr_per_block_3": {
+      "auroc": 0.6429346802609208,
+      "in_mean": 0.19622195781584773,
+      "ood_mean": 0.22097267836156123
+    },
+    "score_debiased_per_block_3": {
+      "auroc": 0.6558870791763528,
+      "in_mean": 1.8737232391488452,
+      "ood_mean": 2.3055279361117846
+    },
+    "score_rawerr_per_block_4": {
+      "auroc": 0.5714340933174094,
+      "in_mean": 0.38197679344113694,
+      "ood_mean": 0.40549419076775417
+    },
+    "score_debiased_per_block_4": {
+      "auroc": 0.6259027897361614,
+      "in_mean": 1.795268310959231,
+      "ood_mean": 2.1239313434670803
+    },
+    "score_rawerr_per_block_5": {
+      "auroc": 0.5436858981645554,
+      "in_mean": 0.41515157915890566,
+      "ood_mean": 0.42982890884364644
+    },
+    "score_debiased_per_block_5": {
+      "auroc": 0.5979651061571181,
+      "in_mean": 1.734177292641206,
+      "ood_mean": 1.964747227353946
+    },
+    "score_rawerr_aggregated": {
+      "auroc": 0.59382867717946,
+      "in_mean": 0.20680810255626647,
+      "ood_mean": 0.22044285066312289
+    },
+    "score_debiased_aggregated": {
+      "auroc": 0.637772562289583,
+      "in_mean": 1.801738251463821,
+      "ood_mean": 2.083054752805664
+    }
+  },
+  "fusion": {
+    "auroc": 0.5529910320483471,
+    "in_mean": 0.6432306170463562,
+    "ood_mean": 0.6612479090690613,
+    "n_in": 18941,
+    "n_ood": 13193
+  },
+  "debiasing": {
+    "agg": "p95",
+    "blocks": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "per_block_auroc_raw": [
+      0.5748295121394746,
+      0.5911914981896355,
+      0.6167971387315676,
+      0.6429346802609208,
+      0.5714340933174094,
+      0.5436858981645554
+    ],
+    "per_block_auroc_debiased": [
+      0.6016937194333061,
+      0.5895492965099615,
+      0.6146396134504937,
+      0.6558870791763528,
+      0.6259027897361614,
+      0.5979651061571181
+    ],
+    "aggregated_raw_auroc": 0.59382867717946,
+    "aggregated_debiased_auroc": 0.637772562289583
+  }
+}

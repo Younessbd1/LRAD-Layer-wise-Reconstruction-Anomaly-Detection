@@ -1,0 +1,124 @@
+{
+  "experiment": "celeba_ood",
+  "ensemble_size": 10,
+  "seeds": [
+    42,
+    43,
+    44,
+    45,
+    46,
+    47,
+    48,
+    49,
+    50,
+    51
+  ],
+  "agg": "p95",
+  "device": "cuda",
+  "identity_max_residual": 1.371372491121292e-07,
+  "per_model": [
+    {
+      "seed": 42,
+      "gender_acc": 0.9732326698695951,
+      "auroc_msp": 0.6983983039675361,
+      "auroc_entropy_gender": 0.6983984140165682,
+      "auroc_entropy_combined": 0.6083429819989437
+    },
+    {
+      "seed": 43,
+      "gender_acc": 0.972018372841983,
+      "auroc_msp": 0.4824671462720872,
+      "auroc_entropy_gender": 0.4824666600554544,
+      "auroc_entropy_combined": 0.5410210328391394
+    },
+    {
+      "seed": 44,
+      "gender_acc": 0.975080513172483,
+      "auroc_msp": 0.5804152488532961,
+      "auroc_entropy_gender": 0.5804134860678906,
+      "auroc_entropy_combined": 0.6144666643933872
+    },
+    {
+      "seed": 45,
+      "gender_acc": 0.9764004012459744,
+      "auroc_msp": 0.6579279544842646,
+      "auroc_entropy_gender": 0.6579283346536483,
+      "auroc_entropy_combined": 0.6398658029287634
+    },
+    {
+      "seed": 46,
+      "gender_acc": 0.9761892191542157,
+      "auroc_msp": 0.6868512311923554,
+      "auroc_entropy_gender": 0.6868506349266903,
+      "auroc_entropy_combined": 0.5986689697621396
+    },
+    {
+      "seed": 47,
+      "gender_acc": 0.9756084684018795,
+      "auroc_msp": 0.5984199948318574,
+      "auroc_entropy_gender": 0.5984194325813478,
+      "auroc_entropy_combined": 0.5766797365032396
+    },
+    {
+      "seed": 48,
+      "gender_acc": 0.9748693310807244,
+      "auroc_msp": 0.6321174586694753,
+      "auroc_entropy_gender": 0.6321171985535812,
+      "auroc_entropy_combined": 0.5616496978995997
+    },
+    {
+      "seed": 49,
+      "gender_acc": 0.9736550340531123,
+      "auroc_msp": 0.6874278981251538,
+      "auroc_entropy_gender": 0.6874279001260454,
+      "auroc_entropy_combined": 0.6015871879684249
+    },
+    {
+      "seed": 50,
+      "gender_acc": 0.9763476057230347,
+      "auroc_msp": 0.5839957181242188,
+      "auroc_entropy_gender": 0.5839956921126294,
+      "auroc_entropy_combined": 0.5892784318267436
+    },
+    {
+      "seed": 51,
+      "gender_acc": 0.9757668549706985,
+      "auroc_msp": 0.663936967788124,
+      "auroc_entropy_gender": 0.6639378581848385,
+      "auroc_entropy_combined": 0.5871141035145927
+    }
+  ],
+  "decomposition_auroc": {
+    "aggregated": {
+      "risk": 0.5909554770308801,
+      "bias": 0.5933824183497308,
+      "variance": 0.5753492597119662
+    },
+    "per_block": {
+      "risk": [
+        0.5751054190692555,
+        0.6027410060497634,
+        0.63210796443934,
+        0.6416788307196695,
+        0.5885966300513261,
+        0.5587631357976284
+      ],
+      "bias": [
+        0.5587046977606779,
+        0.5922348170382616,
+        0.6212054948658265,
+        0.6427235541941241,
+        0.5938318886103066,
+        0.5659777162395151
+      ],
+      "variance": [
+        0.5853883506088371,
+        0.6078894459268538,
+        0.64317179190554,
+        0.622684147676629,
+        0.5552758600488931,
+        0.484265271423152
+      ]
+    }
+  }
+}

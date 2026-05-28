@@ -1,0 +1,1306 @@
+2026-05-27 19:49:54,219 | INFO | celeba_ood | ======================================================================
+2026-05-27 19:49:54,220 | INFO | celeba_ood | Ensemble experiment : celeba_ood
+2026-05-27 19:49:54,220 | INFO | celeba_ood | Config              : configs/celeba_ood.yaml
+2026-05-27 19:49:54,220 | INFO | celeba_ood | Output dir          : outputs/celeba_ood/ensemble_20260527_194912_6458836
+2026-05-27 19:49:54,220 | INFO | celeba_ood | Device              : cuda
+2026-05-27 19:49:54,220 | INFO | celeba_ood | Ensemble size       : 10   seeds = [42, 43, 44, 45, 46, 47, 48, 49, 50, 51]
+2026-05-27 19:49:54,220 | INFO | celeba_ood | Decomposition agg   : p95
+2026-05-27 19:49:54,239 | INFO | celeba_ood | GPU                 : Tesla V100-PCIE-16GB  (torch 2.5.1+cu121, cuda 12.1)
+2026-05-27 19:49:54,239 | INFO | celeba_ood | ======================================================================
+2026-05-27 19:50:07,122 | INFO | celeba_ood | Train pos rates: Male=39.0%  Young=79.9%  Smiling=48.7%  Mouth_Slightly_Open=48.4%  High_Cheekbones=46.7%  Pointy_Nose=28.9%  Oval_Face=29.1%
+2026-05-27 19:50:07,159 | INFO | celeba_ood | Dataloaders  train=170465  val=0  test_in=18941  test_ood=13193
+2026-05-27 19:50:07,160 | INFO | celeba_ood | ######################################################################
+2026-05-27 19:50:07,160 | INFO | celeba_ood | # MODEL 1/10   (seed=42)
+2026-05-27 19:50:07,160 | INFO | celeba_ood | ######################################################################
+2026-05-27 19:50:08,031 | INFO | celeba_ood | Model        : FacialCNN  (1,571,624 params)
+2026-05-27 19:50:08,031 | INFO | celeba_ood | ======================================================================
+2026-05-27 19:50:08,032 | INFO | celeba_ood | TRAINING — combined CE(gender) + BCE(attrs) loss
+2026-05-27 19:50:08,032 | INFO | celeba_ood | ======================================================================
+2026-05-27 19:56:29,584 | INFO | celeba_ood | epoch   1/25  train_loss=0.9299  train_gender_acc=95.1%  train_attr_acc=[84.9 87.8 84.6 83.3 72.9 73.2]%  (381.6s)
+2026-05-27 19:57:24,626 | INFO | celeba_ood | epoch   2/25  train_loss=0.7463  train_gender_acc=97.6%  train_attr_acc=[87.3 91.9 91.5 87.0 74.8 74.8]%  (55.0s)
+2026-05-27 19:58:19,355 | INFO | celeba_ood | epoch   3/25  train_loss=0.7048  train_gender_acc=98.1%  train_attr_acc=[88.2 92.3 92.5 87.5 75.6 75.2]%  (54.7s)
+2026-05-27 19:59:13,497 | INFO | celeba_ood | epoch   4/25  train_loss=0.6779  train_gender_acc=98.5%  train_attr_acc=[88.6 92.7 93.0 87.8 76.0 75.6]%  (54.1s)
+2026-05-27 20:00:07,832 | INFO | celeba_ood | epoch   5/25  train_loss=0.6551  train_gender_acc=98.8%  train_attr_acc=[89.1 92.9 93.3 88.1 76.5 76.0]%  (54.3s)
+2026-05-27 20:01:02,993 | INFO | celeba_ood | epoch   6/25  train_loss=0.6361  train_gender_acc=99.0%  train_attr_acc=[89.5 93.3 93.6 88.4 76.8 76.4]%  (55.2s)
+2026-05-27 20:01:58,311 | INFO | celeba_ood | epoch   7/25  train_loss=0.6194  train_gender_acc=99.2%  train_attr_acc=[89.9 93.4 93.9 88.7 77.1 76.6]%  (55.3s)
+2026-05-27 20:02:53,713 | INFO | celeba_ood | epoch   8/25  train_loss=0.6018  train_gender_acc=99.3%  train_attr_acc=[90.3 93.7 94.1 89.0 77.5 77.0]%  (55.4s)
+2026-05-27 20:03:49,413 | INFO | celeba_ood | epoch   9/25  train_loss=0.5868  train_gender_acc=99.4%  train_attr_acc=[90.7 94.0 94.3 89.3 77.9 77.5]%  (55.7s)
+2026-05-27 20:04:43,772 | INFO | celeba_ood | epoch  10/25  train_loss=0.5703  train_gender_acc=99.5%  train_attr_acc=[91.2 94.2 94.6 89.5 78.2 78.0]%  (54.4s)
+2026-05-27 20:05:39,103 | INFO | celeba_ood | epoch  11/25  train_loss=0.5548  train_gender_acc=99.6%  train_attr_acc=[91.5 94.4 94.8 89.8 78.7 78.4]%  (55.3s)
+2026-05-27 20:06:34,779 | INFO | celeba_ood | epoch  12/25  train_loss=0.5382  train_gender_acc=99.6%  train_attr_acc=[92.0 94.6 95.0 90.2 79.3 78.9]%  (55.7s)
+2026-05-27 20:07:30,084 | INFO | celeba_ood | epoch  13/25  train_loss=0.5207  train_gender_acc=99.6%  train_attr_acc=[92.4 94.8 95.3 90.5 79.7 79.6]%  (55.3s)
+2026-05-27 20:08:25,090 | INFO | celeba_ood | epoch  14/25  train_loss=0.5036  train_gender_acc=99.7%  train_attr_acc=[92.8 95.1 95.5 90.9 80.4 80.2]%  (55.0s)
+2026-05-27 20:09:19,875 | INFO | celeba_ood | epoch  15/25  train_loss=0.4864  train_gender_acc=99.7%  train_attr_acc=[93.3 95.2 95.7 91.2 81.0 80.9]%  (54.8s)
+2026-05-27 20:10:15,324 | INFO | celeba_ood | epoch  16/25  train_loss=0.4673  train_gender_acc=99.7%  train_attr_acc=[93.7 95.5 96.0 91.5 81.8 81.6]%  (55.4s)
+2026-05-27 20:11:10,459 | INFO | celeba_ood | epoch  17/25  train_loss=0.4516  train_gender_acc=99.7%  train_attr_acc=[94.0 95.6 96.1 91.9 82.5 82.5]%  (55.1s)
+2026-05-27 20:12:05,314 | INFO | celeba_ood | epoch  18/25  train_loss=0.4347  train_gender_acc=99.7%  train_attr_acc=[94.3 95.8 96.2 92.2 83.1 83.2]%  (54.9s)
+2026-05-27 20:13:00,960 | INFO | celeba_ood | epoch  19/25  train_loss=0.4159  train_gender_acc=99.8%  train_attr_acc=[94.6 96.0 96.5 92.6 83.9 83.9]%  (55.6s)
+2026-05-27 20:13:55,450 | INFO | celeba_ood | epoch  20/25  train_loss=0.4017  train_gender_acc=99.8%  train_attr_acc=[94.9 96.1 96.6 92.8 84.5 84.6]%  (54.5s)
+2026-05-27 20:14:49,617 | INFO | celeba_ood | epoch  21/25  train_loss=0.3851  train_gender_acc=99.8%  train_attr_acc=[95.2 96.3 96.8 93.1 85.3 85.4]%  (54.2s)
+2026-05-27 20:15:44,735 | INFO | celeba_ood | epoch  22/25  train_loss=0.3706  train_gender_acc=99.8%  train_attr_acc=[95.3 96.4 96.9 93.4 86.0 86.2]%  (55.1s)
+2026-05-27 20:16:39,630 | INFO | celeba_ood | epoch  23/25  train_loss=0.3557  train_gender_acc=99.8%  train_attr_acc=[95.5 96.5 97.1 93.7 86.6 86.8]%  (54.9s)
+2026-05-27 20:17:34,371 | INFO | celeba_ood | epoch  24/25  train_loss=0.3422  train_gender_acc=99.8%  train_attr_acc=[95.8 96.6 97.1 93.9 87.2 87.4]%  (54.7s)
+2026-05-27 20:18:29,750 | INFO | celeba_ood | epoch  25/25  train_loss=0.3290  train_gender_acc=99.8%  train_attr_acc=[95.8 96.7 97.3 94.2 87.8 88.1]%  (55.4s)
+2026-05-27 20:18:29,750 | INFO | celeba_ood | Training done in 1701.7s
+2026-05-27 20:18:29,899 | INFO | celeba_ood | ======================================================================
+2026-05-27 20:18:29,899 | INFO | celeba_ood | PHASE 2 — training per-block decoders (visualization)
+2026-05-27 20:18:29,899 | INFO | celeba_ood | ======================================================================
+2026-05-27 20:18:29,899 | INFO | celeba_ood |   decoder L0: in=(C=32, H=32) → out=(3, 64, 64)  params=8,275
+2026-05-27 20:18:29,899 | INFO | celeba_ood |   decoder L1: in=(C=64, H=16) → out=(3, 64, 64)  params=41,107
+2026-05-27 20:18:29,899 | INFO | celeba_ood |   decoder L2: in=(C=128, H=8) → out=(3, 64, 64)  params=172,307
+2026-05-27 20:18:29,899 | INFO | celeba_ood |   decoder L3: in=(C=256, H=4) → out=(3, 64, 64)  params=696,851
+2026-05-27 20:18:29,900 | INFO | celeba_ood |   decoder L4: in=(C=256, H=2) → out=(3, 64, 64)  params=700,979
+2026-05-27 20:18:29,900 | INFO | celeba_ood |   decoder L5: in=(C=256, H=2) → out=(3, 64, 64)  params=700,979
+2026-05-27 20:19:25,884 | INFO | celeba_ood | [decoders] epoch   1/50  train=0.1655  (56.0s)
+2026-05-27 20:20:20,860 | INFO | celeba_ood | [decoders] epoch   2/50  train=0.1253  (55.0s)
+2026-05-27 20:21:17,076 | INFO | celeba_ood | [decoders] epoch   3/50  train=0.1205  (56.2s)
+2026-05-27 20:22:11,916 | INFO | celeba_ood | [decoders] epoch   4/50  train=0.1177  (54.8s)
+2026-05-27 20:23:07,029 | INFO | celeba_ood | [decoders] epoch   5/50  train=0.1161  (55.1s)
+2026-05-27 20:24:02,628 | INFO | celeba_ood | [decoders] epoch   6/50  train=0.1148  (55.6s)
+2026-05-27 20:24:57,295 | INFO | celeba_ood | [decoders] epoch   7/50  train=0.1138  (54.7s)
+2026-05-27 20:25:53,475 | INFO | celeba_ood | [decoders] epoch   8/50  train=0.1130  (56.2s)
+2026-05-27 20:26:49,715 | INFO | celeba_ood | [decoders] epoch   9/50  train=0.1125  (56.2s)
+2026-05-27 20:27:44,782 | INFO | celeba_ood | [decoders] epoch  10/50  train=0.1119  (55.1s)
+2026-05-27 20:28:39,246 | INFO | celeba_ood | [decoders] epoch  11/50  train=0.1114  (54.5s)
+2026-05-27 20:29:34,712 | INFO | celeba_ood | [decoders] epoch  12/50  train=0.1112  (55.5s)
+2026-05-27 20:30:29,250 | INFO | celeba_ood | [decoders] epoch  13/50  train=0.1106  (54.5s)
+2026-05-27 20:31:23,955 | INFO | celeba_ood | [decoders] epoch  14/50  train=0.1103  (54.7s)
+2026-05-27 20:32:19,978 | INFO | celeba_ood | [decoders] epoch  15/50  train=0.1101  (56.0s)
+2026-05-27 20:33:15,357 | INFO | celeba_ood | [decoders] epoch  16/50  train=0.1099  (55.4s)
+2026-05-27 20:34:10,201 | INFO | celeba_ood | [decoders] epoch  17/50  train=0.1097  (54.8s)
+2026-05-27 20:35:05,940 | INFO | celeba_ood | [decoders] epoch  18/50  train=0.1093  (55.7s)
+2026-05-27 20:36:00,391 | INFO | celeba_ood | [decoders] epoch  19/50  train=0.1092  (54.5s)
+2026-05-27 20:36:55,382 | INFO | celeba_ood | [decoders] epoch  20/50  train=0.1091  (55.0s)
+2026-05-27 20:37:49,991 | INFO | celeba_ood | [decoders] epoch  21/50  train=0.1089  (54.6s)
+2026-05-27 20:38:45,897 | INFO | celeba_ood | [decoders] epoch  22/50  train=0.1087  (55.9s)
+2026-05-27 20:39:40,398 | INFO | celeba_ood | [decoders] epoch  23/50  train=0.1086  (54.5s)
+2026-05-27 20:40:35,473 | INFO | celeba_ood | [decoders] epoch  24/50  train=0.1084  (55.1s)
+2026-05-27 20:41:31,358 | INFO | celeba_ood | [decoders] epoch  25/50  train=0.1083  (55.9s)
+2026-05-27 20:42:26,609 | INFO | celeba_ood | [decoders] epoch  26/50  train=0.1082  (55.3s)
+2026-05-27 20:43:21,144 | INFO | celeba_ood | [decoders] epoch  27/50  train=0.1081  (54.5s)
+2026-05-27 20:44:16,465 | INFO | celeba_ood | [decoders] epoch  28/50  train=0.1080  (55.3s)
+2026-05-27 20:45:11,097 | INFO | celeba_ood | [decoders] epoch  29/50  train=0.1079  (54.6s)
+2026-05-27 20:46:05,568 | INFO | celeba_ood | [decoders] epoch  30/50  train=0.1081  (54.5s)
+2026-05-27 20:47:01,038 | INFO | celeba_ood | [decoders] epoch  31/50  train=0.1077  (55.5s)
+2026-05-27 20:47:56,092 | INFO | celeba_ood | [decoders] epoch  32/50  train=0.1077  (55.1s)
+2026-05-27 20:48:50,633 | INFO | celeba_ood | [decoders] epoch  33/50  train=0.1077  (54.5s)
+2026-05-27 20:49:47,112 | INFO | celeba_ood | [decoders] epoch  34/50  train=0.1076  (56.5s)
+2026-05-27 20:50:42,331 | INFO | celeba_ood | [decoders] epoch  35/50  train=0.1074  (55.2s)
+2026-05-27 20:51:37,750 | INFO | celeba_ood | [decoders] epoch  36/50  train=0.1073  (55.4s)
+2026-05-27 20:52:33,428 | INFO | celeba_ood | [decoders] epoch  37/50  train=0.1074  (55.7s)
+2026-05-27 20:53:28,633 | INFO | celeba_ood | [decoders] epoch  38/50  train=0.1074  (55.2s)
+2026-05-27 20:54:23,187 | INFO | celeba_ood | [decoders] epoch  39/50  train=0.1072  (54.6s)
+2026-05-27 20:55:20,140 | INFO | celeba_ood | [decoders] epoch  40/50  train=0.1072  (57.0s)
+2026-05-27 20:56:16,263 | INFO | celeba_ood | [decoders] epoch  41/50  train=0.1073  (56.1s)
+2026-05-27 20:57:11,493 | INFO | celeba_ood | [decoders] epoch  42/50  train=0.1071  (55.2s)
+2026-05-27 20:58:08,306 | INFO | celeba_ood | [decoders] epoch  43/50  train=0.1070  (56.8s)
+2026-05-27 20:59:03,436 | INFO | celeba_ood | [decoders] epoch  44/50  train=0.1071  (55.1s)
+2026-05-27 20:59:58,396 | INFO | celeba_ood | [decoders] epoch  45/50  train=0.1070  (55.0s)
+2026-05-27 21:00:54,207 | INFO | celeba_ood | [decoders] epoch  46/50  train=0.1070  (55.8s)
+2026-05-27 21:01:49,829 | INFO | celeba_ood | [decoders] epoch  47/50  train=0.1069  (55.6s)
+2026-05-27 21:02:45,101 | INFO | celeba_ood | [decoders] epoch  48/50  train=0.1069  (55.3s)
+2026-05-27 21:03:40,972 | INFO | celeba_ood | [decoders] epoch  49/50  train=0.1068  (55.9s)
+2026-05-27 21:04:35,902 | INFO | celeba_ood | [decoders] epoch  50/50  train=0.1067  (54.9s)
+2026-05-27 21:04:35,903 | INFO | celeba_ood | Decoder training done in 2766.0s
+2026-05-27 21:04:35,947 | INFO | celeba_ood | ======================================================================
+2026-05-27 21:04:35,948 | INFO | celeba_ood | EVALUATION — per-attribute accuracy + OOD AUROC
+2026-05-27 21:04:35,948 | INFO | celeba_ood | ======================================================================
+2026-05-27 21:04:35,948 | INFO | celeba_ood | Collecting predictions on test_in...
+2026-05-27 21:05:22,805 | INFO | celeba_ood |   test_in size = 18941, OOD score (combined entropy) mean = 0.2388
+2026-05-27 21:05:22,806 | INFO | celeba_ood | Collecting predictions on test_ood (Eyeglasses)...
+2026-05-27 21:05:38,044 | INFO | celeba_ood |   test_ood size = 13193, OOD score (combined entropy) mean = 0.3124
+2026-05-27 21:05:38,259 | INFO | celeba_ood | Per-attribute accuracy (in-distribution test set):
+2026-05-27 21:05:38,259 | INFO | celeba_ood |   Male/Female : 97.32%
+2026-05-27 21:05:38,259 | INFO | celeba_ood |   Young                 : 87.16%
+2026-05-27 21:05:38,259 | INFO | celeba_ood |   Smiling               : 91.66%
+2026-05-27 21:05:38,259 | INFO | celeba_ood |   Mouth_Slightly_Open   : 91.93%
+2026-05-27 21:05:38,259 | INFO | celeba_ood |   High_Cheekbones       : 85.37%
+2026-05-27 21:05:38,259 | INFO | celeba_ood |   Pointy_Nose           : 73.44%
+2026-05-27 21:05:38,259 | INFO | celeba_ood |   Oval_Face             : 68.64%
+2026-05-27 21:05:38,259 | INFO | celeba_ood | OOD AUROC (in-dist vs Eyeglasses):
+2026-05-27 21:05:38,259 | INFO | celeba_ood |   score_msp                AUROC = 0.6984  (in_mean=0.011, ood_mean=0.037)
+2026-05-27 21:05:38,259 | INFO | celeba_ood |   score_entropy_gender     AUROC = 0.6984  (in_mean=0.031, ood_mean=0.094)
+2026-05-27 21:05:38,259 | INFO | celeba_ood |   score_entropy_attrs      AUROC = 0.5310  (in_mean=0.208, ood_mean=0.218)
+2026-05-27 21:05:38,259 | INFO | celeba_ood |   score_entropy_combined   AUROC = 0.6083  (in_mean=0.239, ood_mean=0.312)
+2026-05-27 21:05:38,259 | INFO | celeba_ood | Estimating reconstruction-error bias/variance on test_in (clean reference, no training leakage)...
+2026-05-27 21:05:45,116 | INFO | celeba_ood | Scoring test_in / test_ood (agg='p95')...
+2026-05-27 21:05:56,855 | INFO | celeba_ood | OOD AUROC — debiased reconstruction error:
+2026-05-27 21:05:56,855 | INFO | celeba_ood |   block 0: raw AUROC = 0.5724  ->  debiased = 0.5993  (Δ = +0.0269)
+2026-05-27 21:05:56,855 | INFO | celeba_ood |   block 1: raw AUROC = 0.5945  ->  debiased = 0.5914  (Δ = -0.0031)
+2026-05-27 21:05:56,856 | INFO | celeba_ood |   block 2: raw AUROC = 0.6236  ->  debiased = 0.6195  (Δ = -0.0041)
+2026-05-27 21:05:56,856 | INFO | celeba_ood |   block 3: raw AUROC = 0.6402  ->  debiased = 0.6561  (Δ = +0.0159)
+2026-05-27 21:05:56,856 | INFO | celeba_ood |   block 4: raw AUROC = 0.5810  ->  debiased = 0.6343  (Δ = +0.0533)
+2026-05-27 21:05:56,856 | INFO | celeba_ood |   block 5: raw AUROC = 0.5509  ->  debiased = 0.6153  (Δ = +0.0645)
+2026-05-27 21:05:56,856 | INFO | celeba_ood |   aggregated: raw AUROC = 0.6001  ->  debiased = 0.6422  (Δ = +0.0421)
+2026-05-27 21:07:05,560 | INFO | celeba_ood | Fusion-based AUROC (max-pixel) = 0.5587  (in_mean=0.6385, ood_mean=0.6577)
+2026-05-27 21:07:05,560 | INFO | celeba_ood | Wrote per-block plots: per_block_breakdown.png, recons_only.png, activations.png, fusion_overlay.png, fusion_auroc.png
+2026-05-27 21:07:32,965 | INFO | celeba_ood | Wrote debiasing plots: bias_variance_maps.png, anomaly_cleaning.png, score_dist_debiased.png, per_block_auroc.png
+2026-05-27 21:07:32,966 | INFO | celeba_ood | Summary written to outputs/celeba_ood/ensemble_20260527_194912_6458836/model_0/summary.json
+2026-05-27 21:07:32,968 | INFO | celeba_ood | model 1/10 done in 4645.8s
+2026-05-27 21:07:32,999 | INFO | celeba_ood | ######################################################################
+2026-05-27 21:07:32,999 | INFO | celeba_ood | # MODEL 2/10   (seed=43)
+2026-05-27 21:07:32,999 | INFO | celeba_ood | ######################################################################
+2026-05-27 21:07:33,043 | INFO | celeba_ood | Model        : FacialCNN  (1,571,624 params)
+2026-05-27 21:07:33,043 | INFO | celeba_ood | ======================================================================
+2026-05-27 21:07:33,043 | INFO | celeba_ood | TRAINING — combined CE(gender) + BCE(attrs) loss
+2026-05-27 21:07:33,043 | INFO | celeba_ood | ======================================================================
+2026-05-27 21:08:26,723 | INFO | celeba_ood | epoch   1/25  train_loss=0.9154  train_gender_acc=95.2%  train_attr_acc=[84.6 88.5 85.4 83.8 73.1 73.4]%  (53.7s)
+2026-05-27 21:09:21,051 | INFO | celeba_ood | epoch   2/25  train_loss=0.7423  train_gender_acc=97.6%  train_attr_acc=[87.3 92.0 91.7 87.0 74.7 74.7]%  (54.3s)
+2026-05-27 21:10:14,010 | INFO | celeba_ood | epoch   3/25  train_loss=0.7018  train_gender_acc=98.1%  train_attr_acc=[88.1 92.5 92.6 87.6 75.5 75.3]%  (53.0s)
+2026-05-27 21:11:07,334 | INFO | celeba_ood | epoch   4/25  train_loss=0.6749  train_gender_acc=98.5%  train_attr_acc=[88.7 92.8 93.1 87.8 76.0 75.8]%  (53.3s)
+2026-05-27 21:12:01,811 | INFO | celeba_ood | epoch   5/25  train_loss=0.6542  train_gender_acc=98.8%  train_attr_acc=[89.1 93.0 93.3 88.2 76.4 76.1]%  (54.5s)
+2026-05-27 21:12:55,919 | INFO | celeba_ood | epoch   6/25  train_loss=0.6345  train_gender_acc=99.0%  train_attr_acc=[89.5 93.3 93.6 88.4 76.8 76.4]%  (54.1s)
+2026-05-27 21:13:49,439 | INFO | celeba_ood | epoch   7/25  train_loss=0.6179  train_gender_acc=99.1%  train_attr_acc=[89.8 93.5 93.8 88.7 77.1 76.7]%  (53.5s)
+2026-05-27 21:14:43,981 | INFO | celeba_ood | epoch   8/25  train_loss=0.6010  train_gender_acc=99.3%  train_attr_acc=[90.3 93.7 94.1 88.9 77.5 77.2]%  (54.5s)
+2026-05-27 21:15:37,582 | INFO | celeba_ood | epoch   9/25  train_loss=0.5859  train_gender_acc=99.4%  train_attr_acc=[90.8 94.0 94.4 89.4 78.0 77.5]%  (53.6s)
+2026-05-27 21:16:32,132 | INFO | celeba_ood | epoch  10/25  train_loss=0.5687  train_gender_acc=99.5%  train_attr_acc=[91.1 94.2 94.6 89.6 78.2 78.0]%  (54.5s)
+2026-05-27 21:17:26,640 | INFO | celeba_ood | epoch  11/25  train_loss=0.5525  train_gender_acc=99.6%  train_attr_acc=[91.6 94.4 94.8 89.9 78.7 78.5]%  (54.5s)
+2026-05-27 21:18:22,105 | INFO | celeba_ood | epoch  12/25  train_loss=0.5354  train_gender_acc=99.6%  train_attr_acc=[92.0 94.7 95.1 90.3 79.2 79.0]%  (55.5s)
+2026-05-27 21:19:15,859 | INFO | celeba_ood | epoch  13/25  train_loss=0.5187  train_gender_acc=99.6%  train_attr_acc=[92.4 94.9 95.3 90.6 79.7 79.7]%  (53.8s)
+2026-05-27 21:20:09,361 | INFO | celeba_ood | epoch  14/25  train_loss=0.5009  train_gender_acc=99.6%  train_attr_acc=[92.8 95.2 95.6 91.0 80.3 80.5]%  (53.5s)
+2026-05-27 21:21:03,452 | INFO | celeba_ood | epoch  15/25  train_loss=0.4834  train_gender_acc=99.7%  train_attr_acc=[93.2 95.4 95.8 91.4 80.8 81.2]%  (54.1s)
+2026-05-27 21:21:57,029 | INFO | celeba_ood | epoch  16/25  train_loss=0.4642  train_gender_acc=99.7%  train_attr_acc=[93.7 95.6 96.0 91.7 81.6 81.9]%  (53.6s)
+2026-05-27 21:22:50,739 | INFO | celeba_ood | epoch  17/25  train_loss=0.4482  train_gender_acc=99.7%  train_attr_acc=[94.1 95.7 96.1 92.0 82.2 82.6]%  (53.7s)
+2026-05-27 21:23:45,227 | INFO | celeba_ood | epoch  18/25  train_loss=0.4298  train_gender_acc=99.7%  train_attr_acc=[94.5 95.9 96.3 92.4 83.1 83.6]%  (54.5s)
+2026-05-27 21:24:38,394 | INFO | celeba_ood | epoch  19/25  train_loss=0.4134  train_gender_acc=99.8%  train_attr_acc=[94.6 96.1 96.4 92.7 83.8 84.4]%  (53.2s)
+2026-05-27 21:25:31,813 | INFO | celeba_ood | epoch  20/25  train_loss=0.3962  train_gender_acc=99.8%  train_attr_acc=[94.9 96.2 96.7 92.9 84.5 85.1]%  (53.4s)
+2026-05-27 21:26:26,678 | INFO | celeba_ood | epoch  21/25  train_loss=0.3811  train_gender_acc=99.8%  train_attr_acc=[95.2 96.3 96.8 93.4 85.1 85.7]%  (54.9s)
+2026-05-27 21:27:19,798 | INFO | celeba_ood | epoch  22/25  train_loss=0.3677  train_gender_acc=99.8%  train_attr_acc=[95.4 96.5 96.8 93.6 85.9 86.5]%  (53.1s)
+2026-05-27 21:28:13,597 | INFO | celeba_ood | epoch  23/25  train_loss=0.3516  train_gender_acc=99.8%  train_attr_acc=[95.6 96.5 97.0 93.8 86.5 87.2]%  (53.8s)
+2026-05-27 21:29:08,264 | INFO | celeba_ood | epoch  24/25  train_loss=0.3391  train_gender_acc=99.8%  train_attr_acc=[95.7 96.7 97.1 94.0 87.3 87.8]%  (54.7s)
+2026-05-27 21:30:02,585 | INFO | celeba_ood | epoch  25/25  train_loss=0.3268  train_gender_acc=99.8%  train_attr_acc=[95.9 96.8 97.2 94.2 87.8 88.4]%  (54.3s)
+2026-05-27 21:30:02,585 | INFO | celeba_ood | Training done in 1349.5s
+2026-05-27 21:30:02,711 | INFO | celeba_ood | ======================================================================
+2026-05-27 21:30:02,712 | INFO | celeba_ood | PHASE 2 — training per-block decoders (visualization)
+2026-05-27 21:30:02,712 | INFO | celeba_ood | ======================================================================
+2026-05-27 21:30:02,712 | INFO | celeba_ood |   decoder L0: in=(C=32, H=32) → out=(3, 64, 64)  params=8,275
+2026-05-27 21:30:02,712 | INFO | celeba_ood |   decoder L1: in=(C=64, H=16) → out=(3, 64, 64)  params=41,107
+2026-05-27 21:30:02,712 | INFO | celeba_ood |   decoder L2: in=(C=128, H=8) → out=(3, 64, 64)  params=172,307
+2026-05-27 21:30:02,712 | INFO | celeba_ood |   decoder L3: in=(C=256, H=4) → out=(3, 64, 64)  params=696,851
+2026-05-27 21:30:02,712 | INFO | celeba_ood |   decoder L4: in=(C=256, H=2) → out=(3, 64, 64)  params=700,979
+2026-05-27 21:30:02,712 | INFO | celeba_ood |   decoder L5: in=(C=256, H=2) → out=(3, 64, 64)  params=700,979
+2026-05-27 21:30:57,515 | INFO | celeba_ood | [decoders] epoch   1/50  train=0.1567  (54.8s)
+2026-05-27 21:31:52,457 | INFO | celeba_ood | [decoders] epoch   2/50  train=0.1218  (54.9s)
+2026-05-27 21:32:47,976 | INFO | celeba_ood | [decoders] epoch   3/50  train=0.1171  (55.5s)
+2026-05-27 21:33:42,901 | INFO | celeba_ood | [decoders] epoch   4/50  train=0.1145  (54.9s)
+2026-05-27 21:34:37,445 | INFO | celeba_ood | [decoders] epoch   5/50  train=0.1128  (54.5s)
+2026-05-27 21:35:32,665 | INFO | celeba_ood | [decoders] epoch   6/50  train=0.1117  (55.2s)
+2026-05-27 21:36:27,129 | INFO | celeba_ood | [decoders] epoch   7/50  train=0.1108  (54.5s)
+2026-05-27 21:37:22,043 | INFO | celeba_ood | [decoders] epoch   8/50  train=0.1100  (54.9s)
+2026-05-27 21:38:17,197 | INFO | celeba_ood | [decoders] epoch   9/50  train=0.1095  (55.2s)
+2026-05-27 21:39:11,697 | INFO | celeba_ood | [decoders] epoch  10/50  train=0.1089  (54.5s)
+2026-05-27 21:40:06,134 | INFO | celeba_ood | [decoders] epoch  11/50  train=0.1086  (54.4s)
+2026-05-27 21:41:02,078 | INFO | celeba_ood | [decoders] epoch  12/50  train=0.1081  (55.9s)
+2026-05-27 21:41:57,272 | INFO | celeba_ood | [decoders] epoch  13/50  train=0.1078  (55.2s)
+2026-05-27 21:42:52,261 | INFO | celeba_ood | [decoders] epoch  14/50  train=0.1076  (55.0s)
+2026-05-27 21:43:47,890 | INFO | celeba_ood | [decoders] epoch  15/50  train=0.1072  (55.6s)
+2026-05-27 21:44:42,607 | INFO | celeba_ood | [decoders] epoch  16/50  train=0.1071  (54.7s)
+2026-05-27 21:45:37,308 | INFO | celeba_ood | [decoders] epoch  17/50  train=0.1068  (54.7s)
+2026-05-27 21:46:32,798 | INFO | celeba_ood | [decoders] epoch  18/50  train=0.1066  (55.5s)
+2026-05-27 21:47:27,476 | INFO | celeba_ood | [decoders] epoch  19/50  train=0.1063  (54.7s)
+2026-05-27 21:48:22,931 | INFO | celeba_ood | [decoders] epoch  20/50  train=0.1062  (55.5s)
+2026-05-27 21:49:18,411 | INFO | celeba_ood | [decoders] epoch  21/50  train=0.1061  (55.5s)
+2026-05-27 21:50:13,028 | INFO | celeba_ood | [decoders] epoch  22/50  train=0.1059  (54.6s)
+2026-05-27 21:51:07,558 | INFO | celeba_ood | [decoders] epoch  23/50  train=0.1058  (54.5s)
+2026-05-27 21:52:02,806 | INFO | celeba_ood | [decoders] epoch  24/50  train=0.1056  (55.2s)
+2026-05-27 21:52:57,738 | INFO | celeba_ood | [decoders] epoch  25/50  train=0.1055  (54.9s)
+2026-05-27 21:53:52,911 | INFO | celeba_ood | [decoders] epoch  26/50  train=0.1055  (55.2s)
+2026-05-27 21:54:48,385 | INFO | celeba_ood | [decoders] epoch  27/50  train=0.1054  (55.5s)
+2026-05-27 21:55:42,954 | INFO | celeba_ood | [decoders] epoch  28/50  train=0.1051  (54.6s)
+2026-05-27 21:56:37,455 | INFO | celeba_ood | [decoders] epoch  29/50  train=0.1050  (54.5s)
+2026-05-27 21:57:32,843 | INFO | celeba_ood | [decoders] epoch  30/50  train=0.1051  (55.4s)
+2026-05-27 21:58:27,529 | INFO | celeba_ood | [decoders] epoch  31/50  train=0.1050  (54.7s)
+2026-05-27 21:59:22,199 | INFO | celeba_ood | [decoders] epoch  32/50  train=0.1048  (54.7s)
+2026-05-27 22:00:17,545 | INFO | celeba_ood | [decoders] epoch  33/50  train=0.1049  (55.3s)
+2026-05-27 22:01:12,620 | INFO | celeba_ood | [decoders] epoch  34/50  train=0.1048  (55.1s)
+2026-05-27 22:02:07,362 | INFO | celeba_ood | [decoders] epoch  35/50  train=0.1047  (54.7s)
+2026-05-27 22:03:02,349 | INFO | celeba_ood | [decoders] epoch  36/50  train=0.1047  (55.0s)
+2026-05-27 22:03:57,570 | INFO | celeba_ood | [decoders] epoch  37/50  train=0.1045  (55.2s)
+2026-05-27 22:04:52,281 | INFO | celeba_ood | [decoders] epoch  38/50  train=0.1046  (54.7s)
+2026-05-27 22:05:46,796 | INFO | celeba_ood | [decoders] epoch  39/50  train=0.1044  (54.5s)
+2026-05-27 22:06:41,991 | INFO | celeba_ood | [decoders] epoch  40/50  train=0.1045  (55.2s)
+2026-05-27 22:07:36,575 | INFO | celeba_ood | [decoders] epoch  41/50  train=0.1044  (54.6s)
+2026-05-27 22:08:31,080 | INFO | celeba_ood | [decoders] epoch  42/50  train=0.1043  (54.5s)
+2026-05-27 22:09:26,726 | INFO | celeba_ood | [decoders] epoch  43/50  train=0.1043  (55.6s)
+2026-05-27 22:10:21,213 | INFO | celeba_ood | [decoders] epoch  44/50  train=0.1043  (54.5s)
+2026-05-27 22:11:15,935 | INFO | celeba_ood | [decoders] epoch  45/50  train=0.1043  (54.7s)
+2026-05-27 22:12:11,472 | INFO | celeba_ood | [decoders] epoch  46/50  train=0.1042  (55.5s)
+2026-05-27 22:13:06,092 | INFO | celeba_ood | [decoders] epoch  47/50  train=0.1043  (54.6s)
+2026-05-27 22:14:00,706 | INFO | celeba_ood | [decoders] epoch  48/50  train=0.1041  (54.6s)
+2026-05-27 22:14:56,258 | INFO | celeba_ood | [decoders] epoch  49/50  train=0.1041  (55.6s)
+2026-05-27 22:15:50,675 | INFO | celeba_ood | [decoders] epoch  50/50  train=0.1040  (54.4s)
+2026-05-27 22:15:50,676 | INFO | celeba_ood | Decoder training done in 2748.0s
+2026-05-27 22:15:50,720 | INFO | celeba_ood | ======================================================================
+2026-05-27 22:15:50,720 | INFO | celeba_ood | EVALUATION — per-attribute accuracy + OOD AUROC
+2026-05-27 22:15:50,720 | INFO | celeba_ood | ======================================================================
+2026-05-27 22:15:50,720 | INFO | celeba_ood | Collecting predictions on test_in...
+2026-05-27 22:15:57,029 | INFO | celeba_ood |   test_in size = 18941, OOD score (combined entropy) mean = 0.2449
+2026-05-27 22:15:57,029 | INFO | celeba_ood | Collecting predictions on test_ood (Eyeglasses)...
+2026-05-27 22:16:01,406 | INFO | celeba_ood |   test_ood size = 13193, OOD score (combined entropy) mean = 0.2809
+2026-05-27 22:16:01,466 | INFO | celeba_ood | Per-attribute accuracy (in-distribution test set):
+2026-05-27 22:16:01,466 | INFO | celeba_ood |   Male/Female : 97.20%
+2026-05-27 22:16:01,466 | INFO | celeba_ood |   Young                 : 79.34%
+2026-05-27 22:16:01,466 | INFO | celeba_ood |   Smiling               : 91.28%
+2026-05-27 22:16:01,466 | INFO | celeba_ood |   Mouth_Slightly_Open   : 91.02%
+2026-05-27 22:16:01,466 | INFO | celeba_ood |   High_Cheekbones       : 85.37%
+2026-05-27 22:16:01,466 | INFO | celeba_ood |   Pointy_Nose           : 72.99%
+2026-05-27 22:16:01,466 | INFO | celeba_ood |   Oval_Face             : 72.95%
+2026-05-27 22:16:01,466 | INFO | celeba_ood | OOD AUROC (in-dist vs Eyeglasses):
+2026-05-27 22:16:01,466 | INFO | celeba_ood |   score_msp                AUROC = 0.4825  (in_mean=0.012, ood_mean=0.027)
+2026-05-27 22:16:01,466 | INFO | celeba_ood |   score_entropy_gender     AUROC = 0.4825  (in_mean=0.033, ood_mean=0.067)
+2026-05-27 22:16:01,466 | INFO | celeba_ood |   score_entropy_attrs      AUROC = 0.5047  (in_mean=0.212, ood_mean=0.214)
+2026-05-27 22:16:01,466 | INFO | celeba_ood |   score_entropy_combined   AUROC = 0.5410  (in_mean=0.245, ood_mean=0.281)
+2026-05-27 22:16:01,466 | INFO | celeba_ood | Estimating reconstruction-error bias/variance on test_in (clean reference, no training leakage)...
+2026-05-27 22:16:07,690 | INFO | celeba_ood | Scoring test_in / test_ood (agg='p95')...
+2026-05-27 22:16:18,655 | INFO | celeba_ood | OOD AUROC — debiased reconstruction error:
+2026-05-27 22:16:18,655 | INFO | celeba_ood |   block 0: raw AUROC = 0.5653  ->  debiased = 0.5952  (Δ = +0.0299)
+2026-05-27 22:16:18,655 | INFO | celeba_ood |   block 1: raw AUROC = 0.5939  ->  debiased = 0.5919  (Δ = -0.0020)
+2026-05-27 22:16:18,655 | INFO | celeba_ood |   block 2: raw AUROC = 0.6304  ->  debiased = 0.6227  (Δ = -0.0077)
+2026-05-27 22:16:18,655 | INFO | celeba_ood |   block 3: raw AUROC = 0.6416  ->  debiased = 0.6584  (Δ = +0.0168)
+2026-05-27 22:16:18,655 | INFO | celeba_ood |   block 4: raw AUROC = 0.5799  ->  debiased = 0.6364  (Δ = +0.0566)
+2026-05-27 22:16:18,655 | INFO | celeba_ood |   block 5: raw AUROC = 0.5495  ->  debiased = 0.6094  (Δ = +0.0599)
+2026-05-27 22:16:18,655 | INFO | celeba_ood |   aggregated: raw AUROC = 0.6009  ->  debiased = 0.6434  (Δ = +0.0425)
+2026-05-27 22:17:28,598 | INFO | celeba_ood | Fusion-based AUROC (max-pixel) = 0.5614  (in_mean=0.6370, ood_mean=0.6585)
+2026-05-27 22:17:28,598 | INFO | celeba_ood | Wrote per-block plots: per_block_breakdown.png, recons_only.png, activations.png, fusion_overlay.png, fusion_auroc.png
+2026-05-27 22:17:55,781 | INFO | celeba_ood | Wrote debiasing plots: bias_variance_maps.png, anomaly_cleaning.png, score_dist_debiased.png, per_block_auroc.png
+2026-05-27 22:17:55,783 | INFO | celeba_ood | Summary written to outputs/celeba_ood/ensemble_20260527_194912_6458836/model_1/summary.json
+2026-05-27 22:17:55,789 | INFO | celeba_ood | model 2/10 done in 4222.8s
+2026-05-27 22:17:55,818 | INFO | celeba_ood | ######################################################################
+2026-05-27 22:17:55,818 | INFO | celeba_ood | # MODEL 3/10   (seed=44)
+2026-05-27 22:17:55,818 | INFO | celeba_ood | ######################################################################
+2026-05-27 22:17:55,862 | INFO | celeba_ood | Model        : FacialCNN  (1,571,624 params)
+2026-05-27 22:17:55,862 | INFO | celeba_ood | ======================================================================
+2026-05-27 22:17:55,862 | INFO | celeba_ood | TRAINING — combined CE(gender) + BCE(attrs) loss
+2026-05-27 22:17:55,862 | INFO | celeba_ood | ======================================================================
+2026-05-27 22:18:50,006 | INFO | celeba_ood | epoch   1/25  train_loss=0.9168  train_gender_acc=95.2%  train_attr_acc=[84.9 88.5 85.0 83.6 73.1 73.0]%  (54.1s)
+2026-05-27 22:19:44,585 | INFO | celeba_ood | epoch   2/25  train_loss=0.7428  train_gender_acc=97.6%  train_attr_acc=[87.3 92.0 91.7 87.0 74.6 74.8]%  (54.6s)
+2026-05-27 22:20:39,481 | INFO | celeba_ood | epoch   3/25  train_loss=0.7016  train_gender_acc=98.1%  train_attr_acc=[88.1 92.5 92.7 87.5 75.4 75.2]%  (54.9s)
+2026-05-27 22:21:33,076 | INFO | celeba_ood | epoch   4/25  train_loss=0.6758  train_gender_acc=98.5%  train_attr_acc=[88.7 92.8 93.1 87.8 76.0 75.6]%  (53.6s)
+2026-05-27 22:22:26,667 | INFO | celeba_ood | epoch   5/25  train_loss=0.6528  train_gender_acc=98.8%  train_attr_acc=[89.2 93.1 93.4 88.1 76.4 76.0]%  (53.6s)
+2026-05-27 22:23:20,754 | INFO | celeba_ood | epoch   6/25  train_loss=0.6343  train_gender_acc=99.0%  train_attr_acc=[89.6 93.3 93.7 88.5 76.9 76.3]%  (54.1s)
+2026-05-27 22:24:14,719 | INFO | celeba_ood | epoch   7/25  train_loss=0.6170  train_gender_acc=99.2%  train_attr_acc=[89.9 93.6 94.0 88.7 77.2 76.7]%  (54.0s)
+2026-05-27 22:25:08,354 | INFO | celeba_ood | epoch   8/25  train_loss=0.6002  train_gender_acc=99.3%  train_attr_acc=[90.4 93.7 94.2 89.0 77.5 77.0]%  (53.6s)
+2026-05-27 22:26:03,230 | INFO | celeba_ood | epoch   9/25  train_loss=0.5839  train_gender_acc=99.4%  train_attr_acc=[90.7 94.0 94.5 89.3 77.9 77.5]%  (54.9s)
+2026-05-27 22:26:58,202 | INFO | celeba_ood | epoch  10/25  train_loss=0.5666  train_gender_acc=99.5%  train_attr_acc=[91.2 94.3 94.7 89.5 78.3 78.1]%  (55.0s)
+2026-05-27 22:27:52,545 | INFO | celeba_ood | epoch  11/25  train_loss=0.5524  train_gender_acc=99.5%  train_attr_acc=[91.6 94.5 94.9 89.9 78.7 78.5]%  (54.3s)
+2026-05-27 22:28:48,091 | INFO | celeba_ood | epoch  12/25  train_loss=0.5327  train_gender_acc=99.6%  train_attr_acc=[92.1 94.7 95.2 90.3 79.2 79.1]%  (55.5s)
+2026-05-27 22:29:41,704 | INFO | celeba_ood | epoch  13/25  train_loss=0.5157  train_gender_acc=99.6%  train_attr_acc=[92.5 94.9 95.4 90.6 79.9 79.8]%  (53.6s)
+2026-05-27 22:30:34,907 | INFO | celeba_ood | epoch  14/25  train_loss=0.4973  train_gender_acc=99.7%  train_attr_acc=[93.0 95.3 95.6 91.0 80.3 80.5]%  (53.2s)
+2026-05-27 22:31:28,599 | INFO | celeba_ood | epoch  15/25  train_loss=0.4800  train_gender_acc=99.7%  train_attr_acc=[93.5 95.4 95.9 91.3 81.1 81.3]%  (53.7s)
+2026-05-27 22:32:23,119 | INFO | celeba_ood | epoch  16/25  train_loss=0.4646  train_gender_acc=99.7%  train_attr_acc=[93.7 95.6 96.0 91.6 81.7 81.9]%  (54.5s)
+2026-05-27 22:33:17,090 | INFO | celeba_ood | epoch  17/25  train_loss=0.4448  train_gender_acc=99.7%  train_attr_acc=[94.1 95.8 96.3 92.0 82.4 82.7]%  (54.0s)
+2026-05-27 22:34:11,147 | INFO | celeba_ood | epoch  18/25  train_loss=0.4286  train_gender_acc=99.8%  train_attr_acc=[94.4 95.9 96.5 92.4 83.0 83.5]%  (54.1s)
+2026-05-27 22:35:05,973 | INFO | celeba_ood | epoch  19/25  train_loss=0.4105  train_gender_acc=99.8%  train_attr_acc=[94.7 96.2 96.7 92.7 83.7 84.2]%  (54.8s)
+2026-05-27 22:35:59,086 | INFO | celeba_ood | epoch  20/25  train_loss=0.3950  train_gender_acc=99.8%  train_attr_acc=[95.0 96.3 96.8 92.9 84.5 85.2]%  (53.1s)
+2026-05-27 22:36:52,630 | INFO | celeba_ood | epoch  21/25  train_loss=0.3783  train_gender_acc=99.8%  train_attr_acc=[95.2 96.4 96.9 93.4 85.1 85.9]%  (53.5s)
+2026-05-27 22:37:47,486 | INFO | celeba_ood | epoch  22/25  train_loss=0.3618  train_gender_acc=99.8%  train_attr_acc=[95.5 96.5 97.0 93.7 86.0 86.6]%  (54.9s)
+2026-05-27 22:38:41,039 | INFO | celeba_ood | epoch  23/25  train_loss=0.3503  train_gender_acc=99.8%  train_attr_acc=[95.6 96.6 97.1 93.9 86.6 87.2]%  (53.6s)
+2026-05-27 22:39:35,120 | INFO | celeba_ood | epoch  24/25  train_loss=0.3362  train_gender_acc=99.8%  train_attr_acc=[95.8 96.7 97.2 94.1 87.3 87.9]%  (54.1s)
+2026-05-27 22:40:29,717 | INFO | celeba_ood | epoch  25/25  train_loss=0.3224  train_gender_acc=99.8%  train_attr_acc=[96.0 96.8 97.3 94.3 87.9 88.5]%  (54.6s)
+2026-05-27 22:40:29,718 | INFO | celeba_ood | Training done in 1353.9s
+2026-05-27 22:40:29,839 | INFO | celeba_ood | ======================================================================
+2026-05-27 22:40:29,839 | INFO | celeba_ood | PHASE 2 — training per-block decoders (visualization)
+2026-05-27 22:40:29,839 | INFO | celeba_ood | ======================================================================
+2026-05-27 22:40:29,839 | INFO | celeba_ood |   decoder L0: in=(C=32, H=32) → out=(3, 64, 64)  params=8,275
+2026-05-27 22:40:29,839 | INFO | celeba_ood |   decoder L1: in=(C=64, H=16) → out=(3, 64, 64)  params=41,107
+2026-05-27 22:40:29,839 | INFO | celeba_ood |   decoder L2: in=(C=128, H=8) → out=(3, 64, 64)  params=172,307
+2026-05-27 22:40:29,840 | INFO | celeba_ood |   decoder L3: in=(C=256, H=4) → out=(3, 64, 64)  params=696,851
+2026-05-27 22:40:29,840 | INFO | celeba_ood |   decoder L4: in=(C=256, H=2) → out=(3, 64, 64)  params=700,979
+2026-05-27 22:40:29,840 | INFO | celeba_ood |   decoder L5: in=(C=256, H=2) → out=(3, 64, 64)  params=700,979
+2026-05-27 22:41:25,293 | INFO | celeba_ood | [decoders] epoch   1/50  train=0.1566  (55.5s)
+2026-05-27 22:42:20,343 | INFO | celeba_ood | [decoders] epoch   2/50  train=0.1230  (55.0s)
+2026-05-27 22:43:15,804 | INFO | celeba_ood | [decoders] epoch   3/50  train=0.1179  (55.5s)
+2026-05-27 22:44:11,071 | INFO | celeba_ood | [decoders] epoch   4/50  train=0.1155  (55.3s)
+2026-05-27 22:45:06,302 | INFO | celeba_ood | [decoders] epoch   5/50  train=0.1138  (55.2s)
+2026-05-27 22:46:01,558 | INFO | celeba_ood | [decoders] epoch   6/50  train=0.1126  (55.3s)
+2026-05-27 22:46:56,206 | INFO | celeba_ood | [decoders] epoch   7/50  train=0.1116  (54.6s)
+2026-05-27 22:47:50,814 | INFO | celeba_ood | [decoders] epoch   8/50  train=0.1107  (54.6s)
+2026-05-27 22:48:46,450 | INFO | celeba_ood | [decoders] epoch   9/50  train=0.1103  (55.6s)
+2026-05-27 22:49:41,712 | INFO | celeba_ood | [decoders] epoch  10/50  train=0.1098  (55.3s)
+2026-05-27 22:50:36,431 | INFO | celeba_ood | [decoders] epoch  11/50  train=0.1093  (54.7s)
+2026-05-27 22:51:31,944 | INFO | celeba_ood | [decoders] epoch  12/50  train=0.1088  (55.5s)
+2026-05-27 22:52:26,559 | INFO | celeba_ood | [decoders] epoch  13/50  train=0.1087  (54.6s)
+2026-05-27 22:53:21,143 | INFO | celeba_ood | [decoders] epoch  14/50  train=0.1084  (54.6s)
+2026-05-27 22:54:16,338 | INFO | celeba_ood | [decoders] epoch  15/50  train=0.1081  (55.2s)
+2026-05-27 22:55:10,924 | INFO | celeba_ood | [decoders] epoch  16/50  train=0.1078  (54.6s)
+2026-05-27 22:56:05,463 | INFO | celeba_ood | [decoders] epoch  17/50  train=0.1076  (54.5s)
+2026-05-27 22:57:00,340 | INFO | celeba_ood | [decoders] epoch  18/50  train=0.1074  (54.9s)
+2026-05-27 22:57:55,589 | INFO | celeba_ood | [decoders] epoch  19/50  train=0.1072  (55.2s)
+2026-05-27 22:58:50,445 | INFO | celeba_ood | [decoders] epoch  20/50  train=0.1071  (54.9s)
+2026-05-27 22:59:44,981 | INFO | celeba_ood | [decoders] epoch  21/50  train=0.1069  (54.5s)
+2026-05-27 23:00:40,249 | INFO | celeba_ood | [decoders] epoch  22/50  train=0.1068  (55.3s)
+2026-05-27 23:01:34,670 | INFO | celeba_ood | [decoders] epoch  23/50  train=0.1065  (54.4s)
+2026-05-27 23:02:29,406 | INFO | celeba_ood | [decoders] epoch  24/50  train=0.1066  (54.7s)
+2026-05-27 23:03:24,871 | INFO | celeba_ood | [decoders] epoch  25/50  train=0.1064  (55.5s)
+2026-05-27 23:04:19,591 | INFO | celeba_ood | [decoders] epoch  26/50  train=0.1062  (54.7s)
+2026-05-27 23:05:14,321 | INFO | celeba_ood | [decoders] epoch  27/50  train=0.1062  (54.7s)
+2026-05-27 23:06:09,672 | INFO | celeba_ood | [decoders] epoch  28/50  train=0.1061  (55.4s)
+2026-05-27 23:07:04,607 | INFO | celeba_ood | [decoders] epoch  29/50  train=0.1059  (54.9s)
+2026-05-27 23:07:59,584 | INFO | celeba_ood | [decoders] epoch  30/50  train=0.1059  (55.0s)
+2026-05-27 23:08:54,879 | INFO | celeba_ood | [decoders] epoch  31/50  train=0.1057  (55.3s)
+2026-05-27 23:09:49,766 | INFO | celeba_ood | [decoders] epoch  32/50  train=0.1057  (54.9s)
+2026-05-27 23:10:44,484 | INFO | celeba_ood | [decoders] epoch  33/50  train=0.1056  (54.7s)
+2026-05-27 23:11:39,917 | INFO | celeba_ood | [decoders] epoch  34/50  train=0.1055  (55.4s)
+2026-05-27 23:12:34,501 | INFO | celeba_ood | [decoders] epoch  35/50  train=0.1054  (54.6s)
+2026-05-27 23:13:29,617 | INFO | celeba_ood | [decoders] epoch  36/50  train=0.1054  (55.1s)
+2026-05-27 23:14:25,291 | INFO | celeba_ood | [decoders] epoch  37/50  train=0.1054  (55.7s)
+2026-05-27 23:15:20,051 | INFO | celeba_ood | [decoders] epoch  38/50  train=0.1052  (54.8s)
+2026-05-27 23:16:14,771 | INFO | celeba_ood | [decoders] epoch  39/50  train=0.1052  (54.7s)
+2026-05-27 23:17:10,788 | INFO | celeba_ood | [decoders] epoch  40/50  train=0.1051  (56.0s)
+2026-05-27 23:18:05,529 | INFO | celeba_ood | [decoders] epoch  41/50  train=0.1052  (54.7s)
+2026-05-27 23:19:00,363 | INFO | celeba_ood | [decoders] epoch  42/50  train=0.1051  (54.8s)
+2026-05-27 23:19:56,217 | INFO | celeba_ood | [decoders] epoch  43/50  train=0.1050  (55.9s)
+2026-05-27 23:20:51,530 | INFO | celeba_ood | [decoders] epoch  44/50  train=0.1051  (55.3s)
+2026-05-27 23:21:46,513 | INFO | celeba_ood | [decoders] epoch  45/50  train=0.1049  (55.0s)
+2026-05-27 23:22:41,365 | INFO | celeba_ood | [decoders] epoch  46/50  train=0.1049  (54.9s)
+2026-05-27 23:23:37,024 | INFO | celeba_ood | [decoders] epoch  47/50  train=0.1049  (55.7s)
+2026-05-27 23:24:31,979 | INFO | celeba_ood | [decoders] epoch  48/50  train=0.1048  (55.0s)
+2026-05-27 23:25:26,832 | INFO | celeba_ood | [decoders] epoch  49/50  train=0.1049  (54.9s)
+2026-05-27 23:26:22,868 | INFO | celeba_ood | [decoders] epoch  50/50  train=0.1048  (56.0s)
+2026-05-27 23:26:22,869 | INFO | celeba_ood | Decoder training done in 2753.0s
+2026-05-27 23:26:22,920 | INFO | celeba_ood | ======================================================================
+2026-05-27 23:26:22,920 | INFO | celeba_ood | EVALUATION — per-attribute accuracy + OOD AUROC
+2026-05-27 23:26:22,920 | INFO | celeba_ood | ======================================================================
+2026-05-27 23:26:22,920 | INFO | celeba_ood | Collecting predictions on test_in...
+2026-05-27 23:26:29,199 | INFO | celeba_ood |   test_in size = 18941, OOD score (combined entropy) mean = 0.2525
+2026-05-27 23:26:29,199 | INFO | celeba_ood | Collecting predictions on test_ood (Eyeglasses)...
+2026-05-27 23:26:33,465 | INFO | celeba_ood |   test_ood size = 13193, OOD score (combined entropy) mean = 0.3269
+2026-05-27 23:26:33,524 | INFO | celeba_ood | Per-attribute accuracy (in-distribution test set):
+2026-05-27 23:26:33,524 | INFO | celeba_ood |   Male/Female : 97.51%
+2026-05-27 23:26:33,524 | INFO | celeba_ood |   Young                 : 85.90%
+2026-05-27 23:26:33,524 | INFO | celeba_ood |   Smiling               : 91.91%
+2026-05-27 23:26:33,524 | INFO | celeba_ood |   Mouth_Slightly_Open   : 90.56%
+2026-05-27 23:26:33,525 | INFO | celeba_ood |   High_Cheekbones       : 85.25%
+2026-05-27 23:26:33,525 | INFO | celeba_ood |   Pointy_Nose           : 57.81%
+2026-05-27 23:26:33,525 | INFO | celeba_ood |   Oval_Face             : 70.00%
+2026-05-27 23:26:33,525 | INFO | celeba_ood | OOD AUROC (in-dist vs Eyeglasses):
+2026-05-27 23:26:33,525 | INFO | celeba_ood |   score_msp                AUROC = 0.5804  (in_mean=0.010, ood_mean=0.034)
+2026-05-27 23:26:33,525 | INFO | celeba_ood |   score_entropy_gender     AUROC = 0.5804  (in_mean=0.029, ood_mean=0.082)
+2026-05-27 23:26:33,525 | INFO | celeba_ood |   score_entropy_attrs      AUROC = 0.5608  (in_mean=0.224, ood_mean=0.244)
+2026-05-27 23:26:33,525 | INFO | celeba_ood |   score_entropy_combined   AUROC = 0.6145  (in_mean=0.253, ood_mean=0.327)
+2026-05-27 23:26:33,525 | INFO | celeba_ood | Estimating reconstruction-error bias/variance on test_in (clean reference, no training leakage)...
+2026-05-27 23:26:39,832 | INFO | celeba_ood | Scoring test_in / test_ood (agg='p95')...
+2026-05-27 23:26:51,035 | INFO | celeba_ood | OOD AUROC — debiased reconstruction error:
+2026-05-27 23:26:51,035 | INFO | celeba_ood |   block 0: raw AUROC = 0.5716  ->  debiased = 0.5962  (Δ = +0.0246)
+2026-05-27 23:26:51,035 | INFO | celeba_ood |   block 1: raw AUROC = 0.5974  ->  debiased = 0.5949  (Δ = -0.0025)
+2026-05-27 23:26:51,035 | INFO | celeba_ood |   block 2: raw AUROC = 0.6320  ->  debiased = 0.6260  (Δ = -0.0060)
+2026-05-27 23:26:51,035 | INFO | celeba_ood |   block 3: raw AUROC = 0.6360  ->  debiased = 0.6550  (Δ = +0.0191)
+2026-05-27 23:26:51,035 | INFO | celeba_ood |   block 4: raw AUROC = 0.5778  ->  debiased = 0.6276  (Δ = +0.0498)
+2026-05-27 23:26:51,035 | INFO | celeba_ood |   block 5: raw AUROC = 0.5444  ->  debiased = 0.5994  (Δ = +0.0550)
+2026-05-27 23:26:51,035 | INFO | celeba_ood |   aggregated: raw AUROC = 0.5967  ->  debiased = 0.6385  (Δ = +0.0418)
+2026-05-27 23:28:00,705 | INFO | celeba_ood | Fusion-based AUROC (max-pixel) = 0.5483  (in_mean=0.6415, ood_mean=0.6584)
+2026-05-27 23:28:00,705 | INFO | celeba_ood | Wrote per-block plots: per_block_breakdown.png, recons_only.png, activations.png, fusion_overlay.png, fusion_auroc.png
+2026-05-27 23:28:28,443 | INFO | celeba_ood | Wrote debiasing plots: bias_variance_maps.png, anomaly_cleaning.png, score_dist_debiased.png, per_block_auroc.png
+2026-05-27 23:28:28,445 | INFO | celeba_ood | Summary written to outputs/celeba_ood/ensemble_20260527_194912_6458836/model_2/summary.json
+2026-05-27 23:28:28,456 | INFO | celeba_ood | model 3/10 done in 4232.6s
+2026-05-27 23:28:28,478 | INFO | celeba_ood | ######################################################################
+2026-05-27 23:28:28,478 | INFO | celeba_ood | # MODEL 4/10   (seed=45)
+2026-05-27 23:28:28,478 | INFO | celeba_ood | ######################################################################
+2026-05-27 23:28:28,520 | INFO | celeba_ood | Model        : FacialCNN  (1,571,624 params)
+2026-05-27 23:28:28,520 | INFO | celeba_ood | ======================================================================
+2026-05-27 23:28:28,520 | INFO | celeba_ood | TRAINING — combined CE(gender) + BCE(attrs) loss
+2026-05-27 23:28:28,520 | INFO | celeba_ood | ======================================================================
+2026-05-27 23:29:23,522 | INFO | celeba_ood | epoch   1/25  train_loss=0.9375  train_gender_acc=94.9%  train_attr_acc=[84.2 87.8 84.9 83.2 72.9 72.7]%  (55.0s)
+2026-05-27 23:30:17,806 | INFO | celeba_ood | epoch   2/25  train_loss=0.7480  train_gender_acc=97.5%  train_attr_acc=[87.3 91.9 91.5 86.9 74.6 74.7]%  (54.3s)
+2026-05-27 23:31:10,945 | INFO | celeba_ood | epoch   3/25  train_loss=0.7058  train_gender_acc=98.1%  train_attr_acc=[88.1 92.4 92.5 87.5 75.5 75.3]%  (53.1s)
+2026-05-27 23:32:06,290 | INFO | celeba_ood | epoch   4/25  train_loss=0.6777  train_gender_acc=98.5%  train_attr_acc=[88.7 92.7 93.0 87.8 76.0 75.7]%  (55.3s)
+2026-05-27 23:33:00,640 | INFO | celeba_ood | epoch   5/25  train_loss=0.6558  train_gender_acc=98.8%  train_attr_acc=[89.1 93.0 93.4 88.1 76.4 76.0]%  (54.4s)
+2026-05-27 23:33:54,816 | INFO | celeba_ood | epoch   6/25  train_loss=0.6373  train_gender_acc=99.0%  train_attr_acc=[89.4 93.2 93.6 88.3 76.7 76.4]%  (54.2s)
+2026-05-27 23:34:49,213 | INFO | celeba_ood | epoch   7/25  train_loss=0.6201  train_gender_acc=99.2%  train_attr_acc=[89.8 93.5 93.8 88.7 77.1 76.8]%  (54.4s)
+2026-05-27 23:35:43,278 | INFO | celeba_ood | epoch   8/25  train_loss=0.6045  train_gender_acc=99.3%  train_attr_acc=[90.2 93.7 94.1 88.9 77.4 77.1]%  (54.1s)
+2026-05-27 23:36:36,914 | INFO | celeba_ood | epoch   9/25  train_loss=0.5906  train_gender_acc=99.3%  train_attr_acc=[90.7 93.8 94.4 89.2 77.9 77.5]%  (53.6s)
+2026-05-27 23:37:30,761 | INFO | celeba_ood | epoch  10/25  train_loss=0.5739  train_gender_acc=99.5%  train_attr_acc=[91.0 94.1 94.5 89.4 78.3 78.0]%  (53.8s)
+2026-05-27 23:38:24,182 | INFO | celeba_ood | epoch  11/25  train_loss=0.5568  train_gender_acc=99.5%  train_attr_acc=[91.4 94.4 94.8 89.8 78.8 78.4]%  (53.4s)
+2026-05-27 23:39:17,645 | INFO | celeba_ood | epoch  12/25  train_loss=0.5411  train_gender_acc=99.6%  train_attr_acc=[91.9 94.6 95.0 90.1 79.2 78.9]%  (53.5s)
+2026-05-27 23:40:12,095 | INFO | celeba_ood | epoch  13/25  train_loss=0.5233  train_gender_acc=99.6%  train_attr_acc=[92.3 94.8 95.2 90.5 79.8 79.6]%  (54.4s)
+2026-05-27 23:41:05,604 | INFO | celeba_ood | epoch  14/25  train_loss=0.5073  train_gender_acc=99.6%  train_attr_acc=[92.7 95.0 95.5 90.9 80.4 80.1]%  (53.5s)
+2026-05-27 23:41:58,686 | INFO | celeba_ood | epoch  15/25  train_loss=0.4902  train_gender_acc=99.7%  train_attr_acc=[93.1 95.2 95.7 91.2 80.9 80.9]%  (53.1s)
+2026-05-27 23:42:53,471 | INFO | celeba_ood | epoch  16/25  train_loss=0.4714  train_gender_acc=99.7%  train_attr_acc=[93.6 95.4 95.9 91.7 81.6 81.6]%  (54.8s)
+2026-05-27 23:43:47,671 | INFO | celeba_ood | epoch  17/25  train_loss=0.4538  train_gender_acc=99.7%  train_attr_acc=[93.8 95.6 96.1 92.0 82.3 82.4]%  (54.2s)
+2026-05-27 23:44:41,670 | INFO | celeba_ood | epoch  18/25  train_loss=0.4377  train_gender_acc=99.7%  train_attr_acc=[94.3 95.8 96.2 92.3 82.9 83.0]%  (54.0s)
+2026-05-27 23:45:36,685 | INFO | celeba_ood | epoch  19/25  train_loss=0.4213  train_gender_acc=99.7%  train_attr_acc=[94.5 95.9 96.4 92.6 83.7 83.8]%  (55.0s)
+2026-05-27 23:46:29,913 | INFO | celeba_ood | epoch  20/25  train_loss=0.4044  train_gender_acc=99.8%  train_attr_acc=[94.7 96.1 96.6 93.0 84.4 84.4]%  (53.2s)
+2026-05-27 23:47:22,928 | INFO | celeba_ood | epoch  21/25  train_loss=0.3887  train_gender_acc=99.8%  train_attr_acc=[95.0 96.2 96.7 93.3 85.0 85.2]%  (53.0s)
+2026-05-27 23:48:17,826 | INFO | celeba_ood | epoch  22/25  train_loss=0.3735  train_gender_acc=99.8%  train_attr_acc=[95.2 96.4 96.8 93.4 85.8 86.0]%  (54.9s)
+2026-05-27 23:49:11,393 | INFO | celeba_ood | epoch  23/25  train_loss=0.3588  train_gender_acc=99.8%  train_attr_acc=[95.5 96.5 97.0 93.8 86.4 86.6]%  (53.6s)
+2026-05-27 23:50:04,806 | INFO | celeba_ood | epoch  24/25  train_loss=0.3456  train_gender_acc=99.8%  train_attr_acc=[95.7 96.7 97.1 94.0 87.1 87.2]%  (53.4s)
+2026-05-27 23:50:58,644 | INFO | celeba_ood | epoch  25/25  train_loss=0.3323  train_gender_acc=99.8%  train_attr_acc=[95.8 96.7 97.2 94.3 87.7 87.9]%  (53.8s)
+2026-05-27 23:50:58,644 | INFO | celeba_ood | Training done in 1350.1s
+2026-05-27 23:50:58,782 | INFO | celeba_ood | ======================================================================
+2026-05-27 23:50:58,782 | INFO | celeba_ood | PHASE 2 — training per-block decoders (visualization)
+2026-05-27 23:50:58,782 | INFO | celeba_ood | ======================================================================
+2026-05-27 23:50:58,783 | INFO | celeba_ood |   decoder L0: in=(C=32, H=32) → out=(3, 64, 64)  params=8,275
+2026-05-27 23:50:58,783 | INFO | celeba_ood |   decoder L1: in=(C=64, H=16) → out=(3, 64, 64)  params=41,107
+2026-05-27 23:50:58,783 | INFO | celeba_ood |   decoder L2: in=(C=128, H=8) → out=(3, 64, 64)  params=172,307
+2026-05-27 23:50:58,783 | INFO | celeba_ood |   decoder L3: in=(C=256, H=4) → out=(3, 64, 64)  params=696,851
+2026-05-27 23:50:58,783 | INFO | celeba_ood |   decoder L4: in=(C=256, H=2) → out=(3, 64, 64)  params=700,979
+2026-05-27 23:50:58,783 | INFO | celeba_ood |   decoder L5: in=(C=256, H=2) → out=(3, 64, 64)  params=700,979
+2026-05-27 23:51:54,372 | INFO | celeba_ood | [decoders] epoch   1/50  train=0.1605  (55.6s)
+2026-05-27 23:52:48,933 | INFO | celeba_ood | [decoders] epoch   2/50  train=0.1225  (54.6s)
+2026-05-27 23:53:43,648 | INFO | celeba_ood | [decoders] epoch   3/50  train=0.1177  (54.7s)
+2026-05-27 23:54:39,064 | INFO | celeba_ood | [decoders] epoch   4/50  train=0.1150  (55.4s)
+2026-05-27 23:55:33,503 | INFO | celeba_ood | [decoders] epoch   5/50  train=0.1134  (54.4s)
+2026-05-27 23:56:28,419 | INFO | celeba_ood | [decoders] epoch   6/50  train=0.1122  (54.9s)
+2026-05-27 23:57:23,773 | INFO | celeba_ood | [decoders] epoch   7/50  train=0.1112  (55.4s)
+2026-05-27 23:58:18,421 | INFO | celeba_ood | [decoders] epoch   8/50  train=0.1106  (54.6s)
+2026-05-27 23:59:12,825 | INFO | celeba_ood | [decoders] epoch   9/50  train=0.1100  (54.4s)
+2026-05-28 00:00:08,041 | INFO | celeba_ood | [decoders] epoch  10/50  train=0.1092  (55.2s)
+2026-05-28 00:01:02,754 | INFO | celeba_ood | [decoders] epoch  11/50  train=0.1089  (54.7s)
+2026-05-28 00:01:57,266 | INFO | celeba_ood | [decoders] epoch  12/50  train=0.1085  (54.5s)
+2026-05-28 00:02:52,701 | INFO | celeba_ood | [decoders] epoch  13/50  train=0.1082  (55.4s)
+2026-05-28 00:03:47,472 | INFO | celeba_ood | [decoders] epoch  14/50  train=0.1078  (54.8s)
+2026-05-28 00:04:42,171 | INFO | celeba_ood | [decoders] epoch  15/50  train=0.1075  (54.7s)
+2026-05-28 00:05:37,426 | INFO | celeba_ood | [decoders] epoch  16/50  train=0.1073  (55.3s)
+2026-05-28 00:06:32,209 | INFO | celeba_ood | [decoders] epoch  17/50  train=0.1070  (54.8s)
+2026-05-28 00:07:27,690 | INFO | celeba_ood | [decoders] epoch  18/50  train=0.1069  (55.5s)
+2026-05-28 00:08:23,263 | INFO | celeba_ood | [decoders] epoch  19/50  train=0.1068  (55.6s)
+2026-05-28 00:09:17,913 | INFO | celeba_ood | [decoders] epoch  20/50  train=0.1064  (54.6s)
+2026-05-28 00:10:12,348 | INFO | celeba_ood | [decoders] epoch  21/50  train=0.1064  (54.4s)
+2026-05-28 00:11:07,667 | INFO | celeba_ood | [decoders] epoch  22/50  train=0.1062  (55.3s)
+2026-05-28 00:12:03,524 | INFO | celeba_ood | [decoders] epoch  23/50  train=0.1060  (55.9s)
+2026-05-28 00:12:58,982 | INFO | celeba_ood | [decoders] epoch  24/50  train=0.1059  (55.5s)
+2026-05-28 00:13:54,367 | INFO | celeba_ood | [decoders] epoch  25/50  train=0.1057  (55.4s)
+2026-05-28 00:14:48,811 | INFO | celeba_ood | [decoders] epoch  26/50  train=0.1058  (54.4s)
+2026-05-28 00:15:43,260 | INFO | celeba_ood | [decoders] epoch  27/50  train=0.1056  (54.4s)
+2026-05-28 00:16:37,829 | INFO | celeba_ood | [decoders] epoch  28/50  train=0.1055  (54.6s)
+2026-05-28 00:17:33,255 | INFO | celeba_ood | [decoders] epoch  29/50  train=0.1055  (55.4s)
+2026-05-28 00:18:27,932 | INFO | celeba_ood | [decoders] epoch  30/50  train=0.1055  (54.7s)
+2026-05-28 00:19:22,529 | INFO | celeba_ood | [decoders] epoch  31/50  train=0.1053  (54.6s)
+2026-05-28 00:20:18,357 | INFO | celeba_ood | [decoders] epoch  32/50  train=0.1052  (55.8s)
+2026-05-28 00:21:12,978 | INFO | celeba_ood | [decoders] epoch  33/50  train=0.1051  (54.6s)
+2026-05-28 00:22:07,773 | INFO | celeba_ood | [decoders] epoch  34/50  train=0.1050  (54.8s)
+2026-05-28 00:23:03,179 | INFO | celeba_ood | [decoders] epoch  35/50  train=0.1050  (55.4s)
+2026-05-28 00:23:57,707 | INFO | celeba_ood | [decoders] epoch  36/50  train=0.1049  (54.5s)
+2026-05-28 00:24:52,456 | INFO | celeba_ood | [decoders] epoch  37/50  train=0.1048  (54.7s)
+2026-05-28 00:25:47,517 | INFO | celeba_ood | [decoders] epoch  38/50  train=0.1048  (55.1s)
+2026-05-28 00:26:42,375 | INFO | celeba_ood | [decoders] epoch  39/50  train=0.1048  (54.9s)
+2026-05-28 00:27:37,129 | INFO | celeba_ood | [decoders] epoch  40/50  train=0.1046  (54.8s)
+2026-05-28 00:28:32,639 | INFO | celeba_ood | [decoders] epoch  41/50  train=0.1046  (55.5s)
+2026-05-28 00:29:27,490 | INFO | celeba_ood | [decoders] epoch  42/50  train=0.1046  (54.9s)
+2026-05-28 00:30:22,133 | INFO | celeba_ood | [decoders] epoch  43/50  train=0.1046  (54.6s)
+2026-05-28 00:31:17,425 | INFO | celeba_ood | [decoders] epoch  44/50  train=0.1046  (55.3s)
+2026-05-28 00:32:11,998 | INFO | celeba_ood | [decoders] epoch  45/50  train=0.1045  (54.6s)
+2026-05-28 00:33:07,039 | INFO | celeba_ood | [decoders] epoch  46/50  train=0.1044  (55.0s)
+2026-05-28 00:34:03,651 | INFO | celeba_ood | [decoders] epoch  47/50  train=0.1044  (56.6s)
+2026-05-28 00:34:59,401 | INFO | celeba_ood | [decoders] epoch  48/50  train=0.1044  (55.8s)
+2026-05-28 00:35:53,892 | INFO | celeba_ood | [decoders] epoch  49/50  train=0.1044  (54.5s)
+2026-05-28 00:36:49,122 | INFO | celeba_ood | [decoders] epoch  50/50  train=0.1043  (55.2s)
+2026-05-28 00:36:49,123 | INFO | celeba_ood | Decoder training done in 2750.3s
+2026-05-28 00:36:49,170 | INFO | celeba_ood | ======================================================================
+2026-05-28 00:36:49,170 | INFO | celeba_ood | EVALUATION — per-attribute accuracy + OOD AUROC
+2026-05-28 00:36:49,170 | INFO | celeba_ood | ======================================================================
+2026-05-28 00:36:49,170 | INFO | celeba_ood | Collecting predictions on test_in...
+2026-05-28 00:36:55,527 | INFO | celeba_ood |   test_in size = 18941, OOD score (combined entropy) mean = 0.2302
+2026-05-28 00:36:55,527 | INFO | celeba_ood | Collecting predictions on test_ood (Eyeglasses)...
+2026-05-28 00:36:59,929 | INFO | celeba_ood |   test_ood size = 13193, OOD score (combined entropy) mean = 0.3149
+2026-05-28 00:36:59,990 | INFO | celeba_ood | Per-attribute accuracy (in-distribution test set):
+2026-05-28 00:36:59,991 | INFO | celeba_ood |   Male/Female : 97.64%
+2026-05-28 00:36:59,991 | INFO | celeba_ood |   Young                 : 86.52%
+2026-05-28 00:36:59,991 | INFO | celeba_ood |   Smiling               : 91.43%
+2026-05-28 00:36:59,991 | INFO | celeba_ood |   Mouth_Slightly_Open   : 92.19%
+2026-05-28 00:36:59,991 | INFO | celeba_ood |   High_Cheekbones       : 84.62%
+2026-05-28 00:36:59,991 | INFO | celeba_ood |   Pointy_Nose           : 71.45%
+2026-05-28 00:36:59,991 | INFO | celeba_ood |   Oval_Face             : 72.38%
+2026-05-28 00:36:59,991 | INFO | celeba_ood | OOD AUROC (in-dist vs Eyeglasses):
+2026-05-28 00:36:59,991 | INFO | celeba_ood |   score_msp                AUROC = 0.6579  (in_mean=0.010, ood_mean=0.034)
+2026-05-28 00:36:59,991 | INFO | celeba_ood |   score_entropy_gender     AUROC = 0.6579  (in_mean=0.027, ood_mean=0.084)
+2026-05-28 00:36:59,991 | INFO | celeba_ood |   score_entropy_attrs      AUROC = 0.5798  (in_mean=0.204, ood_mean=0.231)
+2026-05-28 00:36:59,991 | INFO | celeba_ood |   score_entropy_combined   AUROC = 0.6399  (in_mean=0.230, ood_mean=0.315)
+2026-05-28 00:36:59,991 | INFO | celeba_ood | Estimating reconstruction-error bias/variance on test_in (clean reference, no training leakage)...
+2026-05-28 00:37:06,406 | INFO | celeba_ood | Scoring test_in / test_ood (agg='p95')...
+2026-05-28 00:37:17,517 | INFO | celeba_ood | OOD AUROC — debiased reconstruction error:
+2026-05-28 00:37:17,517 | INFO | celeba_ood |   block 0: raw AUROC = 0.5652  ->  debiased = 0.5987  (Δ = +0.0336)
+2026-05-28 00:37:17,517 | INFO | celeba_ood |   block 1: raw AUROC = 0.5934  ->  debiased = 0.5904  (Δ = -0.0030)
+2026-05-28 00:37:17,517 | INFO | celeba_ood |   block 2: raw AUROC = 0.6182  ->  debiased = 0.6087  (Δ = -0.0095)
+2026-05-28 00:37:17,517 | INFO | celeba_ood |   block 3: raw AUROC = 0.6265  ->  debiased = 0.6420  (Δ = +0.0155)
+2026-05-28 00:37:17,517 | INFO | celeba_ood |   block 4: raw AUROC = 0.5809  ->  debiased = 0.6336  (Δ = +0.0527)
+2026-05-28 00:37:17,517 | INFO | celeba_ood |   block 5: raw AUROC = 0.5467  ->  debiased = 0.6062  (Δ = +0.0595)
+2026-05-28 00:37:17,518 | INFO | celeba_ood |   aggregated: raw AUROC = 0.5957  ->  debiased = 0.6355  (Δ = +0.0398)
+2026-05-28 00:38:25,287 | INFO | celeba_ood | Fusion-based AUROC (max-pixel) = 0.5666  (in_mean=0.6367, ood_mean=0.6596)
+2026-05-28 00:38:25,288 | INFO | celeba_ood | Wrote per-block plots: per_block_breakdown.png, recons_only.png, activations.png, fusion_overlay.png, fusion_auroc.png
+2026-05-28 00:38:52,070 | INFO | celeba_ood | Wrote debiasing plots: bias_variance_maps.png, anomaly_cleaning.png, score_dist_debiased.png, per_block_auroc.png
+2026-05-28 00:38:52,072 | INFO | celeba_ood | Summary written to outputs/celeba_ood/ensemble_20260527_194912_6458836/model_3/summary.json
+2026-05-28 00:38:52,078 | INFO | celeba_ood | model 4/10 done in 4223.6s
+2026-05-28 00:38:52,098 | INFO | celeba_ood | ######################################################################
+2026-05-28 00:38:52,099 | INFO | celeba_ood | # MODEL 5/10   (seed=46)
+2026-05-28 00:38:52,099 | INFO | celeba_ood | ######################################################################
+2026-05-28 00:38:52,139 | INFO | celeba_ood | Model        : FacialCNN  (1,571,624 params)
+2026-05-28 00:38:52,139 | INFO | celeba_ood | ======================================================================
+2026-05-28 00:38:52,139 | INFO | celeba_ood | TRAINING — combined CE(gender) + BCE(attrs) loss
+2026-05-28 00:38:52,139 | INFO | celeba_ood | ======================================================================
+2026-05-28 00:39:46,302 | INFO | celeba_ood | epoch   1/25  train_loss=0.9168  train_gender_acc=95.2%  train_attr_acc=[84.9 88.4 85.5 83.7 72.5 72.9]%  (54.2s)
+2026-05-28 00:40:39,630 | INFO | celeba_ood | epoch   2/25  train_loss=0.7444  train_gender_acc=97.6%  train_attr_acc=[87.3 91.9 91.7 87.0 74.7 74.8]%  (53.3s)
+2026-05-28 00:41:32,725 | INFO | celeba_ood | epoch   3/25  train_loss=0.7027  train_gender_acc=98.2%  train_attr_acc=[88.1 92.5 92.5 87.6 75.5 75.5]%  (53.1s)
+2026-05-28 00:42:26,846 | INFO | celeba_ood | epoch   4/25  train_loss=0.6743  train_gender_acc=98.6%  train_attr_acc=[88.7 92.8 93.0 87.8 76.0 75.9]%  (54.1s)
+2026-05-28 00:43:19,801 | INFO | celeba_ood | epoch   5/25  train_loss=0.6547  train_gender_acc=98.8%  train_attr_acc=[89.1 93.0 93.3 88.2 76.4 76.2]%  (53.0s)
+2026-05-28 00:44:14,243 | INFO | celeba_ood | epoch   6/25  train_loss=0.6349  train_gender_acc=99.0%  train_attr_acc=[89.5 93.3 93.6 88.4 76.8 76.6]%  (54.4s)
+2026-05-28 00:45:07,211 | INFO | celeba_ood | epoch   7/25  train_loss=0.6171  train_gender_acc=99.2%  train_attr_acc=[89.9 93.5 93.9 88.6 77.2 76.9]%  (53.0s)
+2026-05-28 00:46:01,298 | INFO | celeba_ood | epoch   8/25  train_loss=0.6008  train_gender_acc=99.2%  train_attr_acc=[90.5 93.7 94.2 88.9 77.6 77.3]%  (54.1s)
+2026-05-28 00:46:54,494 | INFO | celeba_ood | epoch   9/25  train_loss=0.5841  train_gender_acc=99.4%  train_attr_acc=[90.7 94.0 94.4 89.3 77.9 77.8]%  (53.2s)
+2026-05-28 00:47:47,969 | INFO | celeba_ood | epoch  10/25  train_loss=0.5656  train_gender_acc=99.5%  train_attr_acc=[91.2 94.2 94.6 89.6 78.3 78.3]%  (53.5s)
+2026-05-28 00:48:42,150 | INFO | celeba_ood | epoch  11/25  train_loss=0.5496  train_gender_acc=99.6%  train_attr_acc=[91.7 94.4 94.9 89.9 78.8 78.7]%  (54.2s)
+2026-05-28 00:49:35,530 | INFO | celeba_ood | epoch  12/25  train_loss=0.5317  train_gender_acc=99.6%  train_attr_acc=[92.2 94.6 95.1 90.3 79.3 79.4]%  (53.4s)
+2026-05-28 00:50:28,505 | INFO | celeba_ood | epoch  13/25  train_loss=0.5134  train_gender_acc=99.7%  train_attr_acc=[92.6 94.9 95.3 90.7 79.8 80.1]%  (53.0s)
+2026-05-28 00:51:22,698 | INFO | celeba_ood | epoch  14/25  train_loss=0.4962  train_gender_acc=99.7%  train_attr_acc=[93.0 95.1 95.6 91.0 80.5 80.9]%  (54.2s)
+2026-05-28 00:52:16,124 | INFO | celeba_ood | epoch  15/25  train_loss=0.4787  train_gender_acc=99.7%  train_attr_acc=[93.5 95.3 95.8 91.4 81.0 81.6]%  (53.4s)
+2026-05-28 00:53:09,602 | INFO | celeba_ood | epoch  16/25  train_loss=0.4613  train_gender_acc=99.7%  train_attr_acc=[93.8 95.5 96.0 91.7 81.7 82.2]%  (53.5s)
+2026-05-28 00:54:03,861 | INFO | celeba_ood | epoch  17/25  train_loss=0.4433  train_gender_acc=99.7%  train_attr_acc=[94.3 95.7 96.2 92.1 82.5 82.8]%  (54.3s)
+2026-05-28 00:54:57,388 | INFO | celeba_ood | epoch  18/25  train_loss=0.4250  train_gender_acc=99.7%  train_attr_acc=[94.6 95.9 96.4 92.4 83.2 83.8]%  (53.5s)
+2026-05-28 00:55:51,241 | INFO | celeba_ood | epoch  19/25  train_loss=0.4088  train_gender_acc=99.7%  train_attr_acc=[94.8 96.1 96.6 92.7 84.0 84.5]%  (53.9s)
+2026-05-28 00:56:45,070 | INFO | celeba_ood | epoch  20/25  train_loss=0.3919  train_gender_acc=99.8%  train_attr_acc=[95.0 96.2 96.7 93.1 84.7 85.2]%  (53.8s)
+2026-05-28 00:57:37,948 | INFO | celeba_ood | epoch  21/25  train_loss=0.3779  train_gender_acc=99.8%  train_attr_acc=[95.3 96.4 96.8 93.3 85.4 86.0]%  (52.9s)
+2026-05-28 00:58:31,034 | INFO | celeba_ood | epoch  22/25  train_loss=0.3613  train_gender_acc=99.8%  train_attr_acc=[95.5 96.5 97.0 93.6 86.2 86.7]%  (53.1s)
+2026-05-28 00:59:24,993 | INFO | celeba_ood | epoch  23/25  train_loss=0.3480  train_gender_acc=99.8%  train_attr_acc=[95.6 96.6 97.0 93.8 86.7 87.3]%  (54.0s)
+2026-05-28 01:00:18,016 | INFO | celeba_ood | epoch  24/25  train_loss=0.3334  train_gender_acc=99.8%  train_attr_acc=[95.9 96.8 97.2 94.2 87.5 88.1]%  (53.0s)
+2026-05-28 01:01:12,127 | INFO | celeba_ood | epoch  25/25  train_loss=0.3215  train_gender_acc=99.8%  train_attr_acc=[96.0 96.7 97.3 94.4 88.0 88.6]%  (54.1s)
+2026-05-28 01:01:12,128 | INFO | celeba_ood | Training done in 1340.0s
+2026-05-28 01:01:12,259 | INFO | celeba_ood | ======================================================================
+2026-05-28 01:01:12,259 | INFO | celeba_ood | PHASE 2 — training per-block decoders (visualization)
+2026-05-28 01:01:12,259 | INFO | celeba_ood | ======================================================================
+2026-05-28 01:01:12,259 | INFO | celeba_ood |   decoder L0: in=(C=32, H=32) → out=(3, 64, 64)  params=8,275
+2026-05-28 01:01:12,259 | INFO | celeba_ood |   decoder L1: in=(C=64, H=16) → out=(3, 64, 64)  params=41,107
+2026-05-28 01:01:12,259 | INFO | celeba_ood |   decoder L2: in=(C=128, H=8) → out=(3, 64, 64)  params=172,307
+2026-05-28 01:01:12,259 | INFO | celeba_ood |   decoder L3: in=(C=256, H=4) → out=(3, 64, 64)  params=696,851
+2026-05-28 01:01:12,259 | INFO | celeba_ood |   decoder L4: in=(C=256, H=2) → out=(3, 64, 64)  params=700,979
+2026-05-28 01:01:12,259 | INFO | celeba_ood |   decoder L5: in=(C=256, H=2) → out=(3, 64, 64)  params=700,979
+2026-05-28 01:02:06,615 | INFO | celeba_ood | [decoders] epoch   1/50  train=0.1648  (54.4s)
+2026-05-28 01:03:01,806 | INFO | celeba_ood | [decoders] epoch   2/50  train=0.1249  (55.2s)
+2026-05-28 01:03:56,241 | INFO | celeba_ood | [decoders] epoch   3/50  train=0.1199  (54.4s)
+2026-05-28 01:04:50,584 | INFO | celeba_ood | [decoders] epoch   4/50  train=0.1173  (54.3s)
+2026-05-28 01:05:45,809 | INFO | celeba_ood | [decoders] epoch   5/50  train=0.1156  (55.2s)
+2026-05-28 01:06:40,695 | INFO | celeba_ood | [decoders] epoch   6/50  train=0.1145  (54.9s)
+2026-05-28 01:07:35,140 | INFO | celeba_ood | [decoders] epoch   7/50  train=0.1136  (54.4s)
+2026-05-28 01:08:30,841 | INFO | celeba_ood | [decoders] epoch   8/50  train=0.1127  (55.7s)
+2026-05-28 01:09:25,315 | INFO | celeba_ood | [decoders] epoch   9/50  train=0.1122  (54.5s)
+2026-05-28 01:10:20,373 | INFO | celeba_ood | [decoders] epoch  10/50  train=0.1116  (55.1s)
+2026-05-28 01:11:17,350 | INFO | celeba_ood | [decoders] epoch  11/50  train=0.1112  (57.0s)
+2026-05-28 01:12:13,982 | INFO | celeba_ood | [decoders] epoch  12/50  train=0.1107  (56.6s)
+2026-05-28 01:13:08,768 | INFO | celeba_ood | [decoders] epoch  13/50  train=0.1105  (54.8s)
+2026-05-28 01:14:03,984 | INFO | celeba_ood | [decoders] epoch  14/50  train=0.1102  (55.2s)
+2026-05-28 01:14:58,828 | INFO | celeba_ood | [decoders] epoch  15/50  train=0.1099  (54.8s)
+2026-05-28 01:15:53,497 | INFO | celeba_ood | [decoders] epoch  16/50  train=0.1098  (54.7s)
+2026-05-28 01:16:49,117 | INFO | celeba_ood | [decoders] epoch  17/50  train=0.1095  (55.6s)
+2026-05-28 01:17:44,073 | INFO | celeba_ood | [decoders] epoch  18/50  train=0.1093  (55.0s)
+2026-05-28 01:18:38,866 | INFO | celeba_ood | [decoders] epoch  19/50  train=0.1091  (54.8s)
+2026-05-28 01:19:34,017 | INFO | celeba_ood | [decoders] epoch  20/50  train=0.1089  (55.2s)
+2026-05-28 01:20:28,622 | INFO | celeba_ood | [decoders] epoch  21/50  train=0.1087  (54.6s)
+2026-05-28 01:21:23,202 | INFO | celeba_ood | [decoders] epoch  22/50  train=0.1086  (54.6s)
+2026-05-28 01:22:18,918 | INFO | celeba_ood | [decoders] epoch  23/50  train=0.1086  (55.7s)
+2026-05-28 01:23:13,787 | INFO | celeba_ood | [decoders] epoch  24/50  train=0.1084  (54.9s)
+2026-05-28 01:24:08,435 | INFO | celeba_ood | [decoders] epoch  25/50  train=0.1081  (54.6s)
+2026-05-28 01:25:03,895 | INFO | celeba_ood | [decoders] epoch  26/50  train=0.1082  (55.5s)
+2026-05-28 01:25:58,274 | INFO | celeba_ood | [decoders] epoch  27/50  train=0.1081  (54.4s)
+2026-05-28 01:26:52,645 | INFO | celeba_ood | [decoders] epoch  28/50  train=0.1078  (54.4s)
+2026-05-28 01:27:47,778 | INFO | celeba_ood | [decoders] epoch  29/50  train=0.1079  (55.1s)
+2026-05-28 01:28:43,044 | INFO | celeba_ood | [decoders] epoch  30/50  train=0.1077  (55.3s)
+2026-05-28 01:29:37,612 | INFO | celeba_ood | [decoders] epoch  31/50  train=0.1077  (54.6s)
+2026-05-28 01:30:32,798 | INFO | celeba_ood | [decoders] epoch  32/50  train=0.1077  (55.2s)
+2026-05-28 01:31:28,631 | INFO | celeba_ood | [decoders] epoch  33/50  train=0.1076  (55.8s)
+2026-05-28 01:32:23,124 | INFO | celeba_ood | [decoders] epoch  34/50  train=0.1075  (54.5s)
+2026-05-28 01:33:17,719 | INFO | celeba_ood | [decoders] epoch  35/50  train=0.1074  (54.6s)
+2026-05-28 01:34:13,283 | INFO | celeba_ood | [decoders] epoch  36/50  train=0.1073  (55.6s)
+2026-05-28 01:35:07,990 | INFO | celeba_ood | [decoders] epoch  37/50  train=0.1074  (54.7s)
+2026-05-28 01:36:02,628 | INFO | celeba_ood | [decoders] epoch  38/50  train=0.1072  (54.6s)
+2026-05-28 01:36:57,831 | INFO | celeba_ood | [decoders] epoch  39/50  train=0.1071  (55.2s)
+2026-05-28 01:37:52,201 | INFO | celeba_ood | [decoders] epoch  40/50  train=0.1072  (54.4s)
+2026-05-28 01:38:46,689 | INFO | celeba_ood | [decoders] epoch  41/50  train=0.1070  (54.5s)
+2026-05-28 01:39:42,095 | INFO | celeba_ood | [decoders] epoch  42/50  train=0.1071  (55.4s)
+2026-05-28 01:40:36,528 | INFO | celeba_ood | [decoders] epoch  43/50  train=0.1069  (54.4s)
+2026-05-28 01:41:30,931 | INFO | celeba_ood | [decoders] epoch  44/50  train=0.1069  (54.4s)
+2026-05-28 01:42:26,129 | INFO | celeba_ood | [decoders] epoch  45/50  train=0.1070  (55.2s)
+2026-05-28 01:43:20,830 | INFO | celeba_ood | [decoders] epoch  46/50  train=0.1069  (54.7s)
+2026-05-28 01:44:15,378 | INFO | celeba_ood | [decoders] epoch  47/50  train=0.1068  (54.5s)
+2026-05-28 01:45:10,612 | INFO | celeba_ood | [decoders] epoch  48/50  train=0.1068  (55.2s)
+2026-05-28 01:46:05,313 | INFO | celeba_ood | [decoders] epoch  49/50  train=0.1069  (54.7s)
+2026-05-28 01:46:59,870 | INFO | celeba_ood | [decoders] epoch  50/50  train=0.1068  (54.6s)
+2026-05-28 01:46:59,871 | INFO | celeba_ood | Decoder training done in 2747.6s
+2026-05-28 01:46:59,917 | INFO | celeba_ood | ======================================================================
+2026-05-28 01:46:59,917 | INFO | celeba_ood | EVALUATION — per-attribute accuracy + OOD AUROC
+2026-05-28 01:46:59,917 | INFO | celeba_ood | ======================================================================
+2026-05-28 01:46:59,917 | INFO | celeba_ood | Collecting predictions on test_in...
+2026-05-28 01:47:05,982 | INFO | celeba_ood |   test_in size = 18941, OOD score (combined entropy) mean = 0.2627
+2026-05-28 01:47:05,982 | INFO | celeba_ood | Collecting predictions on test_ood (Eyeglasses)...
+2026-05-28 01:47:10,385 | INFO | celeba_ood |   test_ood size = 13193, OOD score (combined entropy) mean = 0.3329
+2026-05-28 01:47:10,442 | INFO | celeba_ood | Per-attribute accuracy (in-distribution test set):
+2026-05-28 01:47:10,442 | INFO | celeba_ood |   Male/Female : 97.62%
+2026-05-28 01:47:10,442 | INFO | celeba_ood |   Young                 : 83.61%
+2026-05-28 01:47:10,442 | INFO | celeba_ood |   Smiling               : 91.68%
+2026-05-28 01:47:10,442 | INFO | celeba_ood |   Mouth_Slightly_Open   : 91.53%
+2026-05-28 01:47:10,442 | INFO | celeba_ood |   High_Cheekbones       : 84.59%
+2026-05-28 01:47:10,442 | INFO | celeba_ood |   Pointy_Nose           : 67.88%
+2026-05-28 01:47:10,442 | INFO | celeba_ood |   Oval_Face             : 68.34%
+2026-05-28 01:47:10,442 | INFO | celeba_ood | OOD AUROC (in-dist vs Eyeglasses):
+2026-05-28 01:47:10,442 | INFO | celeba_ood |   score_msp                AUROC = 0.6869  (in_mean=0.011, ood_mean=0.037)
+2026-05-28 01:47:10,442 | INFO | celeba_ood |   score_entropy_gender     AUROC = 0.6869  (in_mean=0.030, ood_mean=0.093)
+2026-05-28 01:47:10,442 | INFO | celeba_ood |   score_entropy_attrs      AUROC = 0.5221  (in_mean=0.233, ood_mean=0.240)
+2026-05-28 01:47:10,442 | INFO | celeba_ood |   score_entropy_combined   AUROC = 0.5987  (in_mean=0.263, ood_mean=0.333)
+2026-05-28 01:47:10,442 | INFO | celeba_ood | Estimating reconstruction-error bias/variance on test_in (clean reference, no training leakage)...
+2026-05-28 01:47:16,703 | INFO | celeba_ood | Scoring test_in / test_ood (agg='p95')...
+2026-05-28 01:47:27,902 | INFO | celeba_ood | OOD AUROC — debiased reconstruction error:
+2026-05-28 01:47:27,903 | INFO | celeba_ood |   block 0: raw AUROC = 0.5727  ->  debiased = 0.5913  (Δ = +0.0186)
+2026-05-28 01:47:27,903 | INFO | celeba_ood |   block 1: raw AUROC = 0.5922  ->  debiased = 0.5908  (Δ = -0.0015)
+2026-05-28 01:47:27,903 | INFO | celeba_ood |   block 2: raw AUROC = 0.6307  ->  debiased = 0.6271  (Δ = -0.0036)
+2026-05-28 01:47:27,903 | INFO | celeba_ood |   block 3: raw AUROC = 0.6349  ->  debiased = 0.6526  (Δ = +0.0177)
+2026-05-28 01:47:27,903 | INFO | celeba_ood |   block 4: raw AUROC = 0.5803  ->  debiased = 0.6335  (Δ = +0.0532)
+2026-05-28 01:47:27,903 | INFO | celeba_ood |   block 5: raw AUROC = 0.5477  ->  debiased = 0.6097  (Δ = +0.0620)
+2026-05-28 01:47:27,903 | INFO | celeba_ood |   aggregated: raw AUROC = 0.5983  ->  debiased = 0.6396  (Δ = +0.0413)
+2026-05-28 01:48:36,228 | INFO | celeba_ood | Fusion-based AUROC (max-pixel) = 0.5596  (in_mean=0.6363, ood_mean=0.6568)
+2026-05-28 01:48:36,228 | INFO | celeba_ood | Wrote per-block plots: per_block_breakdown.png, recons_only.png, activations.png, fusion_overlay.png, fusion_auroc.png
+2026-05-28 01:49:03,313 | INFO | celeba_ood | Wrote debiasing plots: bias_variance_maps.png, anomaly_cleaning.png, score_dist_debiased.png, per_block_auroc.png
+2026-05-28 01:49:03,315 | INFO | celeba_ood | Summary written to outputs/celeba_ood/ensemble_20260527_194912_6458836/model_4/summary.json
+2026-05-28 01:49:03,323 | INFO | celeba_ood | model 5/10 done in 4211.2s
+2026-05-28 01:49:03,347 | INFO | celeba_ood | ######################################################################
+2026-05-28 01:49:03,347 | INFO | celeba_ood | # MODEL 6/10   (seed=47)
+2026-05-28 01:49:03,347 | INFO | celeba_ood | ######################################################################
+2026-05-28 01:49:03,387 | INFO | celeba_ood | Model        : FacialCNN  (1,571,624 params)
+2026-05-28 01:49:03,387 | INFO | celeba_ood | ======================================================================
+2026-05-28 01:49:03,387 | INFO | celeba_ood | TRAINING — combined CE(gender) + BCE(attrs) loss
+2026-05-28 01:49:03,387 | INFO | celeba_ood | ======================================================================
+2026-05-28 01:49:56,807 | INFO | celeba_ood | epoch   1/25  train_loss=0.9073  train_gender_acc=95.2%  train_attr_acc=[85.0 88.7 86.0 83.9 72.9 73.4]%  (53.4s)
+2026-05-28 01:50:50,932 | INFO | celeba_ood | epoch   2/25  train_loss=0.7339  train_gender_acc=97.7%  train_attr_acc=[87.6 92.1 92.1 87.1 74.7 74.9]%  (54.1s)
+2026-05-28 01:51:44,137 | INFO | celeba_ood | epoch   3/25  train_loss=0.6949  train_gender_acc=98.2%  train_attr_acc=[88.4 92.6 92.9 87.6 75.6 75.4]%  (53.2s)
+2026-05-28 01:52:37,224 | INFO | celeba_ood | epoch   4/25  train_loss=0.6690  train_gender_acc=98.6%  train_attr_acc=[88.8 92.9 93.2 87.9 76.1 75.8]%  (53.1s)
+2026-05-28 01:53:31,421 | INFO | celeba_ood | epoch   5/25  train_loss=0.6476  train_gender_acc=98.8%  train_attr_acc=[89.3 93.2 93.5 88.2 76.6 76.1]%  (54.2s)
+2026-05-28 01:54:25,018 | INFO | celeba_ood | epoch   6/25  train_loss=0.6277  train_gender_acc=99.1%  train_attr_acc=[89.6 93.4 93.8 88.4 77.0 76.5]%  (53.6s)
+2026-05-28 01:55:19,362 | INFO | celeba_ood | epoch   7/25  train_loss=0.6110  train_gender_acc=99.2%  train_attr_acc=[90.0 93.6 94.0 88.6 77.3 77.0]%  (54.3s)
+2026-05-28 01:56:13,990 | INFO | celeba_ood | epoch   8/25  train_loss=0.5940  train_gender_acc=99.3%  train_attr_acc=[90.5 93.8 94.3 89.1 77.7 77.4]%  (54.6s)
+2026-05-28 01:57:06,956 | INFO | celeba_ood | epoch   9/25  train_loss=0.5768  train_gender_acc=99.4%  train_attr_acc=[90.9 94.0 94.5 89.3 78.1 77.8]%  (53.0s)
+2026-05-28 01:58:00,791 | INFO | celeba_ood | epoch  10/25  train_loss=0.5594  train_gender_acc=99.5%  train_attr_acc=[91.3 94.3 94.8 89.7 78.6 78.3]%  (53.8s)
+2026-05-28 01:58:54,614 | INFO | celeba_ood | epoch  11/25  train_loss=0.5441  train_gender_acc=99.5%  train_attr_acc=[91.8 94.5 95.0 90.0 79.0 79.0]%  (53.8s)
+2026-05-28 01:59:48,901 | INFO | celeba_ood | epoch  12/25  train_loss=0.5254  train_gender_acc=99.6%  train_attr_acc=[92.3 94.8 95.3 90.4 79.5 79.5]%  (54.3s)
+2026-05-28 02:00:42,076 | INFO | celeba_ood | epoch  13/25  train_loss=0.5089  train_gender_acc=99.6%  train_attr_acc=[92.6 95.0 95.5 90.7 80.2 80.3]%  (53.2s)
+2026-05-28 02:01:35,323 | INFO | celeba_ood | epoch  14/25  train_loss=0.4891  train_gender_acc=99.7%  train_attr_acc=[93.2 95.3 95.7 91.1 80.7 81.0]%  (53.2s)
+2026-05-28 02:02:29,660 | INFO | celeba_ood | epoch  15/25  train_loss=0.4683  train_gender_acc=99.7%  train_attr_acc=[93.6 95.5 95.9 91.6 81.4 81.8]%  (54.3s)
+2026-05-28 02:03:22,790 | INFO | celeba_ood | epoch  16/25  train_loss=0.4528  train_gender_acc=99.7%  train_attr_acc=[94.0 95.7 96.1 91.9 82.1 82.7]%  (53.1s)
+2026-05-28 02:04:16,030 | INFO | celeba_ood | epoch  17/25  train_loss=0.4330  train_gender_acc=99.8%  train_attr_acc=[94.4 95.9 96.3 92.2 82.8 83.5]%  (53.2s)
+2026-05-28 02:05:10,009 | INFO | celeba_ood | epoch  18/25  train_loss=0.4173  train_gender_acc=99.7%  train_attr_acc=[94.7 96.0 96.5 92.5 83.6 84.2]%  (54.0s)
+2026-05-28 02:06:03,884 | INFO | celeba_ood | epoch  19/25  train_loss=0.3974  train_gender_acc=99.8%  train_attr_acc=[95.0 96.2 96.7 92.9 84.4 85.1]%  (53.9s)
+2026-05-28 02:06:58,117 | INFO | celeba_ood | epoch  20/25  train_loss=0.3829  train_gender_acc=99.8%  train_attr_acc=[95.1 96.3 96.8 93.2 85.2 85.7]%  (54.2s)
+2026-05-28 02:07:53,268 | INFO | celeba_ood | epoch  21/25  train_loss=0.3676  train_gender_acc=99.8%  train_attr_acc=[95.4 96.4 96.9 93.4 85.9 86.5]%  (55.1s)
+2026-05-28 02:08:46,939 | INFO | celeba_ood | epoch  22/25  train_loss=0.3506  train_gender_acc=99.8%  train_attr_acc=[95.6 96.6 97.1 93.8 86.6 87.2]%  (53.7s)
+2026-05-28 02:09:40,290 | INFO | celeba_ood | epoch  23/25  train_loss=0.3363  train_gender_acc=99.8%  train_attr_acc=[95.8 96.7 97.2 93.9 87.3 87.9]%  (53.4s)
+2026-05-28 02:10:34,848 | INFO | celeba_ood | epoch  24/25  train_loss=0.3226  train_gender_acc=99.8%  train_attr_acc=[96.0 96.8 97.2 94.4 88.0 88.5]%  (54.6s)
+2026-05-28 02:11:29,595 | INFO | celeba_ood | epoch  25/25  train_loss=0.3102  train_gender_acc=99.8%  train_attr_acc=[96.1 96.9 97.4 94.5 88.5 89.0]%  (54.7s)
+2026-05-28 02:11:29,596 | INFO | celeba_ood | Training done in 1346.2s
+2026-05-28 02:11:29,714 | INFO | celeba_ood | ======================================================================
+2026-05-28 02:11:29,714 | INFO | celeba_ood | PHASE 2 — training per-block decoders (visualization)
+2026-05-28 02:11:29,714 | INFO | celeba_ood | ======================================================================
+2026-05-28 02:11:29,714 | INFO | celeba_ood |   decoder L0: in=(C=32, H=32) → out=(3, 64, 64)  params=8,275
+2026-05-28 02:11:29,714 | INFO | celeba_ood |   decoder L1: in=(C=64, H=16) → out=(3, 64, 64)  params=41,107
+2026-05-28 02:11:29,714 | INFO | celeba_ood |   decoder L2: in=(C=128, H=8) → out=(3, 64, 64)  params=172,307
+2026-05-28 02:11:29,714 | INFO | celeba_ood |   decoder L3: in=(C=256, H=4) → out=(3, 64, 64)  params=696,851
+2026-05-28 02:11:29,714 | INFO | celeba_ood |   decoder L4: in=(C=256, H=2) → out=(3, 64, 64)  params=700,979
+2026-05-28 02:11:29,714 | INFO | celeba_ood |   decoder L5: in=(C=256, H=2) → out=(3, 64, 64)  params=700,979
+2026-05-28 02:12:24,300 | INFO | celeba_ood | [decoders] epoch   1/50  train=0.1632  (54.6s)
+2026-05-28 02:13:19,530 | INFO | celeba_ood | [decoders] epoch   2/50  train=0.1229  (55.2s)
+2026-05-28 02:14:15,540 | INFO | celeba_ood | [decoders] epoch   3/50  train=0.1181  (56.0s)
+2026-05-28 02:15:10,256 | INFO | celeba_ood | [decoders] epoch   4/50  train=0.1157  (54.7s)
+2026-05-28 02:16:05,104 | INFO | celeba_ood | [decoders] epoch   5/50  train=0.1139  (54.8s)
+2026-05-28 02:17:00,503 | INFO | celeba_ood | [decoders] epoch   6/50  train=0.1129  (55.4s)
+2026-05-28 02:17:54,941 | INFO | celeba_ood | [decoders] epoch   7/50  train=0.1120  (54.4s)
+2026-05-28 02:18:49,514 | INFO | celeba_ood | [decoders] epoch   8/50  train=0.1112  (54.6s)
+2026-05-28 02:19:44,794 | INFO | celeba_ood | [decoders] epoch   9/50  train=0.1106  (55.3s)
+2026-05-28 02:20:39,264 | INFO | celeba_ood | [decoders] epoch  10/50  train=0.1102  (54.5s)
+2026-05-28 02:21:33,994 | INFO | celeba_ood | [decoders] epoch  11/50  train=0.1096  (54.7s)
+2026-05-28 02:22:29,524 | INFO | celeba_ood | [decoders] epoch  12/50  train=0.1092  (55.5s)
+2026-05-28 02:23:24,005 | INFO | celeba_ood | [decoders] epoch  13/50  train=0.1090  (54.5s)
+2026-05-28 02:24:18,938 | INFO | celeba_ood | [decoders] epoch  14/50  train=0.1086  (54.9s)
+2026-05-28 02:25:14,062 | INFO | celeba_ood | [decoders] epoch  15/50  train=0.1083  (55.1s)
+2026-05-28 02:26:08,489 | INFO | celeba_ood | [decoders] epoch  16/50  train=0.1081  (54.4s)
+2026-05-28 02:27:03,198 | INFO | celeba_ood | [decoders] epoch  17/50  train=0.1079  (54.7s)
+2026-05-28 02:27:59,677 | INFO | celeba_ood | [decoders] epoch  18/50  train=0.1076  (56.5s)
+2026-05-28 02:28:55,793 | INFO | celeba_ood | [decoders] epoch  19/50  train=0.1075  (56.1s)
+2026-05-28 02:29:51,649 | INFO | celeba_ood | [decoders] epoch  20/50  train=0.1073  (55.9s)
+2026-05-28 02:30:47,780 | INFO | celeba_ood | [decoders] epoch  21/50  train=0.1072  (56.1s)
+2026-05-28 02:31:43,425 | INFO | celeba_ood | [decoders] epoch  22/50  train=0.1070  (55.6s)
+2026-05-28 02:32:39,184 | INFO | celeba_ood | [decoders] epoch  23/50  train=0.1068  (55.8s)
+2026-05-28 02:33:35,967 | INFO | celeba_ood | [decoders] epoch  24/50  train=0.1068  (56.8s)
+2026-05-28 02:34:32,605 | INFO | celeba_ood | [decoders] epoch  25/50  train=0.1066  (56.6s)
+2026-05-28 02:35:29,242 | INFO | celeba_ood | [decoders] epoch  26/50  train=0.1065  (56.6s)
+2026-05-28 02:36:27,179 | INFO | celeba_ood | [decoders] epoch  27/50  train=0.1064  (57.9s)
+2026-05-28 02:37:24,038 | INFO | celeba_ood | [decoders] epoch  28/50  train=0.1063  (56.9s)
+2026-05-28 02:38:19,731 | INFO | celeba_ood | [decoders] epoch  29/50  train=0.1062  (55.7s)
+2026-05-28 02:39:16,277 | INFO | celeba_ood | [decoders] epoch  30/50  train=0.1061  (56.5s)
+2026-05-28 02:40:12,108 | INFO | celeba_ood | [decoders] epoch  31/50  train=0.1060  (55.8s)
+2026-05-28 02:41:07,376 | INFO | celeba_ood | [decoders] epoch  32/50  train=0.1060  (55.3s)
+2026-05-28 02:42:02,716 | INFO | celeba_ood | [decoders] epoch  33/50  train=0.1058  (55.3s)
+2026-05-28 02:42:58,260 | INFO | celeba_ood | [decoders] epoch  34/50  train=0.1058  (55.5s)
+2026-05-28 02:43:52,870 | INFO | celeba_ood | [decoders] epoch  35/50  train=0.1057  (54.6s)
+2026-05-28 02:44:48,211 | INFO | celeba_ood | [decoders] epoch  36/50  train=0.1057  (55.3s)
+2026-05-28 02:45:42,931 | INFO | celeba_ood | [decoders] epoch  37/50  train=0.1056  (54.7s)
+2026-05-28 02:46:37,525 | INFO | celeba_ood | [decoders] epoch  38/50  train=0.1054  (54.6s)
+2026-05-28 02:47:33,088 | INFO | celeba_ood | [decoders] epoch  39/50  train=0.1056  (55.6s)
+2026-05-28 02:48:27,569 | INFO | celeba_ood | [decoders] epoch  40/50  train=0.1054  (54.5s)
+2026-05-28 02:49:21,978 | INFO | celeba_ood | [decoders] epoch  41/50  train=0.1053  (54.4s)
+2026-05-28 02:50:17,500 | INFO | celeba_ood | [decoders] epoch  42/50  train=0.1052  (55.5s)
+2026-05-28 02:51:12,069 | INFO | celeba_ood | [decoders] epoch  43/50  train=0.1052  (54.6s)
+2026-05-28 02:52:06,667 | INFO | celeba_ood | [decoders] epoch  44/50  train=0.1053  (54.6s)
+2026-05-28 02:53:01,698 | INFO | celeba_ood | [decoders] epoch  45/50  train=0.1051  (55.0s)
+2026-05-28 02:53:56,121 | INFO | celeba_ood | [decoders] epoch  46/50  train=0.1052  (54.4s)
+2026-05-28 02:54:50,563 | INFO | celeba_ood | [decoders] epoch  47/50  train=0.1051  (54.4s)
+2026-05-28 02:55:45,118 | INFO | celeba_ood | [decoders] epoch  48/50  train=0.1051  (54.6s)
+2026-05-28 02:56:40,677 | INFO | celeba_ood | [decoders] epoch  49/50  train=0.1050  (55.6s)
+2026-05-28 02:57:35,367 | INFO | celeba_ood | [decoders] epoch  50/50  train=0.1050  (54.7s)
+2026-05-28 02:57:35,367 | INFO | celeba_ood | Decoder training done in 2765.7s
+2026-05-28 02:57:35,416 | INFO | celeba_ood | ======================================================================
+2026-05-28 02:57:35,416 | INFO | celeba_ood | EVALUATION — per-attribute accuracy + OOD AUROC
+2026-05-28 02:57:35,416 | INFO | celeba_ood | ======================================================================
+2026-05-28 02:57:35,416 | INFO | celeba_ood | Collecting predictions on test_in...
+2026-05-28 02:57:41,798 | INFO | celeba_ood |   test_in size = 18941, OOD score (combined entropy) mean = 0.2261
+2026-05-28 02:57:41,798 | INFO | celeba_ood | Collecting predictions on test_ood (Eyeglasses)...
+2026-05-28 02:57:46,192 | INFO | celeba_ood |   test_ood size = 13193, OOD score (combined entropy) mean = 0.2776
+2026-05-28 02:57:46,253 | INFO | celeba_ood | Per-attribute accuracy (in-distribution test set):
+2026-05-28 02:57:46,253 | INFO | celeba_ood |   Male/Female : 97.56%
+2026-05-28 02:57:46,253 | INFO | celeba_ood |   Young                 : 86.68%
+2026-05-28 02:57:46,254 | INFO | celeba_ood |   Smiling               : 91.67%
+2026-05-28 02:57:46,254 | INFO | celeba_ood |   Mouth_Slightly_Open   : 91.89%
+2026-05-28 02:57:46,254 | INFO | celeba_ood |   High_Cheekbones       : 83.64%
+2026-05-28 02:57:46,254 | INFO | celeba_ood |   Pointy_Nose           : 72.92%
+2026-05-28 02:57:46,254 | INFO | celeba_ood |   Oval_Face             : 69.88%
+2026-05-28 02:57:46,254 | INFO | celeba_ood | OOD AUROC (in-dist vs Eyeglasses):
+2026-05-28 02:57:46,254 | INFO | celeba_ood |   score_msp                AUROC = 0.5984  (in_mean=0.009, ood_mean=0.027)
+2026-05-28 02:57:46,254 | INFO | celeba_ood |   score_entropy_gender     AUROC = 0.5984  (in_mean=0.024, ood_mean=0.067)
+2026-05-28 02:57:46,254 | INFO | celeba_ood |   score_entropy_attrs      AUROC = 0.5252  (in_mean=0.202, ood_mean=0.210)
+2026-05-28 02:57:46,254 | INFO | celeba_ood |   score_entropy_combined   AUROC = 0.5767  (in_mean=0.226, ood_mean=0.278)
+2026-05-28 02:57:46,254 | INFO | celeba_ood | Estimating reconstruction-error bias/variance on test_in (clean reference, no training leakage)...
+2026-05-28 02:57:52,553 | INFO | celeba_ood | Scoring test_in / test_ood (agg='p95')...
+2026-05-28 02:58:03,637 | INFO | celeba_ood | OOD AUROC — debiased reconstruction error:
+2026-05-28 02:58:03,637 | INFO | celeba_ood |   block 0: raw AUROC = 0.5697  ->  debiased = 0.5961  (Δ = +0.0264)
+2026-05-28 02:58:03,637 | INFO | celeba_ood |   block 1: raw AUROC = 0.6003  ->  debiased = 0.5948  (Δ = -0.0055)
+2026-05-28 02:58:03,637 | INFO | celeba_ood |   block 2: raw AUROC = 0.6228  ->  debiased = 0.6166  (Δ = -0.0062)
+2026-05-28 02:58:03,637 | INFO | celeba_ood |   block 3: raw AUROC = 0.6311  ->  debiased = 0.6484  (Δ = +0.0173)
+2026-05-28 02:58:03,637 | INFO | celeba_ood |   block 4: raw AUROC = 0.5935  ->  debiased = 0.6396  (Δ = +0.0461)
+2026-05-28 02:58:03,638 | INFO | celeba_ood |   block 5: raw AUROC = 0.5603  ->  debiased = 0.6181  (Δ = +0.0578)
+2026-05-28 02:58:03,638 | INFO | celeba_ood |   aggregated: raw AUROC = 0.6079  ->  debiased = 0.6417  (Δ = +0.0338)
+2026-05-28 02:59:11,466 | INFO | celeba_ood | Fusion-based AUROC (max-pixel) = 0.5647  (in_mean=0.6337, ood_mean=0.6554)
+2026-05-28 02:59:11,467 | INFO | celeba_ood | Wrote per-block plots: per_block_breakdown.png, recons_only.png, activations.png, fusion_overlay.png, fusion_auroc.png
+2026-05-28 02:59:38,969 | INFO | celeba_ood | Wrote debiasing plots: bias_variance_maps.png, anomaly_cleaning.png, score_dist_debiased.png, per_block_auroc.png
+2026-05-28 02:59:38,971 | INFO | celeba_ood | Summary written to outputs/celeba_ood/ensemble_20260527_194912_6458836/model_5/summary.json
+2026-05-28 02:59:38,981 | INFO | celeba_ood | model 6/10 done in 4235.6s
+2026-05-28 02:59:39,006 | INFO | celeba_ood | ######################################################################
+2026-05-28 02:59:39,006 | INFO | celeba_ood | # MODEL 7/10   (seed=48)
+2026-05-28 02:59:39,006 | INFO | celeba_ood | ######################################################################
+2026-05-28 02:59:39,046 | INFO | celeba_ood | Model        : FacialCNN  (1,571,624 params)
+2026-05-28 02:59:39,046 | INFO | celeba_ood | ======================================================================
+2026-05-28 02:59:39,046 | INFO | celeba_ood | TRAINING — combined CE(gender) + BCE(attrs) loss
+2026-05-28 02:59:39,046 | INFO | celeba_ood | ======================================================================
+2026-05-28 03:00:33,303 | INFO | celeba_ood | epoch   1/25  train_loss=0.9215  train_gender_acc=95.1%  train_attr_acc=[84.8 88.4 85.3 83.8 73.0 73.2]%  (54.3s)
+2026-05-28 03:01:27,471 | INFO | celeba_ood | epoch   2/25  train_loss=0.7461  train_gender_acc=97.6%  train_attr_acc=[87.3 91.9 91.5 87.0 74.7 74.7]%  (54.2s)
+2026-05-28 03:02:22,668 | INFO | celeba_ood | epoch   3/25  train_loss=0.7052  train_gender_acc=98.1%  train_attr_acc=[88.2 92.4 92.4 87.5 75.4 75.1]%  (55.2s)
+2026-05-28 03:03:15,645 | INFO | celeba_ood | epoch   4/25  train_loss=0.6781  train_gender_acc=98.5%  train_attr_acc=[88.6 92.7 92.9 87.8 76.0 75.7]%  (53.0s)
+2026-05-28 03:04:08,790 | INFO | celeba_ood | epoch   5/25  train_loss=0.6560  train_gender_acc=98.8%  train_attr_acc=[89.0 93.0 93.3 88.1 76.5 76.0]%  (53.1s)
+2026-05-28 03:05:02,773 | INFO | celeba_ood | epoch   6/25  train_loss=0.6373  train_gender_acc=99.0%  train_attr_acc=[89.4 93.2 93.6 88.3 76.8 76.3]%  (54.0s)
+2026-05-28 03:05:56,351 | INFO | celeba_ood | epoch   7/25  train_loss=0.6200  train_gender_acc=99.2%  train_attr_acc=[89.8 93.4 93.8 88.6 77.0 76.7]%  (53.6s)
+2026-05-28 03:06:49,885 | INFO | celeba_ood | epoch   8/25  train_loss=0.6038  train_gender_acc=99.3%  train_attr_acc=[90.2 93.6 94.1 88.9 77.4 77.1]%  (53.5s)
+2026-05-28 03:07:44,524 | INFO | celeba_ood | epoch   9/25  train_loss=0.5882  train_gender_acc=99.4%  train_attr_acc=[90.6 93.9 94.4 89.2 77.8 77.6]%  (54.6s)
+2026-05-28 03:08:38,365 | INFO | celeba_ood | epoch  10/25  train_loss=0.5718  train_gender_acc=99.5%  train_attr_acc=[91.1 94.1 94.6 89.5 78.2 78.0]%  (53.8s)
+2026-05-28 03:09:32,204 | INFO | celeba_ood | epoch  11/25  train_loss=0.5554  train_gender_acc=99.5%  train_attr_acc=[91.4 94.3 94.7 89.8 78.6 78.5]%  (53.8s)
+2026-05-28 03:10:28,088 | INFO | celeba_ood | epoch  12/25  train_loss=0.5390  train_gender_acc=99.6%  train_attr_acc=[91.9 94.6 95.0 90.1 79.1 79.1]%  (55.9s)
+2026-05-28 03:11:22,296 | INFO | celeba_ood | epoch  13/25  train_loss=0.5229  train_gender_acc=99.6%  train_attr_acc=[92.4 94.8 95.3 90.5 79.7 79.8]%  (54.2s)
+2026-05-28 03:12:16,427 | INFO | celeba_ood | epoch  14/25  train_loss=0.5030  train_gender_acc=99.7%  train_attr_acc=[92.9 95.0 95.5 90.9 80.2 80.4]%  (54.1s)
+2026-05-28 03:13:11,335 | INFO | celeba_ood | epoch  15/25  train_loss=0.4874  train_gender_acc=99.7%  train_attr_acc=[93.2 95.2 95.7 91.2 80.8 81.0]%  (54.9s)
+2026-05-28 03:14:05,215 | INFO | celeba_ood | epoch  16/25  train_loss=0.4685  train_gender_acc=99.7%  train_attr_acc=[93.6 95.4 96.0 91.6 81.4 81.7]%  (53.9s)
+2026-05-28 03:14:58,551 | INFO | celeba_ood | epoch  17/25  train_loss=0.4519  train_gender_acc=99.7%  train_attr_acc=[93.9 95.6 96.1 91.9 82.3 82.6]%  (53.3s)
+2026-05-28 03:15:52,405 | INFO | celeba_ood | epoch  18/25  train_loss=0.4338  train_gender_acc=99.8%  train_attr_acc=[94.3 95.8 96.3 92.3 82.8 83.3]%  (53.9s)
+2026-05-28 03:16:45,739 | INFO | celeba_ood | epoch  19/25  train_loss=0.4172  train_gender_acc=99.8%  train_attr_acc=[94.6 95.9 96.5 92.6 83.7 84.1]%  (53.3s)
+2026-05-28 03:17:38,917 | INFO | celeba_ood | epoch  20/25  train_loss=0.4011  train_gender_acc=99.8%  train_attr_acc=[94.9 96.1 96.6 93.0 84.3 84.8]%  (53.2s)
+2026-05-28 03:18:31,803 | INFO | celeba_ood | epoch  21/25  train_loss=0.3857  train_gender_acc=99.8%  train_attr_acc=[95.1 96.2 96.8 93.2 85.2 85.6]%  (52.9s)
+2026-05-28 03:19:26,343 | INFO | celeba_ood | epoch  22/25  train_loss=0.3700  train_gender_acc=99.8%  train_attr_acc=[95.4 96.3 96.9 93.6 85.7 86.3]%  (54.5s)
+2026-05-28 03:20:19,578 | INFO | celeba_ood | epoch  23/25  train_loss=0.3555  train_gender_acc=99.8%  train_attr_acc=[95.6 96.5 97.0 93.7 86.5 87.0]%  (53.2s)
+2026-05-28 03:21:12,859 | INFO | celeba_ood | epoch  24/25  train_loss=0.3425  train_gender_acc=99.8%  train_attr_acc=[95.7 96.5 97.1 94.0 87.1 87.6]%  (53.3s)
+2026-05-28 03:22:07,142 | INFO | celeba_ood | epoch  25/25  train_loss=0.3304  train_gender_acc=99.8%  train_attr_acc=[95.8 96.7 97.2 94.2 87.8 88.1]%  (54.3s)
+2026-05-28 03:22:07,143 | INFO | celeba_ood | Training done in 1348.1s
+2026-05-28 03:22:07,266 | INFO | celeba_ood | ======================================================================
+2026-05-28 03:22:07,266 | INFO | celeba_ood | PHASE 2 — training per-block decoders (visualization)
+2026-05-28 03:22:07,266 | INFO | celeba_ood | ======================================================================
+2026-05-28 03:22:07,267 | INFO | celeba_ood |   decoder L0: in=(C=32, H=32) → out=(3, 64, 64)  params=8,275
+2026-05-28 03:22:07,267 | INFO | celeba_ood |   decoder L1: in=(C=64, H=16) → out=(3, 64, 64)  params=41,107
+2026-05-28 03:22:07,267 | INFO | celeba_ood |   decoder L2: in=(C=128, H=8) → out=(3, 64, 64)  params=172,307
+2026-05-28 03:22:07,267 | INFO | celeba_ood |   decoder L3: in=(C=256, H=4) → out=(3, 64, 64)  params=696,851
+2026-05-28 03:22:07,267 | INFO | celeba_ood |   decoder L4: in=(C=256, H=2) → out=(3, 64, 64)  params=700,979
+2026-05-28 03:22:07,267 | INFO | celeba_ood |   decoder L5: in=(C=256, H=2) → out=(3, 64, 64)  params=700,979
+2026-05-28 03:23:01,935 | INFO | celeba_ood | [decoders] epoch   1/50  train=0.1611  (54.7s)
+2026-05-28 03:23:56,772 | INFO | celeba_ood | [decoders] epoch   2/50  train=0.1196  (54.8s)
+2026-05-28 03:24:52,359 | INFO | celeba_ood | [decoders] epoch   3/50  train=0.1146  (55.6s)
+2026-05-28 03:25:46,929 | INFO | celeba_ood | [decoders] epoch   4/50  train=0.1122  (54.6s)
+2026-05-28 03:26:41,318 | INFO | celeba_ood | [decoders] epoch   5/50  train=0.1105  (54.4s)
+2026-05-28 03:27:36,691 | INFO | celeba_ood | [decoders] epoch   6/50  train=0.1094  (55.4s)
+2026-05-28 03:28:31,108 | INFO | celeba_ood | [decoders] epoch   7/50  train=0.1087  (54.4s)
+2026-05-28 03:29:25,570 | INFO | celeba_ood | [decoders] epoch   8/50  train=0.1080  (54.5s)
+2026-05-28 03:30:21,156 | INFO | celeba_ood | [decoders] epoch   9/50  train=0.1074  (55.6s)
+2026-05-28 03:31:16,670 | INFO | celeba_ood | [decoders] epoch  10/50  train=0.1070  (55.5s)
+2026-05-28 03:32:11,832 | INFO | celeba_ood | [decoders] epoch  11/50  train=0.1065  (55.2s)
+2026-05-28 03:33:07,928 | INFO | celeba_ood | [decoders] epoch  12/50  train=0.1063  (56.1s)
+2026-05-28 03:34:03,955 | INFO | celeba_ood | [decoders] epoch  13/50  train=0.1059  (56.0s)
+2026-05-28 03:35:00,643 | INFO | celeba_ood | [decoders] epoch  14/50  train=0.1056  (56.7s)
+2026-05-28 03:35:56,290 | INFO | celeba_ood | [decoders] epoch  15/50  train=0.1055  (55.6s)
+2026-05-28 03:36:51,071 | INFO | celeba_ood | [decoders] epoch  16/50  train=0.1051  (54.8s)
+2026-05-28 03:37:45,555 | INFO | celeba_ood | [decoders] epoch  17/50  train=0.1050  (54.5s)
+2026-05-28 03:38:41,081 | INFO | celeba_ood | [decoders] epoch  18/50  train=0.1047  (55.5s)
+2026-05-28 03:39:35,469 | INFO | celeba_ood | [decoders] epoch  19/50  train=0.1046  (54.4s)
+2026-05-28 03:40:29,891 | INFO | celeba_ood | [decoders] epoch  20/50  train=0.1044  (54.4s)
+2026-05-28 03:41:25,182 | INFO | celeba_ood | [decoders] epoch  21/50  train=0.1042  (55.3s)
+2026-05-28 03:42:19,731 | INFO | celeba_ood | [decoders] epoch  22/50  train=0.1042  (54.5s)
+2026-05-28 03:43:14,702 | INFO | celeba_ood | [decoders] epoch  23/50  train=0.1040  (55.0s)
+2026-05-28 03:44:09,950 | INFO | celeba_ood | [decoders] epoch  24/50  train=0.1039  (55.2s)
+2026-05-28 03:45:05,428 | INFO | celeba_ood | [decoders] epoch  25/50  train=0.1038  (55.5s)
+2026-05-28 03:46:00,407 | INFO | celeba_ood | [decoders] epoch  26/50  train=0.1037  (55.0s)
+2026-05-28 03:46:55,439 | INFO | celeba_ood | [decoders] epoch  27/50  train=0.1036  (55.0s)
+2026-05-28 03:47:50,931 | INFO | celeba_ood | [decoders] epoch  28/50  train=0.1035  (55.5s)
+2026-05-28 03:48:46,009 | INFO | celeba_ood | [decoders] epoch  29/50  train=0.1034  (55.1s)
+2026-05-28 03:49:40,880 | INFO | celeba_ood | [decoders] epoch  30/50  train=0.1033  (54.9s)
+2026-05-28 03:50:36,101 | INFO | celeba_ood | [decoders] epoch  31/50  train=0.1033  (55.2s)
+2026-05-28 03:51:30,567 | INFO | celeba_ood | [decoders] epoch  32/50  train=0.1031  (54.5s)
+2026-05-28 03:52:25,573 | INFO | celeba_ood | [decoders] epoch  33/50  train=0.1032  (55.0s)
+2026-05-28 03:53:20,774 | INFO | celeba_ood | [decoders] epoch  34/50  train=0.1031  (55.2s)
+2026-05-28 03:54:15,358 | INFO | celeba_ood | [decoders] epoch  35/50  train=0.1030  (54.6s)
+2026-05-28 03:55:10,107 | INFO | celeba_ood | [decoders] epoch  36/50  train=0.1029  (54.7s)
+2026-05-28 03:56:05,206 | INFO | celeba_ood | [decoders] epoch  37/50  train=0.1030  (55.1s)
+2026-05-28 03:56:59,846 | INFO | celeba_ood | [decoders] epoch  38/50  train=0.1029  (54.6s)
+2026-05-28 03:57:54,278 | INFO | celeba_ood | [decoders] epoch  39/50  train=0.1028  (54.4s)
+2026-05-28 03:58:49,666 | INFO | celeba_ood | [decoders] epoch  40/50  train=0.1029  (55.4s)
+2026-05-28 03:59:44,131 | INFO | celeba_ood | [decoders] epoch  41/50  train=0.1028  (54.5s)
+2026-05-28 04:00:38,533 | INFO | celeba_ood | [decoders] epoch  42/50  train=0.1026  (54.4s)
+2026-05-28 04:01:34,196 | INFO | celeba_ood | [decoders] epoch  43/50  train=0.1026  (55.7s)
+2026-05-28 04:02:29,242 | INFO | celeba_ood | [decoders] epoch  44/50  train=0.1027  (55.0s)
+2026-05-28 04:03:23,826 | INFO | celeba_ood | [decoders] epoch  45/50  train=0.1025  (54.6s)
+2026-05-28 04:04:19,128 | INFO | celeba_ood | [decoders] epoch  46/50  train=0.1025  (55.3s)
+2026-05-28 04:05:13,564 | INFO | celeba_ood | [decoders] epoch  47/50  train=0.1025  (54.4s)
+2026-05-28 04:06:07,985 | INFO | celeba_ood | [decoders] epoch  48/50  train=0.1023  (54.4s)
+2026-05-28 04:07:03,335 | INFO | celeba_ood | [decoders] epoch  49/50  train=0.1023  (55.4s)
+2026-05-28 04:07:58,595 | INFO | celeba_ood | [decoders] epoch  50/50  train=0.1025  (55.3s)
+2026-05-28 04:07:58,595 | INFO | celeba_ood | Decoder training done in 2751.3s
+2026-05-28 04:07:58,643 | INFO | celeba_ood | ======================================================================
+2026-05-28 04:07:58,643 | INFO | celeba_ood | EVALUATION — per-attribute accuracy + OOD AUROC
+2026-05-28 04:07:58,643 | INFO | celeba_ood | ======================================================================
+2026-05-28 04:07:58,643 | INFO | celeba_ood | Collecting predictions on test_in...
+2026-05-28 04:08:05,248 | INFO | celeba_ood |   test_in size = 18941, OOD score (combined entropy) mean = 0.2427
+2026-05-28 04:08:05,248 | INFO | celeba_ood | Collecting predictions on test_ood (Eyeglasses)...
+2026-05-28 04:08:09,548 | INFO | celeba_ood |   test_ood size = 13193, OOD score (combined entropy) mean = 0.2946
+2026-05-28 04:08:09,604 | INFO | celeba_ood | Per-attribute accuracy (in-distribution test set):
+2026-05-28 04:08:09,604 | INFO | celeba_ood |   Male/Female : 97.49%
+2026-05-28 04:08:09,604 | INFO | celeba_ood |   Young                 : 84.65%
+2026-05-28 04:08:09,604 | INFO | celeba_ood |   Smiling               : 91.69%
+2026-05-28 04:08:09,604 | INFO | celeba_ood |   Mouth_Slightly_Open   : 87.81%
+2026-05-28 04:08:09,605 | INFO | celeba_ood |   High_Cheekbones       : 85.20%
+2026-05-28 04:08:09,605 | INFO | celeba_ood |   Pointy_Nose           : 73.47%
+2026-05-28 04:08:09,605 | INFO | celeba_ood |   Oval_Face             : 72.70%
+2026-05-28 04:08:09,605 | INFO | celeba_ood | OOD AUROC (in-dist vs Eyeglasses):
+2026-05-28 04:08:09,605 | INFO | celeba_ood |   score_msp                AUROC = 0.6321  (in_mean=0.009, ood_mean=0.033)
+2026-05-28 04:08:09,605 | INFO | celeba_ood |   score_entropy_gender     AUROC = 0.6321  (in_mean=0.025, ood_mean=0.082)
+2026-05-28 04:08:09,605 | INFO | celeba_ood |   score_entropy_attrs      AUROC = 0.4850  (in_mean=0.218, ood_mean=0.212)
+2026-05-28 04:08:09,605 | INFO | celeba_ood |   score_entropy_combined   AUROC = 0.5616  (in_mean=0.243, ood_mean=0.295)
+2026-05-28 04:08:09,605 | INFO | celeba_ood | Estimating reconstruction-error bias/variance on test_in (clean reference, no training leakage)...
+2026-05-28 04:08:15,850 | INFO | celeba_ood | Scoring test_in / test_ood (agg='p95')...
+2026-05-28 04:08:26,811 | INFO | celeba_ood | OOD AUROC — debiased reconstruction error:
+2026-05-28 04:08:26,812 | INFO | celeba_ood |   block 0: raw AUROC = 0.5809  ->  debiased = 0.6077  (Δ = +0.0268)
+2026-05-28 04:08:26,812 | INFO | celeba_ood |   block 1: raw AUROC = 0.5955  ->  debiased = 0.5929  (Δ = -0.0025)
+2026-05-28 04:08:26,812 | INFO | celeba_ood |   block 2: raw AUROC = 0.6307  ->  debiased = 0.6250  (Δ = -0.0058)
+2026-05-28 04:08:26,812 | INFO | celeba_ood |   block 3: raw AUROC = 0.6292  ->  debiased = 0.6430  (Δ = +0.0138)
+2026-05-28 04:08:26,812 | INFO | celeba_ood |   block 4: raw AUROC = 0.5900  ->  debiased = 0.6338  (Δ = +0.0438)
+2026-05-28 04:08:26,812 | INFO | celeba_ood |   block 5: raw AUROC = 0.5606  ->  debiased = 0.6132  (Δ = +0.0526)
+2026-05-28 04:08:26,812 | INFO | celeba_ood |   aggregated: raw AUROC = 0.6053  ->  debiased = 0.6412  (Δ = +0.0359)
+2026-05-28 04:09:34,123 | INFO | celeba_ood | Fusion-based AUROC (max-pixel) = 0.5780  (in_mean=0.6333, ood_mean=0.6605)
+2026-05-28 04:09:34,124 | INFO | celeba_ood | Wrote per-block plots: per_block_breakdown.png, recons_only.png, activations.png, fusion_overlay.png, fusion_auroc.png
+2026-05-28 04:10:00,633 | INFO | celeba_ood | Wrote debiasing plots: bias_variance_maps.png, anomaly_cleaning.png, score_dist_debiased.png, per_block_auroc.png
+2026-05-28 04:10:00,635 | INFO | celeba_ood | Summary written to outputs/celeba_ood/ensemble_20260527_194912_6458836/model_6/summary.json
+2026-05-28 04:10:00,642 | INFO | celeba_ood | model 7/10 done in 4221.6s
+2026-05-28 04:10:00,660 | INFO | celeba_ood | ######################################################################
+2026-05-28 04:10:00,660 | INFO | celeba_ood | # MODEL 8/10   (seed=49)
+2026-05-28 04:10:00,661 | INFO | celeba_ood | ######################################################################
+2026-05-28 04:10:00,699 | INFO | celeba_ood | Model        : FacialCNN  (1,571,624 params)
+2026-05-28 04:10:00,699 | INFO | celeba_ood | ======================================================================
+2026-05-28 04:10:00,699 | INFO | celeba_ood | TRAINING — combined CE(gender) + BCE(attrs) loss
+2026-05-28 04:10:00,699 | INFO | celeba_ood | ======================================================================
+2026-05-28 04:10:53,898 | INFO | celeba_ood | epoch   1/25  train_loss=0.9152  train_gender_acc=95.1%  train_attr_acc=[84.7 88.7 85.7 83.7 73.3 73.6]%  (53.2s)
+2026-05-28 04:11:46,896 | INFO | celeba_ood | epoch   2/25  train_loss=0.7420  train_gender_acc=97.6%  train_attr_acc=[87.4 92.0 91.7 87.0 74.9 74.8]%  (53.0s)
+2026-05-28 04:12:39,956 | INFO | celeba_ood | epoch   3/25  train_loss=0.7016  train_gender_acc=98.1%  train_attr_acc=[88.2 92.5 92.6 87.6 75.6 75.3]%  (53.1s)
+2026-05-28 04:13:34,339 | INFO | celeba_ood | epoch   4/25  train_loss=0.6745  train_gender_acc=98.5%  train_attr_acc=[88.7 92.7 93.1 87.9 76.2 75.7]%  (54.4s)
+2026-05-28 04:14:27,417 | INFO | celeba_ood | epoch   5/25  train_loss=0.6530  train_gender_acc=98.8%  train_attr_acc=[89.2 93.0 93.3 88.2 76.6 76.1]%  (53.1s)
+2026-05-28 04:15:20,801 | INFO | celeba_ood | epoch   6/25  train_loss=0.6341  train_gender_acc=99.0%  train_attr_acc=[89.6 93.3 93.7 88.4 76.8 76.4]%  (53.4s)
+2026-05-28 04:16:15,168 | INFO | celeba_ood | epoch   7/25  train_loss=0.6162  train_gender_acc=99.2%  train_attr_acc=[89.9 93.5 93.9 88.7 77.2 76.8]%  (54.4s)
+2026-05-28 04:17:08,405 | INFO | celeba_ood | epoch   8/25  train_loss=0.6000  train_gender_acc=99.3%  train_attr_acc=[90.3 93.7 94.2 89.0 77.6 77.1]%  (53.2s)
+2026-05-28 04:18:01,555 | INFO | celeba_ood | epoch   9/25  train_loss=0.5856  train_gender_acc=99.4%  train_attr_acc=[90.6 93.9 94.3 89.3 77.9 77.5]%  (53.2s)
+2026-05-28 04:18:56,686 | INFO | celeba_ood | epoch  10/25  train_loss=0.5689  train_gender_acc=99.5%  train_attr_acc=[91.1 94.2 94.6 89.6 78.3 78.1]%  (55.1s)
+2026-05-28 04:19:50,415 | INFO | celeba_ood | epoch  11/25  train_loss=0.5516  train_gender_acc=99.5%  train_attr_acc=[91.6 94.4 94.9 90.0 78.8 78.6]%  (53.7s)
+2026-05-28 04:20:44,463 | INFO | celeba_ood | epoch  12/25  train_loss=0.5343  train_gender_acc=99.6%  train_attr_acc=[92.0 94.7 95.2 90.3 79.2 79.2]%  (54.0s)
+2026-05-28 04:21:37,828 | INFO | celeba_ood | epoch  13/25  train_loss=0.5180  train_gender_acc=99.6%  train_attr_acc=[92.4 94.9 95.4 90.6 79.8 79.8]%  (53.4s)
+2026-05-28 04:22:31,587 | INFO | celeba_ood | epoch  14/25  train_loss=0.4994  train_gender_acc=99.7%  train_attr_acc=[92.9 95.1 95.6 90.9 80.4 80.6]%  (53.8s)
+2026-05-28 04:23:24,970 | INFO | celeba_ood | epoch  15/25  train_loss=0.4826  train_gender_acc=99.7%  train_attr_acc=[93.3 95.4 95.8 91.3 80.9 81.4]%  (53.4s)
+2026-05-28 04:24:18,423 | INFO | celeba_ood | epoch  16/25  train_loss=0.4649  train_gender_acc=99.7%  train_attr_acc=[93.6 95.6 96.0 91.7 81.7 82.0]%  (53.5s)
+2026-05-28 04:25:11,387 | INFO | celeba_ood | epoch  17/25  train_loss=0.4460  train_gender_acc=99.7%  train_attr_acc=[94.0 95.7 96.2 92.1 82.5 82.7]%  (53.0s)
+2026-05-28 04:26:04,587 | INFO | celeba_ood | epoch  18/25  train_loss=0.4289  train_gender_acc=99.7%  train_attr_acc=[94.4 95.9 96.4 92.3 83.1 83.6]%  (53.2s)
+2026-05-28 04:26:58,130 | INFO | celeba_ood | epoch  19/25  train_loss=0.4115  train_gender_acc=99.8%  train_attr_acc=[94.5 96.1 96.5 92.8 83.9 84.5]%  (53.5s)
+2026-05-28 04:27:51,452 | INFO | celeba_ood | epoch  20/25  train_loss=0.3941  train_gender_acc=99.8%  train_attr_acc=[94.9 96.2 96.8 93.1 84.7 85.1]%  (53.3s)
+2026-05-28 04:28:45,010 | INFO | celeba_ood | epoch  21/25  train_loss=0.3793  train_gender_acc=99.8%  train_attr_acc=[95.1 96.3 96.9 93.3 85.3 85.8]%  (53.6s)
+2026-05-28 04:29:39,392 | INFO | celeba_ood | epoch  22/25  train_loss=0.3624  train_gender_acc=99.8%  train_attr_acc=[95.4 96.6 97.0 93.7 86.1 86.5]%  (54.4s)
+2026-05-28 04:30:33,141 | INFO | celeba_ood | epoch  23/25  train_loss=0.3496  train_gender_acc=99.8%  train_attr_acc=[95.6 96.6 97.1 93.9 86.5 87.2]%  (53.7s)
+2026-05-28 04:31:26,783 | INFO | celeba_ood | epoch  24/25  train_loss=0.3360  train_gender_acc=99.8%  train_attr_acc=[95.7 96.7 97.1 94.3 87.3 87.9]%  (53.6s)
+2026-05-28 04:32:20,201 | INFO | celeba_ood | epoch  25/25  train_loss=0.3227  train_gender_acc=99.8%  train_attr_acc=[95.9 96.8 97.3 94.4 88.0 88.4]%  (53.4s)
+2026-05-28 04:32:20,202 | INFO | celeba_ood | Training done in 1339.5s
+2026-05-28 04:32:20,328 | INFO | celeba_ood | ======================================================================
+2026-05-28 04:32:20,328 | INFO | celeba_ood | PHASE 2 — training per-block decoders (visualization)
+2026-05-28 04:32:20,328 | INFO | celeba_ood | ======================================================================
+2026-05-28 04:32:20,329 | INFO | celeba_ood |   decoder L0: in=(C=32, H=32) → out=(3, 64, 64)  params=8,275
+2026-05-28 04:32:20,329 | INFO | celeba_ood |   decoder L1: in=(C=64, H=16) → out=(3, 64, 64)  params=41,107
+2026-05-28 04:32:20,329 | INFO | celeba_ood |   decoder L2: in=(C=128, H=8) → out=(3, 64, 64)  params=172,307
+2026-05-28 04:32:20,329 | INFO | celeba_ood |   decoder L3: in=(C=256, H=4) → out=(3, 64, 64)  params=696,851
+2026-05-28 04:32:20,329 | INFO | celeba_ood |   decoder L4: in=(C=256, H=2) → out=(3, 64, 64)  params=700,979
+2026-05-28 04:32:20,329 | INFO | celeba_ood |   decoder L5: in=(C=256, H=2) → out=(3, 64, 64)  params=700,979
+2026-05-28 04:33:14,696 | INFO | celeba_ood | [decoders] epoch   1/50  train=0.1632  (54.4s)
+2026-05-28 04:34:09,384 | INFO | celeba_ood | [decoders] epoch   2/50  train=0.1264  (54.7s)
+2026-05-28 04:35:03,788 | INFO | celeba_ood | [decoders] epoch   3/50  train=0.1213  (54.4s)
+2026-05-28 04:35:58,476 | INFO | celeba_ood | [decoders] epoch   4/50  train=0.1188  (54.7s)
+2026-05-28 04:36:53,382 | INFO | celeba_ood | [decoders] epoch   5/50  train=0.1171  (54.9s)
+2026-05-28 04:37:48,166 | INFO | celeba_ood | [decoders] epoch   6/50  train=0.1159  (54.8s)
+2026-05-28 04:38:42,737 | INFO | celeba_ood | [decoders] epoch   7/50  train=0.1149  (54.6s)
+2026-05-28 04:39:37,462 | INFO | celeba_ood | [decoders] epoch   8/50  train=0.1143  (54.7s)
+2026-05-28 04:40:32,107 | INFO | celeba_ood | [decoders] epoch   9/50  train=0.1136  (54.6s)
+2026-05-28 04:41:26,526 | INFO | celeba_ood | [decoders] epoch  10/50  train=0.1131  (54.4s)
+2026-05-28 04:42:21,163 | INFO | celeba_ood | [decoders] epoch  11/50  train=0.1127  (54.6s)
+2026-05-28 04:43:15,600 | INFO | celeba_ood | [decoders] epoch  12/50  train=0.1122  (54.4s)
+2026-05-28 04:44:10,140 | INFO | celeba_ood | [decoders] epoch  13/50  train=0.1118  (54.5s)
+2026-05-28 04:45:04,580 | INFO | celeba_ood | [decoders] epoch  14/50  train=0.1116  (54.4s)
+2026-05-28 04:45:59,429 | INFO | celeba_ood | [decoders] epoch  15/50  train=0.1113  (54.8s)
+2026-05-28 04:46:53,899 | INFO | celeba_ood | [decoders] epoch  16/50  train=0.1111  (54.5s)
+2026-05-28 04:47:48,390 | INFO | celeba_ood | [decoders] epoch  17/50  train=0.1108  (54.5s)
+2026-05-28 04:48:42,880 | INFO | celeba_ood | [decoders] epoch  18/50  train=0.1106  (54.5s)
+2026-05-28 04:49:38,124 | INFO | celeba_ood | [decoders] epoch  19/50  train=0.1104  (55.2s)
+2026-05-28 04:50:32,978 | INFO | celeba_ood | [decoders] epoch  20/50  train=0.1102  (54.9s)
+2026-05-28 04:51:27,555 | INFO | celeba_ood | [decoders] epoch  21/50  train=0.1102  (54.6s)
+2026-05-28 04:52:22,096 | INFO | celeba_ood | [decoders] epoch  22/50  train=0.1100  (54.5s)
+2026-05-28 04:53:16,982 | INFO | celeba_ood | [decoders] epoch  23/50  train=0.1099  (54.9s)
+2026-05-28 04:54:12,034 | INFO | celeba_ood | [decoders] epoch  24/50  train=0.1096  (55.1s)
+2026-05-28 04:55:06,808 | INFO | celeba_ood | [decoders] epoch  25/50  train=0.1095  (54.8s)
+2026-05-28 04:56:01,342 | INFO | celeba_ood | [decoders] epoch  26/50  train=0.1095  (54.5s)
+2026-05-28 04:56:55,743 | INFO | celeba_ood | [decoders] epoch  27/50  train=0.1093  (54.4s)
+2026-05-28 04:57:50,333 | INFO | celeba_ood | [decoders] epoch  28/50  train=0.1094  (54.6s)
+2026-05-28 04:58:44,727 | INFO | celeba_ood | [decoders] epoch  29/50  train=0.1092  (54.4s)
+2026-05-28 04:59:39,455 | INFO | celeba_ood | [decoders] epoch  30/50  train=0.1091  (54.7s)
+2026-05-28 05:00:33,876 | INFO | celeba_ood | [decoders] epoch  31/50  train=0.1091  (54.4s)
+2026-05-28 05:01:28,320 | INFO | celeba_ood | [decoders] epoch  32/50  train=0.1089  (54.4s)
+2026-05-28 05:02:23,503 | INFO | celeba_ood | [decoders] epoch  33/50  train=0.1088  (55.2s)
+2026-05-28 05:03:18,569 | INFO | celeba_ood | [decoders] epoch  34/50  train=0.1089  (55.1s)
+2026-05-28 05:04:13,058 | INFO | celeba_ood | [decoders] epoch  35/50  train=0.1087  (54.5s)
+2026-05-28 05:05:07,740 | INFO | celeba_ood | [decoders] epoch  36/50  train=0.1086  (54.7s)
+2026-05-28 05:06:03,015 | INFO | celeba_ood | [decoders] epoch  37/50  train=0.1088  (55.3s)
+2026-05-28 05:06:58,318 | INFO | celeba_ood | [decoders] epoch  38/50  train=0.1086  (55.3s)
+2026-05-28 05:07:53,368 | INFO | celeba_ood | [decoders] epoch  39/50  train=0.1085  (55.1s)
+2026-05-28 05:08:48,198 | INFO | celeba_ood | [decoders] epoch  40/50  train=0.1085  (54.8s)
+2026-05-28 05:09:42,817 | INFO | celeba_ood | [decoders] epoch  41/50  train=0.1084  (54.6s)
+2026-05-28 05:10:37,329 | INFO | celeba_ood | [decoders] epoch  42/50  train=0.1084  (54.5s)
+2026-05-28 05:11:31,938 | INFO | celeba_ood | [decoders] epoch  43/50  train=0.1083  (54.6s)
+2026-05-28 05:12:26,475 | INFO | celeba_ood | [decoders] epoch  44/50  train=0.1083  (54.5s)
+2026-05-28 05:13:20,941 | INFO | celeba_ood | [decoders] epoch  45/50  train=0.1082  (54.5s)
+2026-05-28 05:14:15,569 | INFO | celeba_ood | [decoders] epoch  46/50  train=0.1082  (54.6s)
+2026-05-28 05:15:10,163 | INFO | celeba_ood | [decoders] epoch  47/50  train=0.1083  (54.6s)
+2026-05-28 05:16:04,638 | INFO | celeba_ood | [decoders] epoch  48/50  train=0.1082  (54.5s)
+2026-05-28 05:16:59,083 | INFO | celeba_ood | [decoders] epoch  49/50  train=0.1080  (54.4s)
+2026-05-28 05:17:54,089 | INFO | celeba_ood | [decoders] epoch  50/50  train=0.1083  (55.0s)
+2026-05-28 05:17:54,090 | INFO | celeba_ood | Decoder training done in 2733.8s
+2026-05-28 05:17:54,138 | INFO | celeba_ood | ======================================================================
+2026-05-28 05:17:54,138 | INFO | celeba_ood | EVALUATION — per-attribute accuracy + OOD AUROC
+2026-05-28 05:17:54,139 | INFO | celeba_ood | ======================================================================
+2026-05-28 05:17:54,139 | INFO | celeba_ood | Collecting predictions on test_in...
+2026-05-28 05:18:00,416 | INFO | celeba_ood |   test_in size = 18941, OOD score (combined entropy) mean = 0.2095
+2026-05-28 05:18:00,416 | INFO | celeba_ood | Collecting predictions on test_ood (Eyeglasses)...
+2026-05-28 05:18:04,705 | INFO | celeba_ood |   test_ood size = 13193, OOD score (combined entropy) mean = 0.2815
+2026-05-28 05:18:04,761 | INFO | celeba_ood | Per-attribute accuracy (in-distribution test set):
+2026-05-28 05:18:04,761 | INFO | celeba_ood |   Male/Female : 97.37%
+2026-05-28 05:18:04,762 | INFO | celeba_ood |   Young                 : 86.82%
+2026-05-28 05:18:04,762 | INFO | celeba_ood |   Smiling               : 91.37%
+2026-05-28 05:18:04,762 | INFO | celeba_ood |   Mouth_Slightly_Open   : 91.76%
+2026-05-28 05:18:04,762 | INFO | celeba_ood |   High_Cheekbones       : 85.14%
+2026-05-28 05:18:04,762 | INFO | celeba_ood |   Pointy_Nose           : 74.06%
+2026-05-28 05:18:04,762 | INFO | celeba_ood |   Oval_Face             : 73.37%
+2026-05-28 05:18:04,762 | INFO | celeba_ood | OOD AUROC (in-dist vs Eyeglasses):
+2026-05-28 05:18:04,762 | INFO | celeba_ood |   score_msp                AUROC = 0.6874  (in_mean=0.011, ood_mean=0.040)
+2026-05-28 05:18:04,762 | INFO | celeba_ood |   score_entropy_gender     AUROC = 0.6874  (in_mean=0.028, ood_mean=0.098)
+2026-05-28 05:18:04,762 | INFO | celeba_ood |   score_entropy_attrs      AUROC = 0.5083  (in_mean=0.181, ood_mean=0.183)
+2026-05-28 05:18:04,762 | INFO | celeba_ood |   score_entropy_combined   AUROC = 0.6016  (in_mean=0.209, ood_mean=0.281)
+2026-05-28 05:18:04,762 | INFO | celeba_ood | Estimating reconstruction-error bias/variance on test_in (clean reference, no training leakage)...
+2026-05-28 05:18:10,853 | INFO | celeba_ood | Scoring test_in / test_ood (agg='p95')...
+2026-05-28 05:18:21,712 | INFO | celeba_ood | OOD AUROC — debiased reconstruction error:
+2026-05-28 05:18:21,712 | INFO | celeba_ood |   block 0: raw AUROC = 0.5733  ->  debiased = 0.5986  (Δ = +0.0254)
+2026-05-28 05:18:21,712 | INFO | celeba_ood |   block 1: raw AUROC = 0.5946  ->  debiased = 0.5928  (Δ = -0.0019)
+2026-05-28 05:18:21,712 | INFO | celeba_ood |   block 2: raw AUROC = 0.6323  ->  debiased = 0.6246  (Δ = -0.0077)
+2026-05-28 05:18:21,713 | INFO | celeba_ood |   block 3: raw AUROC = 0.6415  ->  debiased = 0.6574  (Δ = +0.0159)
+2026-05-28 05:18:21,713 | INFO | celeba_ood |   block 4: raw AUROC = 0.5787  ->  debiased = 0.6286  (Δ = +0.0500)
+2026-05-28 05:18:21,713 | INFO | celeba_ood |   block 5: raw AUROC = 0.5497  ->  debiased = 0.6027  (Δ = +0.0530)
+2026-05-28 05:18:21,713 | INFO | celeba_ood |   aggregated: raw AUROC = 0.6002  ->  debiased = 0.6412  (Δ = +0.0410)
+2026-05-28 05:19:28,386 | INFO | celeba_ood | Fusion-based AUROC (max-pixel) = 0.5629  (in_mean=0.6329, ood_mean=0.6538)
+2026-05-28 05:19:28,387 | INFO | celeba_ood | Wrote per-block plots: per_block_breakdown.png, recons_only.png, activations.png, fusion_overlay.png, fusion_auroc.png
+2026-05-28 05:19:54,528 | INFO | celeba_ood | Wrote debiasing plots: bias_variance_maps.png, anomaly_cleaning.png, score_dist_debiased.png, per_block_auroc.png
+2026-05-28 05:19:54,530 | INFO | celeba_ood | Summary written to outputs/celeba_ood/ensemble_20260527_194912_6458836/model_7/summary.json
+2026-05-28 05:19:54,538 | INFO | celeba_ood | model 8/10 done in 4193.9s
+2026-05-28 05:19:54,564 | INFO | celeba_ood | ######################################################################
+2026-05-28 05:19:54,564 | INFO | celeba_ood | # MODEL 9/10   (seed=50)
+2026-05-28 05:19:54,564 | INFO | celeba_ood | ######################################################################
+2026-05-28 05:19:54,606 | INFO | celeba_ood | Model        : FacialCNN  (1,571,624 params)
+2026-05-28 05:19:54,606 | INFO | celeba_ood | ======================================================================
+2026-05-28 05:19:54,606 | INFO | celeba_ood | TRAINING — combined CE(gender) + BCE(attrs) loss
+2026-05-28 05:19:54,606 | INFO | celeba_ood | ======================================================================
+2026-05-28 05:20:48,603 | INFO | celeba_ood | epoch   1/25  train_loss=0.9380  train_gender_acc=94.8%  train_attr_acc=[84.1 88.3 85.0 83.4 72.1 72.8]%  (54.0s)
+2026-05-28 05:21:42,657 | INFO | celeba_ood | epoch   2/25  train_loss=0.7476  train_gender_acc=97.5%  train_attr_acc=[87.3 92.0 91.5 87.1 74.7 74.7]%  (54.1s)
+2026-05-28 05:22:36,194 | INFO | celeba_ood | epoch   3/25  train_loss=0.7054  train_gender_acc=98.1%  train_attr_acc=[88.1 92.4 92.4 87.5 75.5 75.3]%  (53.5s)
+2026-05-28 05:23:29,747 | INFO | celeba_ood | epoch   4/25  train_loss=0.6769  train_gender_acc=98.5%  train_attr_acc=[88.7 92.8 92.9 87.9 76.1 75.7]%  (53.6s)
+2026-05-28 05:24:23,696 | INFO | celeba_ood | epoch   5/25  train_loss=0.6555  train_gender_acc=98.8%  train_attr_acc=[89.1 93.0 93.3 88.1 76.3 76.1]%  (53.9s)
+2026-05-28 05:25:17,909 | INFO | celeba_ood | epoch   6/25  train_loss=0.6350  train_gender_acc=99.0%  train_attr_acc=[89.5 93.2 93.6 88.3 76.8 76.5]%  (54.2s)
+2026-05-28 05:26:11,314 | INFO | celeba_ood | epoch   7/25  train_loss=0.6175  train_gender_acc=99.1%  train_attr_acc=[89.9 93.5 93.9 88.7 77.2 76.8]%  (53.4s)
+2026-05-28 05:27:05,006 | INFO | celeba_ood | epoch   8/25  train_loss=0.6006  train_gender_acc=99.3%  train_attr_acc=[90.4 93.7 94.1 88.9 77.6 77.2]%  (53.7s)
+2026-05-28 05:27:58,710 | INFO | celeba_ood | epoch   9/25  train_loss=0.5850  train_gender_acc=99.4%  train_attr_acc=[90.7 93.9 94.3 89.3 78.0 77.7]%  (53.7s)
+2026-05-28 05:28:52,565 | INFO | celeba_ood | epoch  10/25  train_loss=0.5673  train_gender_acc=99.5%  train_attr_acc=[91.1 94.2 94.6 89.6 78.3 78.1]%  (53.9s)
+2026-05-28 05:29:46,754 | INFO | celeba_ood | epoch  11/25  train_loss=0.5513  train_gender_acc=99.5%  train_attr_acc=[91.5 94.5 94.8 89.9 78.9 78.6]%  (54.2s)
+2026-05-28 05:30:40,357 | INFO | celeba_ood | epoch  12/25  train_loss=0.5319  train_gender_acc=99.6%  train_attr_acc=[92.2 94.7 95.1 90.3 79.4 79.1]%  (53.6s)
+2026-05-28 05:31:33,976 | INFO | celeba_ood | epoch  13/25  train_loss=0.5157  train_gender_acc=99.6%  train_attr_acc=[92.5 94.9 95.3 90.6 80.0 79.8]%  (53.6s)
+2026-05-28 05:32:27,403 | INFO | celeba_ood | epoch  14/25  train_loss=0.4971  train_gender_acc=99.7%  train_attr_acc=[92.9 95.1 95.6 91.0 80.7 80.6]%  (53.4s)
+2026-05-28 05:33:20,455 | INFO | celeba_ood | epoch  15/25  train_loss=0.4800  train_gender_acc=99.7%  train_attr_acc=[93.3 95.3 95.8 91.4 81.3 81.3]%  (53.1s)
+2026-05-28 05:34:14,375 | INFO | celeba_ood | epoch  16/25  train_loss=0.4613  train_gender_acc=99.7%  train_attr_acc=[93.7 95.6 96.0 91.7 82.0 82.1]%  (53.9s)
+2026-05-28 05:35:07,736 | INFO | celeba_ood | epoch  17/25  train_loss=0.4416  train_gender_acc=99.8%  train_attr_acc=[94.1 95.7 96.2 92.1 82.8 82.9]%  (53.4s)
+2026-05-28 05:36:01,303 | INFO | celeba_ood | epoch  18/25  train_loss=0.4272  train_gender_acc=99.7%  train_attr_acc=[94.3 95.9 96.4 92.4 83.4 83.6]%  (53.6s)
+2026-05-28 05:36:55,038 | INFO | celeba_ood | epoch  19/25  train_loss=0.4083  train_gender_acc=99.8%  train_attr_acc=[94.8 96.0 96.6 92.8 84.1 84.4]%  (53.7s)
+2026-05-28 05:37:48,403 | INFO | celeba_ood | epoch  20/25  train_loss=0.3911  train_gender_acc=99.8%  train_attr_acc=[95.0 96.2 96.8 93.1 84.9 85.2]%  (53.4s)
+2026-05-28 05:38:42,262 | INFO | celeba_ood | epoch  21/25  train_loss=0.3766  train_gender_acc=99.8%  train_attr_acc=[95.3 96.3 96.9 93.4 85.7 85.8]%  (53.9s)
+2026-05-28 05:39:36,044 | INFO | celeba_ood | epoch  22/25  train_loss=0.3606  train_gender_acc=99.8%  train_attr_acc=[95.4 96.5 96.9 93.7 86.3 86.6]%  (53.8s)
+2026-05-28 05:40:29,664 | INFO | celeba_ood | epoch  23/25  train_loss=0.3482  train_gender_acc=99.8%  train_attr_acc=[95.6 96.6 97.1 93.9 86.9 87.2]%  (53.6s)
+2026-05-28 05:41:23,546 | INFO | celeba_ood | epoch  24/25  train_loss=0.3345  train_gender_acc=99.8%  train_attr_acc=[95.8 96.6 97.2 94.1 87.5 87.8]%  (53.9s)
+2026-05-28 05:42:17,369 | INFO | celeba_ood | epoch  25/25  train_loss=0.3237  train_gender_acc=99.8%  train_attr_acc=[95.9 96.8 97.2 94.3 88.1 88.4]%  (53.8s)
+2026-05-28 05:42:17,370 | INFO | celeba_ood | Training done in 1342.8s
+2026-05-28 05:42:17,491 | INFO | celeba_ood | ======================================================================
+2026-05-28 05:42:17,491 | INFO | celeba_ood | PHASE 2 — training per-block decoders (visualization)
+2026-05-28 05:42:17,491 | INFO | celeba_ood | ======================================================================
+2026-05-28 05:42:17,491 | INFO | celeba_ood |   decoder L0: in=(C=32, H=32) → out=(3, 64, 64)  params=8,275
+2026-05-28 05:42:17,492 | INFO | celeba_ood |   decoder L1: in=(C=64, H=16) → out=(3, 64, 64)  params=41,107
+2026-05-28 05:42:17,492 | INFO | celeba_ood |   decoder L2: in=(C=128, H=8) → out=(3, 64, 64)  params=172,307
+2026-05-28 05:42:17,492 | INFO | celeba_ood |   decoder L3: in=(C=256, H=4) → out=(3, 64, 64)  params=696,851
+2026-05-28 05:42:17,492 | INFO | celeba_ood |   decoder L4: in=(C=256, H=2) → out=(3, 64, 64)  params=700,979
+2026-05-28 05:42:17,492 | INFO | celeba_ood |   decoder L5: in=(C=256, H=2) → out=(3, 64, 64)  params=700,979
+2026-05-28 05:43:12,478 | INFO | celeba_ood | [decoders] epoch   1/50  train=0.1631  (55.0s)
+2026-05-28 05:44:07,294 | INFO | celeba_ood | [decoders] epoch   2/50  train=0.1270  (54.8s)
+2026-05-28 05:45:01,843 | INFO | celeba_ood | [decoders] epoch   3/50  train=0.1221  (54.5s)
+2026-05-28 05:45:56,597 | INFO | celeba_ood | [decoders] epoch   4/50  train=0.1196  (54.8s)
+2026-05-28 05:46:51,150 | INFO | celeba_ood | [decoders] epoch   5/50  train=0.1176  (54.6s)
+2026-05-28 05:47:45,521 | INFO | celeba_ood | [decoders] epoch   6/50  train=0.1164  (54.4s)
+2026-05-28 05:48:40,019 | INFO | celeba_ood | [decoders] epoch   7/50  train=0.1156  (54.5s)
+2026-05-28 05:49:34,681 | INFO | celeba_ood | [decoders] epoch   8/50  train=0.1148  (54.7s)
+2026-05-28 05:50:29,402 | INFO | celeba_ood | [decoders] epoch   9/50  train=0.1141  (54.7s)
+2026-05-28 05:51:24,072 | INFO | celeba_ood | [decoders] epoch  10/50  train=0.1135  (54.7s)
+2026-05-28 05:52:18,504 | INFO | celeba_ood | [decoders] epoch  11/50  train=0.1130  (54.4s)
+2026-05-28 05:53:13,241 | INFO | celeba_ood | [decoders] epoch  12/50  train=0.1128  (54.7s)
+2026-05-28 05:54:07,693 | INFO | celeba_ood | [decoders] epoch  13/50  train=0.1122  (54.5s)
+2026-05-28 05:55:02,507 | INFO | celeba_ood | [decoders] epoch  14/50  train=0.1120  (54.8s)
+2026-05-28 05:55:57,085 | INFO | celeba_ood | [decoders] epoch  15/50  train=0.1117  (54.6s)
+2026-05-28 05:56:51,490 | INFO | celeba_ood | [decoders] epoch  16/50  train=0.1115  (54.4s)
+2026-05-28 05:57:46,480 | INFO | celeba_ood | [decoders] epoch  17/50  train=0.1112  (55.0s)
+2026-05-28 05:58:40,902 | INFO | celeba_ood | [decoders] epoch  18/50  train=0.1110  (54.4s)
+2026-05-28 05:59:35,359 | INFO | celeba_ood | [decoders] epoch  19/50  train=0.1108  (54.5s)
+2026-05-28 06:00:29,956 | INFO | celeba_ood | [decoders] epoch  20/50  train=0.1107  (54.6s)
+2026-05-28 06:01:24,359 | INFO | celeba_ood | [decoders] epoch  21/50  train=0.1106  (54.4s)
+2026-05-28 06:02:18,888 | INFO | celeba_ood | [decoders] epoch  22/50  train=0.1104  (54.5s)
+2026-05-28 06:03:13,396 | INFO | celeba_ood | [decoders] epoch  23/50  train=0.1102  (54.5s)
+2026-05-28 06:04:07,819 | INFO | celeba_ood | [decoders] epoch  24/50  train=0.1101  (54.4s)
+2026-05-28 06:05:02,223 | INFO | celeba_ood | [decoders] epoch  25/50  train=0.1100  (54.4s)
+2026-05-28 06:05:56,747 | INFO | celeba_ood | [decoders] epoch  26/50  train=0.1099  (54.5s)
+2026-05-28 06:06:51,339 | INFO | celeba_ood | [decoders] epoch  27/50  train=0.1097  (54.6s)
+2026-05-28 06:07:46,051 | INFO | celeba_ood | [decoders] epoch  28/50  train=0.1097  (54.7s)
+2026-05-28 06:08:40,506 | INFO | celeba_ood | [decoders] epoch  29/50  train=0.1096  (54.5s)
+2026-05-28 06:09:35,154 | INFO | celeba_ood | [decoders] epoch  30/50  train=0.1095  (54.6s)
+2026-05-28 06:10:29,639 | INFO | celeba_ood | [decoders] epoch  31/50  train=0.1095  (54.5s)
+2026-05-28 06:11:24,256 | INFO | celeba_ood | [decoders] epoch  32/50  train=0.1093  (54.6s)
+2026-05-28 06:12:18,808 | INFO | celeba_ood | [decoders] epoch  33/50  train=0.1092  (54.6s)
+2026-05-28 06:13:13,422 | INFO | celeba_ood | [decoders] epoch  34/50  train=0.1092  (54.6s)
+2026-05-28 06:14:07,848 | INFO | celeba_ood | [decoders] epoch  35/50  train=0.1090  (54.4s)
+2026-05-28 06:15:02,287 | INFO | celeba_ood | [decoders] epoch  36/50  train=0.1090  (54.4s)
+2026-05-28 06:15:56,967 | INFO | celeba_ood | [decoders] epoch  37/50  train=0.1090  (54.7s)
+2026-05-28 06:16:51,525 | INFO | celeba_ood | [decoders] epoch  38/50  train=0.1089  (54.6s)
+2026-05-28 06:17:45,924 | INFO | celeba_ood | [decoders] epoch  39/50  train=0.1089  (54.4s)
+2026-05-28 06:18:41,137 | INFO | celeba_ood | [decoders] epoch  40/50  train=0.1088  (55.2s)
+2026-05-28 06:19:35,924 | INFO | celeba_ood | [decoders] epoch  41/50  train=0.1088  (54.8s)
+2026-05-28 06:20:30,687 | INFO | celeba_ood | [decoders] epoch  42/50  train=0.1087  (54.8s)
+2026-05-28 06:21:25,533 | INFO | celeba_ood | [decoders] epoch  43/50  train=0.1087  (54.8s)
+2026-05-28 06:22:20,096 | INFO | celeba_ood | [decoders] epoch  44/50  train=0.1087  (54.6s)
+2026-05-28 06:23:14,585 | INFO | celeba_ood | [decoders] epoch  45/50  train=0.1086  (54.5s)
+2026-05-28 06:24:09,138 | INFO | celeba_ood | [decoders] epoch  46/50  train=0.1085  (54.6s)
+2026-05-28 06:25:03,595 | INFO | celeba_ood | [decoders] epoch  47/50  train=0.1084  (54.5s)
+2026-05-28 06:25:59,060 | INFO | celeba_ood | [decoders] epoch  48/50  train=0.1084  (55.5s)
+2026-05-28 06:26:53,645 | INFO | celeba_ood | [decoders] epoch  49/50  train=0.1083  (54.6s)
+2026-05-28 06:27:48,227 | INFO | celeba_ood | [decoders] epoch  50/50  train=0.1085  (54.6s)
+2026-05-28 06:27:48,227 | INFO | celeba_ood | Decoder training done in 2730.7s
+2026-05-28 06:27:48,276 | INFO | celeba_ood | ======================================================================
+2026-05-28 06:27:48,276 | INFO | celeba_ood | EVALUATION — per-attribute accuracy + OOD AUROC
+2026-05-28 06:27:48,276 | INFO | celeba_ood | ======================================================================
+2026-05-28 06:27:48,276 | INFO | celeba_ood | Collecting predictions on test_in...
+2026-05-28 06:27:54,325 | INFO | celeba_ood |   test_in size = 18941, OOD score (combined entropy) mean = 0.2271
+2026-05-28 06:27:54,325 | INFO | celeba_ood | Collecting predictions on test_ood (Eyeglasses)...
+2026-05-28 06:27:58,611 | INFO | celeba_ood |   test_ood size = 13193, OOD score (combined entropy) mean = 0.2875
+2026-05-28 06:27:58,671 | INFO | celeba_ood | Per-attribute accuracy (in-distribution test set):
+2026-05-28 06:27:58,671 | INFO | celeba_ood |   Male/Female : 97.63%
+2026-05-28 06:27:58,671 | INFO | celeba_ood |   Young                 : 86.95%
+2026-05-28 06:27:58,671 | INFO | celeba_ood |   Smiling               : 91.41%
+2026-05-28 06:27:58,671 | INFO | celeba_ood |   Mouth_Slightly_Open   : 91.75%
+2026-05-28 06:27:58,671 | INFO | celeba_ood |   High_Cheekbones       : 84.76%
+2026-05-28 06:27:58,671 | INFO | celeba_ood |   Pointy_Nose           : 74.23%
+2026-05-28 06:27:58,671 | INFO | celeba_ood |   Oval_Face             : 67.24%
+2026-05-28 06:27:58,671 | INFO | celeba_ood | OOD AUROC (in-dist vs Eyeglasses):
+2026-05-28 06:27:58,671 | INFO | celeba_ood |   score_msp                AUROC = 0.5840  (in_mean=0.009, ood_mean=0.030)
+2026-05-28 06:27:58,671 | INFO | celeba_ood |   score_entropy_gender     AUROC = 0.5840  (in_mean=0.026, ood_mean=0.075)
+2026-05-28 06:27:58,671 | INFO | celeba_ood |   score_entropy_attrs      AUROC = 0.5346  (in_mean=0.201, ood_mean=0.213)
+2026-05-28 06:27:58,671 | INFO | celeba_ood |   score_entropy_combined   AUROC = 0.5893  (in_mean=0.227, ood_mean=0.288)
+2026-05-28 06:27:58,672 | INFO | celeba_ood | Estimating reconstruction-error bias/variance on test_in (clean reference, no training leakage)...
+2026-05-28 06:28:04,827 | INFO | celeba_ood | Scoring test_in / test_ood (agg='p95')...
+2026-05-28 06:28:15,630 | INFO | celeba_ood | OOD AUROC — debiased reconstruction error:
+2026-05-28 06:28:15,630 | INFO | celeba_ood |   block 0: raw AUROC = 0.5748  ->  debiased = 0.6017  (Δ = +0.0269)
+2026-05-28 06:28:15,630 | INFO | celeba_ood |   block 1: raw AUROC = 0.5912  ->  debiased = 0.5895  (Δ = -0.0016)
+2026-05-28 06:28:15,630 | INFO | celeba_ood |   block 2: raw AUROC = 0.6168  ->  debiased = 0.6146  (Δ = -0.0022)
+2026-05-28 06:28:15,630 | INFO | celeba_ood |   block 3: raw AUROC = 0.6429  ->  debiased = 0.6559  (Δ = +0.0130)
+2026-05-28 06:28:15,630 | INFO | celeba_ood |   block 4: raw AUROC = 0.5714  ->  debiased = 0.6259  (Δ = +0.0545)
+2026-05-28 06:28:15,630 | INFO | celeba_ood |   block 5: raw AUROC = 0.5437  ->  debiased = 0.5980  (Δ = +0.0543)
+2026-05-28 06:28:15,630 | INFO | celeba_ood |   aggregated: raw AUROC = 0.5938  ->  debiased = 0.6378  (Δ = +0.0439)
+2026-05-28 06:29:23,895 | INFO | celeba_ood | Fusion-based AUROC (max-pixel) = 0.5530  (in_mean=0.6432, ood_mean=0.6612)
+2026-05-28 06:29:23,896 | INFO | celeba_ood | Wrote per-block plots: per_block_breakdown.png, recons_only.png, activations.png, fusion_overlay.png, fusion_auroc.png
+2026-05-28 06:29:50,951 | INFO | celeba_ood | Wrote debiasing plots: bias_variance_maps.png, anomaly_cleaning.png, score_dist_debiased.png, per_block_auroc.png
+2026-05-28 06:29:50,953 | INFO | celeba_ood | Summary written to outputs/celeba_ood/ensemble_20260527_194912_6458836/model_8/summary.json
+2026-05-28 06:29:50,961 | INFO | celeba_ood | model 9/10 done in 4196.4s
+2026-05-28 06:29:50,989 | INFO | celeba_ood | ######################################################################
+2026-05-28 06:29:50,989 | INFO | celeba_ood | # MODEL 10/10   (seed=51)
+2026-05-28 06:29:50,989 | INFO | celeba_ood | ######################################################################
+2026-05-28 06:29:51,032 | INFO | celeba_ood | Model        : FacialCNN  (1,571,624 params)
+2026-05-28 06:29:51,032 | INFO | celeba_ood | ======================================================================
+2026-05-28 06:29:51,032 | INFO | celeba_ood | TRAINING — combined CE(gender) + BCE(attrs) loss
+2026-05-28 06:29:51,032 | INFO | celeba_ood | ======================================================================
+2026-05-28 06:30:44,193 | INFO | celeba_ood | epoch   1/25  train_loss=0.9169  train_gender_acc=95.1%  train_attr_acc=[85.0 88.4 85.8 83.7 72.3 73.2]%  (53.2s)
+2026-05-28 06:31:37,209 | INFO | celeba_ood | epoch   2/25  train_loss=0.7421  train_gender_acc=97.6%  train_attr_acc=[87.4 92.0 91.9 87.0 74.7 74.7]%  (53.0s)
+2026-05-28 06:32:30,265 | INFO | celeba_ood | epoch   3/25  train_loss=0.7022  train_gender_acc=98.1%  train_attr_acc=[88.2 92.4 92.7 87.5 75.4 75.4]%  (53.1s)
+2026-05-28 06:33:23,738 | INFO | celeba_ood | epoch   4/25  train_loss=0.6747  train_gender_acc=98.5%  train_attr_acc=[88.7 92.8 93.1 87.8 76.0 75.8]%  (53.5s)
+2026-05-28 06:34:16,895 | INFO | celeba_ood | epoch   5/25  train_loss=0.6540  train_gender_acc=98.8%  train_attr_acc=[89.2 93.0 93.4 88.2 76.4 76.1]%  (53.2s)
+2026-05-28 06:35:10,091 | INFO | celeba_ood | epoch   6/25  train_loss=0.6335  train_gender_acc=99.0%  train_attr_acc=[89.5 93.3 93.7 88.4 76.6 76.5]%  (53.2s)
+2026-05-28 06:36:03,222 | INFO | celeba_ood | epoch   7/25  train_loss=0.6166  train_gender_acc=99.1%  train_attr_acc=[90.0 93.4 93.9 88.7 77.1 76.8]%  (53.1s)
+2026-05-28 06:36:56,900 | INFO | celeba_ood | epoch   8/25  train_loss=0.5991  train_gender_acc=99.3%  train_attr_acc=[90.4 93.7 94.2 88.9 77.5 77.3]%  (53.7s)
+2026-05-28 06:37:49,866 | INFO | celeba_ood | epoch   9/25  train_loss=0.5840  train_gender_acc=99.4%  train_attr_acc=[90.8 93.9 94.4 89.3 77.9 77.7]%  (53.0s)
+2026-05-28 06:38:43,003 | INFO | celeba_ood | epoch  10/25  train_loss=0.5653  train_gender_acc=99.5%  train_attr_acc=[91.2 94.2 94.7 89.5 78.3 78.3]%  (53.1s)
+2026-05-28 06:39:36,088 | INFO | celeba_ood | epoch  11/25  train_loss=0.5500  train_gender_acc=99.5%  train_attr_acc=[91.5 94.5 94.9 89.9 78.8 78.7]%  (53.1s)
+2026-05-28 06:40:29,752 | INFO | celeba_ood | epoch  12/25  train_loss=0.5320  train_gender_acc=99.6%  train_attr_acc=[92.1 94.7 95.1 90.4 79.2 79.3]%  (53.7s)
+2026-05-28 06:41:23,463 | INFO | celeba_ood | epoch  13/25  train_loss=0.5141  train_gender_acc=99.6%  train_attr_acc=[92.4 95.0 95.4 90.7 79.8 80.0]%  (53.7s)
+2026-05-28 06:42:16,469 | INFO | celeba_ood | epoch  14/25  train_loss=0.4954  train_gender_acc=99.7%  train_attr_acc=[92.9 95.1 95.6 91.0 80.6 80.7]%  (53.0s)
+2026-05-28 06:43:09,843 | INFO | celeba_ood | epoch  15/25  train_loss=0.4771  train_gender_acc=99.7%  train_attr_acc=[93.3 95.4 95.9 91.4 81.1 81.5]%  (53.4s)
+2026-05-28 06:44:03,487 | INFO | celeba_ood | epoch  16/25  train_loss=0.4599  train_gender_acc=99.7%  train_attr_acc=[93.7 95.6 96.1 91.7 81.9 82.3]%  (53.6s)
+2026-05-28 06:44:56,849 | INFO | celeba_ood | epoch  17/25  train_loss=0.4419  train_gender_acc=99.7%  train_attr_acc=[94.1 95.8 96.3 91.9 82.7 83.0]%  (53.4s)
+2026-05-28 06:45:50,384 | INFO | celeba_ood | epoch  18/25  train_loss=0.4251  train_gender_acc=99.7%  train_attr_acc=[94.3 95.9 96.3 92.3 83.3 83.7]%  (53.5s)
+2026-05-28 06:46:43,349 | INFO | celeba_ood | epoch  19/25  train_loss=0.4079  train_gender_acc=99.8%  train_attr_acc=[94.7 96.1 96.6 92.8 84.1 84.6]%  (53.0s)
+2026-05-28 06:47:37,450 | INFO | celeba_ood | epoch  20/25  train_loss=0.3931  train_gender_acc=99.8%  train_attr_acc=[94.9 96.3 96.7 92.9 84.8 85.2]%  (54.1s)
+2026-05-28 06:48:31,820 | INFO | celeba_ood | epoch  21/25  train_loss=0.3732  train_gender_acc=99.8%  train_attr_acc=[95.2 96.5 96.9 93.4 85.5 86.1]%  (54.4s)
+2026-05-28 06:49:25,287 | INFO | celeba_ood | epoch  22/25  train_loss=0.3619  train_gender_acc=99.8%  train_attr_acc=[95.4 96.6 97.0 93.5 86.2 86.6]%  (53.5s)
+2026-05-28 06:50:18,679 | INFO | celeba_ood | epoch  23/25  train_loss=0.3458  train_gender_acc=99.8%  train_attr_acc=[95.7 96.6 97.1 93.9 86.9 87.4]%  (53.4s)
+2026-05-28 06:51:12,341 | INFO | celeba_ood | epoch  24/25  train_loss=0.3320  train_gender_acc=99.8%  train_attr_acc=[95.8 96.8 97.2 94.2 87.6 88.0]%  (53.7s)
+2026-05-28 06:52:06,248 | INFO | celeba_ood | epoch  25/25  train_loss=0.3197  train_gender_acc=99.8%  train_attr_acc=[95.9 96.8 97.3 94.4 88.1 88.6]%  (53.9s)
+2026-05-28 06:52:06,249 | INFO | celeba_ood | Training done in 1335.2s
+2026-05-28 06:52:06,369 | INFO | celeba_ood | ======================================================================
+2026-05-28 06:52:06,369 | INFO | celeba_ood | PHASE 2 — training per-block decoders (visualization)
+2026-05-28 06:52:06,369 | INFO | celeba_ood | ======================================================================
+2026-05-28 06:52:06,369 | INFO | celeba_ood |   decoder L0: in=(C=32, H=32) → out=(3, 64, 64)  params=8,275
+2026-05-28 06:52:06,369 | INFO | celeba_ood |   decoder L1: in=(C=64, H=16) → out=(3, 64, 64)  params=41,107
+2026-05-28 06:52:06,369 | INFO | celeba_ood |   decoder L2: in=(C=128, H=8) → out=(3, 64, 64)  params=172,307
+2026-05-28 06:52:06,369 | INFO | celeba_ood |   decoder L3: in=(C=256, H=4) → out=(3, 64, 64)  params=696,851
+2026-05-28 06:52:06,369 | INFO | celeba_ood |   decoder L4: in=(C=256, H=2) → out=(3, 64, 64)  params=700,979
+2026-05-28 06:52:06,369 | INFO | celeba_ood |   decoder L5: in=(C=256, H=2) → out=(3, 64, 64)  params=700,979
+2026-05-28 06:53:01,066 | INFO | celeba_ood | [decoders] epoch   1/50  train=0.1625  (54.7s)
+2026-05-28 06:53:55,653 | INFO | celeba_ood | [decoders] epoch   2/50  train=0.1280  (54.6s)
+2026-05-28 06:54:50,529 | INFO | celeba_ood | [decoders] epoch   3/50  train=0.1233  (54.9s)
+2026-05-28 06:55:44,925 | INFO | celeba_ood | [decoders] epoch   4/50  train=0.1207  (54.4s)
+2026-05-28 06:56:39,459 | INFO | celeba_ood | [decoders] epoch   5/50  train=0.1192  (54.5s)
+2026-05-28 06:57:33,901 | INFO | celeba_ood | [decoders] epoch   6/50  train=0.1178  (54.4s)
+2026-05-28 06:58:28,606 | INFO | celeba_ood | [decoders] epoch   7/50  train=0.1169  (54.7s)
+2026-05-28 06:59:23,939 | INFO | celeba_ood | [decoders] epoch   8/50  train=0.1162  (55.3s)
+2026-05-28 07:00:18,645 | INFO | celeba_ood | [decoders] epoch   9/50  train=0.1156  (54.7s)
+2026-05-28 07:01:13,651 | INFO | celeba_ood | [decoders] epoch  10/50  train=0.1150  (55.0s)
+2026-05-28 07:02:08,368 | INFO | celeba_ood | [decoders] epoch  11/50  train=0.1147  (54.7s)
+2026-05-28 07:03:03,087 | INFO | celeba_ood | [decoders] epoch  12/50  train=0.1142  (54.7s)
+2026-05-28 07:03:58,023 | INFO | celeba_ood | [decoders] epoch  13/50  train=0.1139  (54.9s)
+2026-05-28 07:04:52,952 | INFO | celeba_ood | [decoders] epoch  14/50  train=0.1137  (54.9s)
+2026-05-28 07:05:47,373 | INFO | celeba_ood | [decoders] epoch  15/50  train=0.1134  (54.4s)
+2026-05-28 07:06:41,802 | INFO | celeba_ood | [decoders] epoch  16/50  train=0.1131  (54.4s)
+2026-05-28 07:07:36,346 | INFO | celeba_ood | [decoders] epoch  17/50  train=0.1128  (54.5s)
+2026-05-28 07:08:30,850 | INFO | celeba_ood | [decoders] epoch  18/50  train=0.1126  (54.5s)
+2026-05-28 07:09:25,276 | INFO | celeba_ood | [decoders] epoch  19/50  train=0.1126  (54.4s)
+2026-05-28 07:10:20,402 | INFO | celeba_ood | [decoders] epoch  20/50  train=0.1124  (55.1s)
+2026-05-28 07:11:14,982 | INFO | celeba_ood | [decoders] epoch  21/50  train=0.1121  (54.6s)
+2026-05-28 07:12:09,390 | INFO | celeba_ood | [decoders] epoch  22/50  train=0.1120  (54.4s)
+2026-05-28 07:13:04,132 | INFO | celeba_ood | [decoders] epoch  23/50  train=0.1119  (54.7s)
+2026-05-28 07:13:58,748 | INFO | celeba_ood | [decoders] epoch  24/50  train=0.1116  (54.6s)
+2026-05-28 07:14:53,477 | INFO | celeba_ood | [decoders] epoch  25/50  train=0.1117  (54.7s)
+2026-05-28 07:15:47,917 | INFO | celeba_ood | [decoders] epoch  26/50  train=0.1114  (54.4s)
+2026-05-28 07:16:42,616 | INFO | celeba_ood | [decoders] epoch  27/50  train=0.1114  (54.7s)
+2026-05-28 07:17:37,223 | INFO | celeba_ood | [decoders] epoch  28/50  train=0.1113  (54.6s)
+2026-05-28 07:18:31,679 | INFO | celeba_ood | [decoders] epoch  29/50  train=0.1112  (54.5s)
+2026-05-28 07:19:26,723 | INFO | celeba_ood | [decoders] epoch  30/50  train=0.1110  (55.0s)
+2026-05-28 07:20:21,317 | INFO | celeba_ood | [decoders] epoch  31/50  train=0.1110  (54.6s)
+2026-05-28 07:21:15,743 | INFO | celeba_ood | [decoders] epoch  32/50  train=0.1109  (54.4s)
+2026-05-28 07:22:10,931 | INFO | celeba_ood | [decoders] epoch  33/50  train=0.1108  (55.2s)
+2026-05-28 07:23:06,217 | INFO | celeba_ood | [decoders] epoch  34/50  train=0.1107  (55.3s)
+2026-05-28 07:24:01,523 | INFO | celeba_ood | [decoders] epoch  35/50  train=0.1107  (55.3s)
+2026-05-28 07:24:56,514 | INFO | celeba_ood | [decoders] epoch  36/50  train=0.1107  (55.0s)
+2026-05-28 07:25:51,266 | INFO | celeba_ood | [decoders] epoch  37/50  train=0.1105  (54.8s)
+2026-05-28 07:26:46,208 | INFO | celeba_ood | [decoders] epoch  38/50  train=0.1105  (54.9s)
+2026-05-28 07:27:40,894 | INFO | celeba_ood | [decoders] epoch  39/50  train=0.1103  (54.7s)
+2026-05-28 07:28:35,372 | INFO | celeba_ood | [decoders] epoch  40/50  train=0.1103  (54.5s)
+2026-05-28 07:29:29,808 | INFO | celeba_ood | [decoders] epoch  41/50  train=0.1104  (54.4s)
+2026-05-28 07:30:24,505 | INFO | celeba_ood | [decoders] epoch  42/50  train=0.1103  (54.7s)
+2026-05-28 07:31:19,257 | INFO | celeba_ood | [decoders] epoch  43/50  train=0.1101  (54.8s)
+2026-05-28 07:32:13,703 | INFO | celeba_ood | [decoders] epoch  44/50  train=0.1101  (54.4s)
+2026-05-28 07:33:08,192 | INFO | celeba_ood | [decoders] epoch  45/50  train=0.1101  (54.5s)
+2026-05-28 07:34:02,657 | INFO | celeba_ood | [decoders] epoch  46/50  train=0.1101  (54.5s)
+2026-05-28 07:34:57,536 | INFO | celeba_ood | [decoders] epoch  47/50  train=0.1100  (54.9s)
+2026-05-28 07:35:52,071 | INFO | celeba_ood | [decoders] epoch  48/50  train=0.1101  (54.5s)
+2026-05-28 07:36:46,692 | INFO | celeba_ood | [decoders] epoch  49/50  train=0.1101  (54.6s)
+2026-05-28 07:37:41,092 | INFO | celeba_ood | [decoders] epoch  50/50  train=0.1098  (54.4s)
+2026-05-28 07:37:41,092 | INFO | celeba_ood | Decoder training done in 2734.7s
+2026-05-28 07:37:41,139 | INFO | celeba_ood | ======================================================================
+2026-05-28 07:37:41,140 | INFO | celeba_ood | EVALUATION — per-attribute accuracy + OOD AUROC
+2026-05-28 07:37:41,140 | INFO | celeba_ood | ======================================================================
+2026-05-28 07:37:41,140 | INFO | celeba_ood | Collecting predictions on test_in...
+2026-05-28 07:37:47,222 | INFO | celeba_ood |   test_in size = 18941, OOD score (combined entropy) mean = 0.2245
+2026-05-28 07:37:47,222 | INFO | celeba_ood | Collecting predictions on test_ood (Eyeglasses)...
+2026-05-28 07:37:51,520 | INFO | celeba_ood |   test_ood size = 13193, OOD score (combined entropy) mean = 0.2853
+2026-05-28 07:37:51,577 | INFO | celeba_ood | Per-attribute accuracy (in-distribution test set):
+2026-05-28 07:37:51,577 | INFO | celeba_ood |   Male/Female : 97.58%
+2026-05-28 07:37:51,577 | INFO | celeba_ood |   Young                 : 86.74%
+2026-05-28 07:37:51,577 | INFO | celeba_ood |   Smiling               : 90.10%
+2026-05-28 07:37:51,577 | INFO | celeba_ood |   Mouth_Slightly_Open   : 91.85%
+2026-05-28 07:37:51,577 | INFO | celeba_ood |   High_Cheekbones       : 85.56%
+2026-05-28 07:37:51,577 | INFO | celeba_ood |   Pointy_Nose           : 73.45%
+2026-05-28 07:37:51,577 | INFO | celeba_ood |   Oval_Face             : 70.75%
+2026-05-28 07:37:51,577 | INFO | celeba_ood | OOD AUROC (in-dist vs Eyeglasses):
+2026-05-28 07:37:51,577 | INFO | celeba_ood |   score_msp                AUROC = 0.6639  (in_mean=0.011, ood_mean=0.034)
+2026-05-28 07:37:51,577 | INFO | celeba_ood |   score_entropy_gender     AUROC = 0.6639  (in_mean=0.029, ood_mean=0.085)
+2026-05-28 07:37:51,577 | INFO | celeba_ood |   score_entropy_attrs      AUROC = 0.5160  (in_mean=0.195, ood_mean=0.200)
+2026-05-28 07:37:51,577 | INFO | celeba_ood |   score_entropy_combined   AUROC = 0.5871  (in_mean=0.225, ood_mean=0.285)
+2026-05-28 07:37:51,577 | INFO | celeba_ood | Estimating reconstruction-error bias/variance on test_in (clean reference, no training leakage)...
+2026-05-28 07:37:57,647 | INFO | celeba_ood | Scoring test_in / test_ood (agg='p95')...
+2026-05-28 07:38:08,690 | INFO | celeba_ood | OOD AUROC — debiased reconstruction error:
+2026-05-28 07:38:08,690 | INFO | celeba_ood |   block 0: raw AUROC = 0.5717  ->  debiased = 0.5956  (Δ = +0.0239)
+2026-05-28 07:38:08,690 | INFO | celeba_ood |   block 1: raw AUROC = 0.5906  ->  debiased = 0.5904  (Δ = -0.0002)
+2026-05-28 07:38:08,690 | INFO | celeba_ood |   block 2: raw AUROC = 0.6305  ->  debiased = 0.6258  (Δ = -0.0047)
+2026-05-28 07:38:08,690 | INFO | celeba_ood |   block 3: raw AUROC = 0.6331  ->  debiased = 0.6543  (Δ = +0.0213)
+2026-05-28 07:38:08,690 | INFO | celeba_ood |   block 4: raw AUROC = 0.5756  ->  debiased = 0.6309  (Δ = +0.0552)
+2026-05-28 07:38:08,690 | INFO | celeba_ood |   block 5: raw AUROC = 0.5553  ->  debiased = 0.6188  (Δ = +0.0636)
+2026-05-28 07:38:08,690 | INFO | celeba_ood |   aggregated: raw AUROC = 0.5997  ->  debiased = 0.6424  (Δ = +0.0427)
+2026-05-28 07:39:17,204 | INFO | celeba_ood | Fusion-based AUROC (max-pixel) = 0.5708  (in_mean=0.6363, ood_mean=0.6604)
+2026-05-28 07:39:17,205 | INFO | celeba_ood | Wrote per-block plots: per_block_breakdown.png, recons_only.png, activations.png, fusion_overlay.png, fusion_auroc.png
+2026-05-28 07:39:44,396 | INFO | celeba_ood | Wrote debiasing plots: bias_variance_maps.png, anomaly_cleaning.png, score_dist_debiased.png, per_block_auroc.png
+2026-05-28 07:39:44,398 | INFO | celeba_ood | Summary written to outputs/celeba_ood/ensemble_20260527_194912_6458836/model_9/summary.json
+2026-05-28 07:39:44,409 | INFO | celeba_ood | model 10/10 done in 4193.4s
+2026-05-28 07:39:44,439 | INFO | celeba_ood | All 10 models ready in 42577.3s
+2026-05-28 07:39:44,439 | INFO | celeba_ood | ======================================================================
+2026-05-28 07:39:44,439 | INFO | celeba_ood | ENSEMBLE DECOMPOSITION — Risk = Bias + Variance
+2026-05-28 07:39:44,439 | INFO | celeba_ood | ======================================================================
+2026-05-28 07:40:38,596 | INFO | celeba_ood | Aggregated OOD AUROC (p95):  Risk=0.5910  Bias=0.5934  Variance=0.5753
+2026-05-28 07:40:38,596 | INFO | celeba_ood |   block 0:  risk=0.5751  bias=0.5587  variance=0.5854
+2026-05-28 07:40:38,596 | INFO | celeba_ood |   block 1:  risk=0.6027  bias=0.5922  variance=0.6079
+2026-05-28 07:40:38,596 | INFO | celeba_ood |   block 2:  risk=0.6321  bias=0.6212  variance=0.6432
+2026-05-28 07:40:38,596 | INFO | celeba_ood |   block 3:  risk=0.6417  bias=0.6427  variance=0.6227
+2026-05-28 07:40:38,596 | INFO | celeba_ood |   block 4:  risk=0.5886  bias=0.5938  variance=0.5553
+2026-05-28 07:40:38,596 | INFO | celeba_ood |   block 5:  risk=0.5588  bias=0.5660  variance=0.4843
+2026-05-28 07:40:38,708 | INFO | celeba_ood | Risk = Bias + Variance identity — max abs residual on 25 samples (10 ID + 15 OOD): 1.37e-07
+2026-05-28 07:42:12,417 | INFO | celeba_ood | Wrote ensemble plots: ensemble_decomposition.png, decomposition_auroc.png, ensemble_score_hists.png, mean_recon_breakdown.png, mean_recons_only.png, mean_abs_bias.png, variance_heatmaps_ood.png, variance_heatmaps_all.png, bias_variance_vs_block.png, bias_variance_vs_percentile.png
+2026-05-28 07:42:12,418 | INFO | celeba_ood | Ensemble summary written to outputs/celeba_ood/ensemble_20260527_194912_6458836/ensemble/summary.json
+2026-05-28 07:42:12,418 | INFO | celeba_ood | All done.
