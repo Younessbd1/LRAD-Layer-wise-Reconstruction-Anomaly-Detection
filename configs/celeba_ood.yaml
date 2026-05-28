@@ -21,41 +21,51 @@ experiment:
   output_dir: "outputs/celeba_ood/run"
 
 # ---- Data --------------------------------------------------------------
+# val_ratio=0 disables the validation split entirely: all in-dist images
+# outside the test split are used for training. There is no early stopping
+# and no val_loss curve — every model runs for exactly `epochs` epochs.
+# This is what the LRAD note calls for: a clean deep ensemble where
+# diversity comes only from the init + shuffle order.
 dataset:
   root: "./data"          # parent dir of the celeba/ folder
   download: false         # set true to let torchvision download
   image_size: 64
   batch_size: 256
   num_workers: 4
-  train_ratio: 0.80
-  val_ratio: 0.10
+  train_ratio: 0.90
+  val_ratio: 0.00
   pin_memory: true
   seed: 42
 
 # ---- Model --------------------------------------------------------------
-# 5 conv blocks, no pretrained weights. Each block:
+# 6 conv blocks, no pretrained weights. Each block:
 #   Conv3x3 + BN + ReLU + MaxPool2x2 (last block: no pool)
+# The extra block 256→256 with a MaxPool doubles the spatial compression
+# of the final feature map (4×4 → 2×2 → GAP), so the deepest activations
+# encode a much more abstract summary of the face.
 # No Dropout: ensemble diversity for the bias/variance decomposition comes
 # from independent weight init + SGD shuffle order (deep ensemble), not
 # from MC-Dropout.
 model:
   in_channels: 3
-  channels: [32, 64, 128, 256, 256]
+  channels: [32, 64, 128, 256, 256, 256]
   n_attrs: 6
   n_gender: 2
 
 # ---- Training -----------------------------------------------------------
 # Combined loss = CrossEntropy(gender) + attr_loss_weight * BCE(attrs).
-# Single .backward() per step.
+# Single .backward() per step. With val_ratio=0 there is no validation
+# loop — every model runs the full `epochs` schedule.
 training:
-  epochs: 20
+  # 25 epochs (was 20) because there is no val-loop early stop any more —
+  # every model now runs the full fixed schedule, so a few extra epochs
+  # are essentially free and the deeper (6-block) trunk benefits from
+  # them. Train loss flattens well before epoch 25 on this dataset.
+  epochs: 25
   lr: 0.0003
   weight_decay: 0.001
   attr_loss_weight: 2.0
   log_every: 1
-  early_stop_patience: 10
-  early_stop_min_delta: 0.0001
-  early_stop_min_epochs: 15
 
   # --- Per-block decoders (visualization only) ---------------------------
   # After classifier training, freeze the classifier and train one small
@@ -63,15 +73,26 @@ training:
   # activations. These decoders are NEVER used for OOD scoring — they
   # only feed the per_block_breakdown.png and recons_only.png plots.
   # Set this section to ~null~ to skip decoder training entirely.
+  #
+  # 50 epochs (was 80) is plenty: the per-block decoders are tiny
+  # ConvTranspose stacks whose MSE converges well before that, and we
+  # now have 6 blocks instead of 5, so a single decoder epoch is ~20 %
+  # heavier. Cutting epochs offsets that and trims total wall-time per
+  # ensemble model.
   decoders:
-    epochs: 80
+    epochs: 50
     lr: 0.001
     weight_decay: 0.00001
     log_every: 1
 
 # ---- Evaluation ---------------------------------------------------------
+# Plots use 10 in-dist + 15 OOD samples (randomly drawn from the test
+# loaders with a fixed seed, so the picks are reproducible and disjoint
+# from the older 4-sample displays).
 evaluation:
-  n_viz_samples: 4   # in-dist + OOD samples to render in per-block plots
+  n_viz_in_samples: 10
+  n_viz_ood_samples: 15
+  viz_seed: 1234
 
 # ---- Ensemble (bias/variance decomposition) -----------------------------
 # scripts/run_ensemble.py trains `size` independent models (classifier +
@@ -82,6 +103,6 @@ evaluation:
 #   Variance  = E[ E_D[(f_hat(x) - E_D[f_hat(x)])^2] ]   (model spread)
 # with the exact per-pixel identity Risk = Bias + Variance.
 ensemble:
-  size: 5
-  base_seed: 42      # models are seeded 42, 43, 44, 45, 46
+  size: 10
+  base_seed: 42      # models are seeded 42, 43, 44, ..., 51
   agg: p95           # pixel -> scalar reduction for the decomposition scores
