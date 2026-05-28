@@ -113,22 +113,25 @@ def apply_overrides(cfg: dict, overrides: list[str]) -> dict:
 
 def _plot_history(history: dict, save_path: Path) -> None:
     epochs = list(range(1, len(history["train_loss"]) + 1))
+    has_val = bool(history.get("val_loss"))
     fig, axes = plt.subplots(1, 2, figsize=(10, 3.6), constrained_layout=True)
 
     axes[0].plot(epochs, history["train_loss"], label="train")
-    axes[0].plot(epochs, history["val_loss"], label="val", linestyle="--")
+    if has_val:
+        axes[0].plot(epochs, history["val_loss"], label="val", linestyle="--")
     axes[0].set_xlabel("Epoch")
     axes[0].set_ylabel("Combined CE + BCE loss")
     axes[0].grid(alpha=0.3)
     axes[0].legend()
 
     axes[1].plot(epochs, history["train_gender_acc"], label="train gender")
-    axes[1].plot(epochs, history["val_gender_acc"], label="val gender",
-                 linestyle="--")
-    val_attr = np.asarray(history["val_attr_acc"])  # (E, n_attrs)
-    if val_attr.size:
-        axes[1].plot(epochs, val_attr.mean(axis=1),
-                     label="val attrs (mean)", linestyle=":")
+    if has_val:
+        axes[1].plot(epochs, history["val_gender_acc"], label="val gender",
+                     linestyle="--")
+        val_attr = np.asarray(history["val_attr_acc"])  # (E, n_attrs)
+        if val_attr.size:
+            axes[1].plot(epochs, val_attr.mean(axis=1),
+                         label="val attrs (mean)", linestyle=":")
     axes[1].set_xlabel("Epoch")
     axes[1].set_ylabel("Accuracy")
     axes[1].set_ylim(0.45, 1.02)
@@ -180,16 +183,37 @@ def _compute_fusion_scores(model, decoders, loader, device) -> np.ndarray:
     return np.concatenate(scores) if scores else np.zeros(0)
 
 
-def _gather_samples(loader, n: int) -> torch.Tensor:
-    """Take the first ``n`` images from a (non-shuffled) loader."""
-    chunks: list[torch.Tensor] = []
-    have = 0
-    for batch in loader:
-        chunks.append(batch[0])
-        have += batch[0].size(0)
-        if have >= n:
-            break
-    return torch.cat(chunks, dim=0)[:n]
+def _gather_samples(
+    loader,
+    n: int,
+    *,
+    seed: int | None = None,
+) -> torch.Tensor:
+    """Return ``n`` images from a (non-shuffled) loader.
+
+    With ``seed=None`` the call is backwards compatible: the first ``n``
+    images are returned. With a seed, ``n`` images are drawn uniformly at
+    random from the entire underlying dataset (reproducible), which gives
+    visually-varied picks and lets us show samples beyond the loader's
+    first batch.
+    """
+    if seed is None:
+        chunks: list[torch.Tensor] = []
+        have = 0
+        for batch in loader:
+            chunks.append(batch[0])
+            have += batch[0].size(0)
+            if have >= n:
+                break
+        return torch.cat(chunks, dim=0)[:n]
+
+    ds = loader.dataset
+    total = len(ds)
+    n = min(n, total)
+    gen = torch.Generator().manual_seed(int(seed))
+    idx = torch.randperm(total, generator=gen)[:n].tolist()
+    imgs = [ds[i][0] for i in idx]
+    return torch.stack(imgs, dim=0)
 
 
 def _plot_roc(auroc: dict, save_path: Path) -> None:
@@ -292,7 +316,7 @@ def build_and_run(
         history = train_model(
             model,
             loaders["train"],
-            loaders["val"],
+            loaders.get("val"),
             epochs=tcfg.get("epochs", 30),
             lr=tcfg.get("lr", 1e-3),
             weight_decay=tcfg.get("weight_decay", 1e-4),
@@ -342,7 +366,7 @@ def build_and_run(
             model,
             decoders,
             loaders["train"],
-            loaders["val"],
+            loaders.get("val"),
             epochs=dec_cfg.get("epochs", 20),
             lr=dec_cfg.get("lr", 1e-3),
             weight_decay=dec_cfg.get("weight_decay", 1e-5),
@@ -407,9 +431,21 @@ def build_and_run(
 
         # --- Per-block reconstruction plots (visualization only) ----------
         if decoders is not None:
-            n_viz = int(cfg.get("evaluation", {}).get("n_viz_samples", 4))
-            samples_in = _gather_samples(loaders["test_in"], n_viz).to(device)
-            samples_ood = _gather_samples(loaders["test_ood"], n_viz).to(device)
+            ecfg = cfg.get("evaluation", {})
+            n_viz_in = int(ecfg.get(
+                "n_viz_in_samples", ecfg.get("n_viz_samples", 4),
+            ))
+            n_viz_ood = int(ecfg.get(
+                "n_viz_ood_samples", ecfg.get("n_viz_samples", 4),
+            ))
+            viz_seed = ecfg.get("viz_seed")
+            samples_in = _gather_samples(
+                loaders["test_in"], n_viz_in, seed=viz_seed,
+            ).to(device)
+            samples_ood = _gather_samples(
+                loaders["test_ood"], n_viz_ood,
+                seed=(viz_seed + 1) if viz_seed is not None else None,
+            ).to(device)
 
             decoders.eval()
             with torch.no_grad():
@@ -539,7 +575,8 @@ def build_and_run(
         "seed": seed,
         "device": str(device),
         "n_train": len(loaders["train"].dataset),
-        "n_val": len(loaders["val"].dataset),
+        "n_val": (len(loaders["val"].dataset)
+                  if loaders.get("val") is not None else 0),
         "n_test_in": len(loaders["test_in"].dataset),
         "n_test_ood": len(loaders["test_ood"].dataset),
         "gender_attr": loaders["gender_attr"],
@@ -612,9 +649,11 @@ def main() -> None:
 
     # --- Data ---
     loaders = get_celeba_loaders(cfg)
+    n_val = (len(loaders['val'].dataset)
+             if loaders.get('val') is not None else 0)
     logger.info(
         f"Dataloaders  train={len(loaders['train'].dataset)}  "
-        f"val={len(loaders['val'].dataset)}  "
+        f"val={n_val}  "
         f"test_in={len(loaders['test_in'].dataset)}  "
         f"test_ood={len(loaders['test_ood'].dataset)}"
     )
