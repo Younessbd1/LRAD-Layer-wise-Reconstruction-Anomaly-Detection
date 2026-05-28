@@ -1,24 +1,28 @@
 #!/bin/bash
 # ---------------------------------------------------------------------------
 # OAR submission script for Grid'5000 — CelebA OOD *deep-ensemble* run,
-# pinned to the **gratouille** cluster (Nancy — A100 GPUs).
+# pinned to the **gratouille** cluster (Nancy — A100 GPUs) — same GPU as
+# the original single-model job, so the wall-clock numbers below apply.
 #
 # This trains `ensemble.size` models sequentially in a single job (each is
-# a full classifier + decoders), then runs the bias/variance decomposition.
-# A single CelebA run is ~1h, so a 5-model ensemble is ~5-6h; the 10h
-# reservation below is deliberately generous but never under-size it — a
-# reservation is cut at its end even mid-epoch and training does not
-# checkpoint.
+# a full classifier + per-block decoders), then runs the bias/variance
+# decomposition. The current config does 10 models (was 5) on a 6-block
+# trunk (was 5), with 25 classifier epochs + 50 decoder epochs per model
+# and no validation pass. Empirical per-model wall-time on gratouille is
+# ~1h–1h15 on the new 6-block trunk, so a 10-model ensemble is ~11–13h;
+# the 14h reservation below leaves enough head-room for the final
+# decomposition + plots. Never under-size: an OAR reservation is cut at
+# its walltime even mid-epoch and this pipeline does not checkpoint.
 #
 # We run as an ADVANCE RESERVATION (oarsub -r), NOT besteffort: a
 # reservation books the GPU for a fixed future window and is guaranteed —
 # it is never preempted by other jobs.
 #
 # Submit (advance reservation — give a future start time):
-#   ./scripts/oar_run_ensemble.sh '2026-05-23 20:00:00'
+#   ./scripts/oar_run_ensemble.sh '2026-05-28 20:00:00'
 # or manually:
 #   mkdir -p ~/lrad/outputs/celeba_ood/_oar
-#   oarsub -r '2026-05-23 20:00:00' -S ./scripts/oar_run_ensemble.sh
+#   oarsub -r '2026-05-28 20:00:00' -S ./scripts/oar_run_ensemble.sh
 #
 # Submit immediately (normal queued job, no reservation):
 #   ./scripts/oar_run_ensemble.sh
@@ -34,7 +38,7 @@
 
 #OAR -n celeba-ood-ensemble-gratouille
 #OAR -p cluster='gratouille'
-#OAR -l gpu=1,walltime=10:00:00
+#OAR -l gpu=1,walltime=14:00:00
 #OAR -O outputs/celeba_ood/_oar/oar.%jobid%.stdout
 #OAR -E outputs/celeba_ood/_oar/oar.%jobid%.stderr
 
