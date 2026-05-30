@@ -157,17 +157,7 @@ classifier-confidence baselines are weaker and unstable across seeds
 **decomposition**: isolating the bias term that actually carries the OOD
 signal from the variance term that reflects ensemble disagreement.
 
-<p align="center">
-  <img src="docs/decomposition_auroc.png" width="48%" alt="Per-block OOD AUROC for Risk / Bias / Variance">
-  <img src="docs/ensemble_score_hists.png" width="48%" alt="In-dist vs OOD aggregated score distributions">
-</p>
-<p align="center">
-  <img src="docs/bias_variance_vs_block.png" width="48%" alt="Bias and variance across conv blocks">
-  <img src="docs/bias_variance_vs_percentile.png" width="48%" alt="Score vs pixel percentile">
-</p>
-
-*(Figures are from the 10-model run; regenerate them with `run_ensemble.py` —
-full-size image-grid plots stay under the gitignored `outputs/`.)*
+*(Figures can be regenerated with `run_ensemble.py` — plots are written to `outputs/` which is gitignored.)*
 
 ---
 
@@ -194,7 +184,7 @@ lrad/
 │   ├── oar_run_celeba.sh       # Grid'5000 / OAR wrapper (single model)
 │   └── oar_run_ensemble.sh     # Grid'5000 / OAR wrapper (ensemble)
 ├── tests/                      # pytest: anomaly score, ensemble, no-val training
-├── docs/                       # lightweight result figures used in this README
+├── docs/                       # supplementary notes and explanations
 ├── requirements.txt            # pinned (CUDA 11.8) deps for Grid'5000
 ├── setup.py
 └── README.md
