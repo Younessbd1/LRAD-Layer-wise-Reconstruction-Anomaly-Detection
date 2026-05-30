@@ -182,9 +182,26 @@ def get_celeba_loaders(cfg: dict) -> dict:
             drop_last=False,
         )
 
+    # ``val_ratio=0`` disables validation entirely (see the config note):
+    # there is no split to wrap, so expose ``val=None`` rather than an empty
+    # DataLoader. An empty loader would make every val metric collapse to 0
+    # and silently trigger early stopping on a constant val_loss — the
+    # training loops treat ``None`` as "no validation, run the full schedule".
+    if val_indices:
+        val_loader: DataLoader | None = _make(
+            val_indices, is_ood=0, shuffle=False,
+        )
+    else:
+        val_loader = None
+        logger.info(
+            "val_ratio=%.4g → no validation split: %d in-dist images train, "
+            "%d held out for test_in (no early stopping, full schedule).",
+            val_ratio, len(train_indices), len(test_indices),
+        )
+
     return {
         "train": _make(train_indices, is_ood=0, shuffle=True),
-        "val": _make(val_indices, is_ood=0, shuffle=False),
+        "val": val_loader,
         "test_in": _make(test_indices, is_ood=0, shuffle=False),
         "test_ood": _make(ood_idx, is_ood=1, shuffle=False),
         "gender_attr": GENDER_ATTR,
