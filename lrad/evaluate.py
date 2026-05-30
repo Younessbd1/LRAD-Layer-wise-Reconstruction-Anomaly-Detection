@@ -25,18 +25,10 @@ from typing import Iterable
 
 import numpy as np
 import torch
-import torch.nn as nn
 import torch.nn.functional as F
 from sklearn.metrics import roc_auc_score, roc_curve
 from torch.utils.data import DataLoader
 
-from .anomaly_score import (
-    _clean_errors,
-    _per_pixel_errors,
-    _reduce_over_pixels,
-    aggregate_anomaly_score,
-    estimate_baseline_stats,
-)
 from .model import FacialCNN
 
 logger = logging.getLogger("celeba_ood")
@@ -220,7 +212,7 @@ def evaluate(
 
 
 # ---------------------------------------------------------------------------
-# Debiased (bias/variance-cleaned) reconstruction-error OOD score
+# Shared AUROC helper (used by the ensemble bias/variance decomposition)
 # ---------------------------------------------------------------------------
 
 def _auroc_entry(in_scores: np.ndarray, ood_scores: np.ndarray) -> dict:
@@ -240,160 +232,4 @@ def _auroc_entry(in_scores: np.ndarray, ood_scores: np.ndarray) -> dict:
         "ood_mean": float(ood_scores.mean()),
         "fpr": fpr.tolist(),
         "tpr": tpr.tolist(),
-    }
-
-
-@torch.no_grad()
-def collect_debiased_scores(
-    model: FacialCNN,
-    decoders: nn.ModuleList,
-    loader: DataLoader,
-    baseline_stats: dict,
-    device: torch.device,
-    agg: str = "p95",
-    block_weights=None,
-) -> dict:
-    """Per-image raw and debiased anomaly scores over a whole loader.
-
-    For every image, the raw error map ``|x - recon_k|`` and the cleaned
-    map ``max(0, (err - mu_k) / (sigma_k + eps))`` are reduced to a
-    scalar with ``agg`` per block and also aggregated across blocks. The
-    raw and debiased scores use the *same* aggregation so any AUROC gap
-    between them is attributable purely to the bias/variance removal.
-
-    Returns numpy arrays::
-
-        {
-          'per_block_raw':       {k: (N,)},
-          'per_block_debiased':  {k: (N,)},
-          'aggregated_raw':      (N,),
-          'aggregated_debiased': (N,),
-        }
-    """
-    model.eval()
-    decoders.eval()
-    pb_raw: dict[int, list] = {}
-    pb_deb: dict[int, list] = {}
-    agg_raw: list[np.ndarray] = []
-    agg_deb: list[np.ndarray] = []
-
-    for batch in loader:
-        img = batch[0].to(device, non_blocking=True)
-        raw = _per_pixel_errors(model, decoders, img)
-        clean = _clean_errors(raw, baseline_stats)
-        for k in raw:
-            pb_raw.setdefault(k, []).append(
-                _reduce_over_pixels(raw[k], agg).cpu().numpy()
-            )
-            pb_deb.setdefault(k, []).append(
-                _reduce_over_pixels(clean[k], agg).cpu().numpy()
-            )
-        agg_raw.append(
-            aggregate_anomaly_score(raw, agg, block_weights).cpu().numpy()
-        )
-        agg_deb.append(
-            aggregate_anomaly_score(clean, agg, block_weights).cpu().numpy()
-        )
-
-    return {
-        "per_block_raw": {k: np.concatenate(v) for k, v in pb_raw.items()},
-        "per_block_debiased": {
-            k: np.concatenate(v) for k, v in pb_deb.items()
-        },
-        "aggregated_raw": np.concatenate(agg_raw) if agg_raw else np.zeros(0),
-        "aggregated_debiased": (
-            np.concatenate(agg_deb) if agg_deb else np.zeros(0)
-        ),
-    }
-
-
-@torch.no_grad()
-def evaluate_with_debiasing(
-    model: FacialCNN,
-    decoders: nn.ModuleList,
-    loaders: dict,
-    device: torch.device,
-    agg: str = "p95",
-    block_weights=None,
-) -> dict:
-    """Full debiased-score evaluation.
-
-    1. Estimate ``mu_k`` (bias) and ``sigma_k`` (variance) on
-       ``loaders['test_in']`` — the clean held-out set, **not** ``train``,
-       so the estimated bias is not contaminated by training-set leakage.
-    2. Score ``test_in`` and ``test_ood`` with both the raw error and the
-       debiased/whitened error, per block and aggregated.
-    3. Compute AUROC for every variant.
-
-    The returned ``auroc`` dict uses the keys
-    ``score_rawerr_per_block_{k}``, ``score_debiased_per_block_{k}``,
-    ``score_rawerr_aggregated`` and ``score_debiased_aggregated`` so it
-    can be merged straight into ``results['auroc']``.
-    """
-    logger.info(
-        "Estimating reconstruction-error bias/variance on test_in "
-        "(clean reference, no training leakage)..."
-    )
-    baseline_stats = estimate_baseline_stats(
-        model, decoders, loaders["test_in"], device,
-    )
-
-    logger.info(f"Scoring test_in / test_ood (agg='{agg}')...")
-    scores_in = collect_debiased_scores(
-        model, decoders, loaders["test_in"], baseline_stats, device,
-        agg=agg, block_weights=block_weights,
-    )
-    scores_ood = collect_debiased_scores(
-        model, decoders, loaders["test_ood"], baseline_stats, device,
-        agg=agg, block_weights=block_weights,
-    )
-
-    ks = sorted(scores_in["per_block_raw"].keys())
-    auroc: dict = {}
-    per_block_auroc_raw: list[float] = []
-    per_block_auroc_debiased: list[float] = []
-    for k in ks:
-        e_raw = _auroc_entry(
-            scores_in["per_block_raw"][k], scores_ood["per_block_raw"][k],
-        )
-        e_deb = _auroc_entry(
-            scores_in["per_block_debiased"][k],
-            scores_ood["per_block_debiased"][k],
-        )
-        auroc[f"score_rawerr_per_block_{k}"] = e_raw
-        auroc[f"score_debiased_per_block_{k}"] = e_deb
-        per_block_auroc_raw.append(e_raw.get("auroc", float("nan")))
-        per_block_auroc_debiased.append(e_deb.get("auroc", float("nan")))
-
-    auroc["score_rawerr_aggregated"] = _auroc_entry(
-        scores_in["aggregated_raw"], scores_ood["aggregated_raw"],
-    )
-    auroc["score_debiased_aggregated"] = _auroc_entry(
-        scores_in["aggregated_debiased"], scores_ood["aggregated_debiased"],
-    )
-
-    logger.info("OOD AUROC — debiased reconstruction error:")
-    for k in ks:
-        r = auroc[f"score_rawerr_per_block_{k}"].get("auroc", float("nan"))
-        d = auroc[f"score_debiased_per_block_{k}"].get("auroc", float("nan"))
-        logger.info(
-            f"  block {k}: raw AUROC = {r:.4f}  ->  debiased = {d:.4f}  "
-            f"(Δ = {d - r:+.4f})"
-        )
-    ra = auroc["score_rawerr_aggregated"].get("auroc", float("nan"))
-    da = auroc["score_debiased_aggregated"].get("auroc", float("nan"))
-    logger.info(
-        f"  aggregated: raw AUROC = {ra:.4f}  ->  debiased = {da:.4f}  "
-        f"(Δ = {da - ra:+.4f})"
-    )
-
-    return {
-        "baseline_stats": baseline_stats,
-        "scores_in": scores_in,
-        "scores_ood": scores_ood,
-        "auroc": auroc,
-        "agg": agg,
-        "blocks": ks,
-        "per_block_auroc_raw": per_block_auroc_raw,
-        "per_block_auroc_debiased": per_block_auroc_debiased,
     }
