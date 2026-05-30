@@ -228,6 +228,10 @@ def main() -> None:
         f"Risk={agg_au['risk']:.4f}  Bias={agg_au['bias']:.4f}  "
         f"Variance={agg_au['variance']:.4f}"
     )
+    logger.info(
+        f"  -> anomaly score = Bias = |Risk − Variance| (no sigma, no "
+        f"division):  AUROC={agg_au['bias']:.4f}"
+    )
     for k in blocks:
         row = "  ".join(
             f"{t}={auroc[f'score_{t}_per_block_{k}'].get('auroc', float('nan')):.4f}"
@@ -363,6 +367,8 @@ def main() -> None:
                 t: _to_jsonable(deb["per_block_auroc"][t]) for t in TERMS
             },
         },
+        # Headline OOD score: the Bias term (bias = risk − variance).
+        "anomaly_auroc": _to_jsonable(deb["anomaly_auroc"]),
     }
     with open(ens_dir / "summary.json", "w") as f:
         json.dump(_to_jsonable(summary), f, indent=2)
