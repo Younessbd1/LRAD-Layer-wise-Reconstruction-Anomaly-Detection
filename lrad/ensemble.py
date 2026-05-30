@@ -203,7 +203,9 @@ def evaluate_ensemble_decomposition(
     The ``auroc`` dict uses the keys ``score_{term}_per_block_{k}`` and
     ``score_{term}_aggregated`` so it merges straight into a results
     ``auroc`` mapping. ``per_block_auroc`` holds one AUROC list per term,
-    in block order, ready for the bar plot.
+    in block order, ready for the bar plot. ``anomaly_auroc`` surfaces the
+    headline OOD score — the Bias term ``bias = risk − variance`` — as a
+    convenience for callers.
     """
     scores_in = collect_decomposition_scores(
         models, decoders_list, loaders["test_in"], device, agg, block_weights,
@@ -235,4 +237,11 @@ def evaluate_ensemble_decomposition(
         "scores_ood": scores_ood,
         "auroc": auroc,
         "per_block_auroc": per_block_auroc,
+        # The OOD anomaly is the bias term itself: bias = risk − variance
+        # = (x − f̄)², with no sigma and no division. Surface it directly so
+        # callers don't have to know it lives under the "bias" key.
+        "anomaly_auroc": {
+            "aggregated": auroc["score_bias_aggregated"].get("auroc"),
+            "per_block": list(per_block_auroc["bias"]),
+        },
     }
