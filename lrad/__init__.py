@@ -2,11 +2,7 @@
 
 __version__ = "0.3.0"
 
-from .anomaly_score import (
-    aggregate_anomaly_score,
-    cleaned_anomaly_maps,
-    estimate_baseline_stats,
-)
+from .anomaly_score import aggregate_anomaly_score
 from .dataset import (
     ATTR_TARGETS,
     CELEBA_ATTRS,
@@ -25,22 +21,20 @@ from .ensemble import (
 )
 from .model import FacialCNN, build_model, count_parameters
 from .plots import (
-    plot_anomaly_cleaning_comparison,
-    plot_bias_variance_maps,
+    plot_bias_variance_vs_block,
+    plot_bias_variance_vs_percentile,
     plot_decomposition_auroc_bars,
     plot_ensemble_decomposition,
     plot_ensemble_score_hists,
-    plot_per_block_auroc_bars,
+    plot_mean_abs_bias,
     plot_per_block_breakdown,
     plot_recons_only,
-    plot_score_distribution_comparison,
+    plot_variance_heatmaps,
 )
 from .train import evaluate_one_epoch, train_decoders, train_model
 from .evaluate import (
-    collect_debiased_scores,
     collect_predictions,
     evaluate,
-    evaluate_with_debiasing,
     ood_auroc,
     per_attribute_accuracy,
 )
@@ -57,31 +51,27 @@ __all__ = [
     "aggregate_anomaly_score",
     "build_decoders",
     "build_model",
-    "cleaned_anomaly_maps",
-    "collect_debiased_scores",
     "collect_decomposition_scores",
     "collect_predictions",
     "count_parameters",
     "decomposition_maps",
-    "estimate_baseline_stats",
     "evaluate",
     "evaluate_ensemble_decomposition",
     "evaluate_one_epoch",
-    "evaluate_with_debiasing",
     "get_celeba_loaders",
     "get_device",
     "identity_residual",
     "ood_auroc",
     "per_attribute_accuracy",
-    "plot_anomaly_cleaning_comparison",
-    "plot_bias_variance_maps",
+    "plot_bias_variance_vs_block",
+    "plot_bias_variance_vs_percentile",
     "plot_decomposition_auroc_bars",
     "plot_ensemble_decomposition",
     "plot_ensemble_score_hists",
-    "plot_per_block_auroc_bars",
+    "plot_mean_abs_bias",
     "plot_per_block_breakdown",
     "plot_recons_only",
-    "plot_score_distribution_comparison",
+    "plot_variance_heatmaps",
     "sample_decomposition",
     "seed_everything",
     "setup_logging",
