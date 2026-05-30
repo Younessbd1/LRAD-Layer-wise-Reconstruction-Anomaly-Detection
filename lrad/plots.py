@@ -15,18 +15,22 @@ in-distribution and OOD samples with row labels:
 
         Original  Recon L0  Recon L1  ...  Recon Ln
 
-A second family of figures visualizes the bias/variance **debiasing**
-of the error maps (see ``lrad.anomaly_score``):
+A second family of figures visualizes the **ensemble bias/variance
+decomposition** (see ``lrad.ensemble``). The OOD anomaly is the *bias*
+term itself — ``bias = risk − variance = (x − f̄)²`` per pixel — computed
+directly from the ensemble, with **no sigma and no division**:
 
-  * ``plot_bias_variance_maps`` — the estimated per-pixel bias ``mu_k``
-    and variance ``sigma_k`` for every block.
-  * ``plot_anomaly_cleaning_comparison`` — raw vs cleaned error maps
-    side by side, showing that clean ID faces lose their error while
-    OOD anomalies survive the debiasing.
-  * ``plot_score_distribution_comparison`` — ID vs OOD score histograms
-    for the raw vs the debiased score, AUROC annotated.
-  * ``plot_per_block_auroc_bars`` — per-block AUROC before/after
-    debiasing, to see which block benefits most.
+  * ``plot_mean_abs_bias`` — per-block ``|x − f̄_k|`` heatmaps for each
+    sample (the latent error layers of the ensemble-mean reconstruction).
+  * ``plot_variance_heatmaps`` — per-block model-disagreement (variance)
+    heatmaps, used to show the epistemic signal on OOD inputs.
+  * ``plot_bias_variance_vs_block`` — how the mean bias and variance
+    evolve with conv-block depth, ID vs OOD.
+  * ``plot_bias_variance_vs_percentile`` — how the per-image bias and
+    variance scores separate ID from OOD across aggregation percentiles.
+  * ``plot_ensemble_decomposition`` / ``plot_decomposition_auroc_bars`` /
+    ``plot_ensemble_score_hists`` — the full Risk | Bias | Variance maps,
+    per-block AUROC bars, and aggregated score histograms.
 
 Implementation follows current matplotlib best practices:
 ``layout='constrained'``, viridis colormap for error maps, hidden
@@ -550,7 +554,12 @@ def plot_recons_only(
 
 
 # ---------------------------------------------------------------------------
-# Bias / variance debiasing visualizations
+# Ensemble bias/variance decomposition (see lrad.ensemble)
+#
+# The anomaly is the bias term itself — bias = risk − variance = (x − f̄)²
+# per pixel — with no sigma and no division. The helpers below render the
+# per-block bias/variance maps, their evolution with depth, and how the
+# per-image scores separate ID from OOD.
 # ---------------------------------------------------------------------------
 
 def _stat_np(t) -> np.ndarray:
@@ -560,148 +569,56 @@ def _stat_np(t) -> np.ndarray:
     return np.asarray(t, dtype=np.float32)
 
 
-def _clean_np(
-    err: np.ndarray,
-    mu: np.ndarray,
-    sigma: np.ndarray,
-    eps: float = 1e-6,
-) -> np.ndarray:
-    """Numpy mirror of the cleaned map: max(0, (err - mu) / (sigma+eps))."""
-    return np.maximum((err - mu) / (sigma + eps), 0.0)
-
-
-def plot_bias_variance_maps(
-    baseline_stats: dict,
-    save_path: str | Path,
-    *,
-    title: str | None = None,
-) -> None:
-    """Per-pixel reconstruction-error **bias** (μ) and **variance** (σ).
-
-    One column per conv block, two rows::
-
-                     Block 0   Block 1   Block 2   ...
-        μ (bias)     [heatmap] [heatmap] [heatmap]
-        σ (variance) [heatmap] [heatmap] [heatmap]
-
-    The colour scale is shared **per column** (μ and σ of the same block
-    use one vmax and one colour bar underneath), so within a block you
-    can read directly whether the systematic bias dominates the residual
-    variance, while deeper blocks — whose errors are intrinsically larger
-    — are not washed out by a single global scale.
-    """
-    ks = sorted(baseline_stats.keys())
-    n_blocks = len(ks)
-    mus = [_stat_np(baseline_stats[k]["mu"]) for k in ks]
-    sigmas = [_stat_np(baseline_stats[k]["sigma"]) for k in ks]
-
-    fig, axes = plt.subplots(
-        2, n_blocks,
-        figsize=(1.9 * n_blocks + 0.6, 4.4),
-        layout="constrained",
-        squeeze=False,
-    )
-
-    for j, k in enumerate(ks):
-        mu, sigma = mus[j], sigmas[j]
-        vmax = max(float(mu.max()), float(sigma.max()))
-        vmax = vmax if vmax > 0 else 1.0
-
-        axes[0, j].imshow(mu, cmap="viridis", vmin=0.0, vmax=vmax)
-        im = axes[1, j].imshow(sigma, cmap="viridis", vmin=0.0, vmax=vmax)
-        for ax in (axes[0, j], axes[1, j]):
-            _bare(ax)
-        axes[0, j].set_title(f"Block {k}", fontsize=_LABEL_FS)
-        axes[0, j].text(
-            0.5, 0.03, f"μ̄={mu.mean():.3f}", transform=axes[0, j].transAxes,
-            ha="center", va="bottom", fontsize=8, color="white",
-        )
-        axes[1, j].text(
-            0.5, 0.03, f"σ̄={sigma.mean():.3f}",
-            transform=axes[1, j].transAxes,
-            ha="center", va="bottom", fontsize=8, color="white",
-        )
-        cbar = fig.colorbar(
-            im, ax=[axes[0, j], axes[1, j]], location="bottom",
-            shrink=0.9, pad=0.02, aspect=22,
-        )
-        cbar.ax.tick_params(labelsize=8)
-
-    axes[0, 0].set_ylabel("μ  (bias)", fontsize=_LABEL_FS)
-    axes[1, 0].set_ylabel("σ  (variance)", fontsize=_LABEL_FS)
-
-    fig.suptitle(
-        title or "Per-pixel reconstruction-error bias & variance",
-        fontsize=_TITLE_FS,
-    )
-    fig.savefig(save_path, dpi=150, bbox_inches="tight")
-    plt.close(fig)
-
-
-def plot_anomaly_cleaning_comparison(
+def plot_mean_abs_bias(
     images: torch.Tensor,
-    recons: Sequence[torch.Tensor],
-    baseline_stats: dict,
+    mean_recons: Sequence[torch.Tensor],
     save_path: str | Path,
     *,
     row_labels: Iterable[str] | None = None,
     title: str | None = None,
-    eps: float = 1e-6,
 ) -> None:
-    """Raw vs debiased error maps, side by side, for a few images.
+    """Per-block ``|x − f̄_k|`` heatmaps of the ensemble-mean reconstruction.
 
-    For every block ``k`` two columns are drawn — the raw error
-    ``|x − recon_k|`` and the cleaned map
-    ``max(0, (err − μ_k) / (σ_k + eps))`` (in σ units)::
+    ``mean_recons`` is the list of per-block ensemble-mean reconstructions
+    ``f̄_k`` (each ``(B, 3, H, W)``). For every sample one row is drawn::
 
-        Original | Err raw L0 | Err clean L0 | Err raw L1 | Err clean L1 | …
+        Original | |x − f̄_L0| | |x − f̄_L1| | ... | |x − f̄_Ln|
 
-    All raw tiles share one colour scale/bar; all cleaned tiles share
-    another (the cleaned maps live in σ-units and are typically much
-    larger). The point to read off: clean **ID** rows have substantial
-    *raw* error that all but vanishes once cleaned, whereas **OOD** rows
-    keep a bright localized blob (the glasses) after cleaning — that
-    surviving signal is the true anomaly.
+    This is the L1 "latent error layer" view of the consensus model — the
+    bias term in absolute (rather than squared) units. All error tiles
+    share one colour scale and a single colour bar; each tile is annotated
+    with its mean. ID rows should be dim everywhere while OOD rows light up
+    on the anomaly (e.g. eyeglasses).
     """
     import matplotlib.patheffects as pe
 
     images_np = _to_image_grid(images)
-    recons_np = [_to_image_grid(r) for r in recons]
+    recons_np = [_to_image_grid(r) for r in mean_recons]
     n_rows = images_np.shape[0]
     n_blocks = len(recons_np)
-    n_cols = 1 + 2 * n_blocks
+    n_cols = 1 + n_blocks
 
-    ks = sorted(baseline_stats.keys())
-    mus = [_stat_np(baseline_stats[k]["mu"]) for k in ks]
-    sigmas = [_stat_np(baseline_stats[k]["sigma"]) for k in ks]
-
-    raw_maps: list[list[np.ndarray]] = []
-    clean_maps: list[list[np.ndarray]] = []
-    raw_vmax = clean_vmax = 0.0
+    err_maps: list[list[np.ndarray]] = []
+    vmax = 0.0
     for r in range(n_rows):
-        raw_row, clean_row = [], []
+        row = []
         for j in range(n_blocks):
-            err = _abs_error(images_np[r], recons_np[j][r])
-            cln = _clean_np(err, mus[j], sigmas[j], eps)
-            raw_row.append(err)
-            clean_row.append(cln)
-            raw_vmax = max(raw_vmax, float(err.max()))
-            clean_vmax = max(clean_vmax, float(cln.max()))
-        raw_maps.append(raw_row)
-        clean_maps.append(clean_row)
-    raw_vmax = raw_vmax if raw_vmax > 0 else 1.0
-    clean_vmax = clean_vmax if clean_vmax > 0 else 1.0
+            e = _abs_error(images_np[r], recons_np[j][r])
+            row.append(e)
+            vmax = max(vmax, float(e.max()))
+        err_maps.append(row)
+    vmax = vmax if vmax > 0 else 1.0
 
     fig, axes = plt.subplots(
         n_rows, n_cols,
-        figsize=(1.45 * n_cols + 0.8, 1.55 * n_rows + 0.3),
+        figsize=(1.4 * n_cols + 0.8, 1.55 * n_rows + 0.3),
         layout="constrained",
         squeeze=False,
     )
     labels = list(row_labels) if row_labels is not None else [None] * n_rows
     text_pe = [pe.withStroke(linewidth=1.6, foreground="black")]
+    im = None
 
-    raw_im = clean_im = None
     for r in range(n_rows):
         ax = axes[r, 0]
         ax.imshow(images_np[r])
@@ -712,46 +629,25 @@ def plot_anomaly_cleaning_comparison(
             _row_label(ax, labels[r])
 
         for j in range(n_blocks):
-            err = raw_maps[r][j]
-            cln = clean_maps[r][j]
-            ax_raw = axes[r, 1 + 2 * j]
-            ax_cln = axes[r, 2 + 2 * j]
-            raw_im = ax_raw.imshow(err, cmap="viridis",
-                                   vmin=0.0, vmax=raw_vmax)
-            clean_im = ax_cln.imshow(cln, cmap="viridis",
-                                     vmin=0.0, vmax=clean_vmax)
-            _bare(ax_raw)
-            _bare(ax_cln)
+            ax_e = axes[r, 1 + j]
+            e = err_maps[r][j]
+            im = ax_e.imshow(e, cmap="viridis", vmin=0.0, vmax=vmax)
+            _bare(ax_e)
             if r == 0:
-                ax_raw.set_title(f"Raw L{j}", fontsize=_LABEL_FS)
-                ax_cln.set_title(f"Clean L{j}", fontsize=_LABEL_FS)
-            ax_raw.text(
-                0.5, 0.04,
-                f"max={err.max():.2f}\nμ={err.mean():.3f}",
-                transform=ax_raw.transAxes, ha="center", va="bottom",
-                fontsize=7.5, color="white", path_effects=text_pe,
-            )
-            ax_cln.text(
-                0.5, 0.04,
-                f"max={cln.max():.1f}σ\nμ={cln.mean():.2f}σ",
-                transform=ax_cln.transAxes, ha="center", va="bottom",
-                fontsize=7.5, color="white", path_effects=text_pe,
+                ax_e.set_title(f"|x − f̄| L{j}", fontsize=_LABEL_FS)
+            ax_e.text(
+                0.5, 0.04, f"{float(e.mean()):.3f}",
+                transform=ax_e.transAxes, ha="center", va="bottom",
+                fontsize=8.0, color="white", path_effects=text_pe,
             )
 
-    if raw_im is not None:
-        cb_raw = fig.colorbar(
-            raw_im, ax=axes[:, 1::2].ravel().tolist(),
-            location="right", shrink=0.85, pad=0.012, aspect=30,
+    if im is not None:
+        cbar = fig.colorbar(
+            im, ax=axes[:, 1:].ravel().tolist(),
+            location="right", shrink=0.85, pad=0.015, aspect=30,
         )
-        cb_raw.set_label("raw |x − recon|", fontsize=_LABEL_FS)
-        cb_raw.ax.tick_params(labelsize=_TICK_FS)
-    if clean_im is not None:
-        cb_cln = fig.colorbar(
-            clean_im, ax=axes[:, 2::2].ravel().tolist(),
-            location="right", shrink=0.85, pad=0.012, aspect=30,
-        )
-        cb_cln.set_label("cleaned anomaly  (σ units)", fontsize=_LABEL_FS)
-        cb_cln.ax.tick_params(labelsize=_TICK_FS)
+        cbar.set_label("|x − f̄|  (mean over RGB)", fontsize=_LABEL_FS)
+        cbar.ax.tick_params(labelsize=_TICK_FS)
 
     if title:
         fig.suptitle(title, fontsize=_TITLE_FS)
@@ -759,124 +655,192 @@ def plot_anomaly_cleaning_comparison(
     plt.close(fig)
 
 
-def plot_score_distribution_comparison(
-    raw_in: np.ndarray,
-    raw_ood: np.ndarray,
-    clean_in: np.ndarray,
-    clean_ood: np.ndarray,
+def plot_variance_heatmaps(
+    images: torch.Tensor,
+    maps: dict,
     save_path: str | Path,
     *,
-    raw_auroc: float | None = None,
-    clean_auroc: float | None = None,
+    row_labels: Iterable[str] | None = None,
     title: str | None = None,
 ) -> None:
-    """ID vs OOD score histograms — raw error vs debiased, side by side.
+    """Per-block ensemble-variance (model-disagreement) heatmaps.
 
-    Left panel: the raw aggregated error score. Right panel: the
-    debiased/whitened score (same aggregation, σ units). The AUROC is
-    annotated on each panel; a working debiasing widens the ID/OOD
-    separation, so the right panel should show much less overlap and a
-    higher AUROC than the left.
+    ``maps`` is ``{k: {'variance': (B, H, W)}}`` aligned with ``images``
+    (one variance map per block, already sliced to the displayed samples).
+    For every sample one row is drawn::
+
+        Original | Var L0 | Var L1 | ... | Var Ln
+
+    Variance is the epistemic-uncertainty signal: on OOD inputs the
+    ensemble members extrapolate differently, so they disagree more and
+    the maps brighten. All tiles share one colour scale + colour bar; each
+    is annotated with its mean.
     """
-    from sklearn.metrics import roc_auc_score
+    import matplotlib.patheffects as pe
 
-    def _auroc(in_s, ood_s):
-        in_s = np.asarray(in_s).ravel()
-        ood_s = np.asarray(ood_s).ravel()
-        y = np.concatenate([np.zeros(in_s.size), np.ones(ood_s.size)])
-        s = np.concatenate([in_s, ood_s])
-        if not np.isfinite(s).all() or np.unique(y).size != 2:
-            return float("nan")
-        return float(roc_auc_score(y, s))
+    images_np = _to_image_grid(images)
+    n_rows = images_np.shape[0]
+    blocks = sorted(maps.keys())
+    n_blocks = len(blocks)
+    n_cols = 1 + n_blocks
 
-    if raw_auroc is None:
-        raw_auroc = _auroc(raw_in, raw_ood)
-    if clean_auroc is None:
-        clean_auroc = _auroc(clean_in, clean_ood)
+    np_var = {k: _stat_np(maps[k]["variance"]) for k in blocks}
+    vmax = 0.0
+    for k in blocks:
+        vmax = max(vmax, float(np_var[k].max()))
+    vmax = vmax if vmax > 0 else 1.0
+
+    fig, axes = plt.subplots(
+        n_rows, n_cols,
+        figsize=(1.4 * n_cols + 0.8, 1.55 * n_rows + 0.3),
+        layout="constrained",
+        squeeze=False,
+    )
+    labels = list(row_labels) if row_labels is not None else [None] * n_rows
+    text_pe = [pe.withStroke(linewidth=1.6, foreground="black")]
+    im = None
+
+    for r in range(n_rows):
+        ax = axes[r, 0]
+        ax.imshow(images_np[r])
+        _bare(ax)
+        if r == 0:
+            ax.set_title("Original", fontsize=_LABEL_FS)
+        if labels[r] is not None:
+            _row_label(ax, labels[r])
+
+        for bi, k in enumerate(blocks):
+            ax_v = axes[r, 1 + bi]
+            v = np_var[k][r]
+            im = ax_v.imshow(v, cmap="magma", vmin=0.0, vmax=vmax)
+            _bare(ax_v)
+            if r == 0:
+                ax_v.set_title(f"Var L{k}", fontsize=_LABEL_FS)
+            ax_v.text(
+                0.5, 0.04, f"{float(v.mean()):.4f}",
+                transform=ax_v.transAxes, ha="center", va="bottom",
+                fontsize=8.0, color="white", path_effects=text_pe,
+            )
+
+    if im is not None:
+        cbar = fig.colorbar(
+            im, ax=axes[:, 1:].ravel().tolist(),
+            location="right", shrink=0.85, pad=0.015, aspect=30,
+        )
+        cbar.set_label("ensemble variance  (mean over RGB)",
+                       fontsize=_LABEL_FS)
+        cbar.ax.tick_params(labelsize=_TICK_FS)
+
+    if title:
+        fig.suptitle(title, fontsize=_TITLE_FS)
+    fig.savefig(save_path, dpi=150, bbox_inches="tight")
+    plt.close(fig)
+
+
+def _mean_std_over_blocks(
+    per_block: dict, term: str, blocks: Sequence[int],
+) -> tuple[np.ndarray, np.ndarray]:
+    """Mean and std of a per-image score across blocks for one term.
+
+    ``per_block`` is ``{term: {k: (N,)}}``; returns two ``(n_blocks,)``
+    arrays (mean and std over the N images, per block).
+    """
+    means, stds = [], []
+    for k in blocks:
+        arr = np.asarray(per_block[term][k]).ravel()
+        means.append(float(arr.mean()) if arr.size else float("nan"))
+        stds.append(float(arr.std()) if arr.size else float("nan"))
+    return np.asarray(means), np.asarray(stds)
+
+
+def plot_bias_variance_vs_block(
+    scores_in_per_block: dict,
+    scores_ood_per_block: dict,
+    save_path: str | Path,
+    *,
+    blocks: Sequence[int],
+    title: str | None = None,
+) -> None:
+    """Evolution of the mean Bias and Variance scores with conv-block depth.
+
+    ``scores_*_per_block`` is ``{term: {k: (N,)}}`` (the per-image,
+    per-block scores from ``lrad.ensemble.collect_decomposition_scores``).
+    Two panels — Bias (left) and Variance (right) — each plotting the mean
+    score per block for ID vs OOD with a ±1 std band, so the depth at
+    which OOD separates from ID is visible for both terms.
+    """
+    blocks = list(blocks)
+    x = np.asarray(blocks)
 
     fig, axes = plt.subplots(1, 2, figsize=(12, 4.4),
                              constrained_layout=True)
-    panels = [
-        (axes[0], np.asarray(raw_in).ravel(), np.asarray(raw_ood).ravel(),
-         "Raw error score", raw_auroc),
-        (axes[1], np.asarray(clean_in).ravel(),
-         np.asarray(clean_ood).ravel(),
-         "Debiased score  (σ units)", clean_auroc),
-    ]
-    for ax, in_s, ood_s, name, auroc in panels:
-        bins = 50
-        ax.hist(in_s, bins=bins, alpha=0.55, density=True,
-                color="#377eb8", label=f"in-dist (n={in_s.size})")
-        ax.hist(ood_s, bins=bins, alpha=0.55, density=True,
-                color="#e41a1c", label=f"OOD (n={ood_s.size})")
-        ax.set_xlabel(name, fontsize=_LABEL_FS)
-        ax.set_ylabel("Density", fontsize=_LABEL_FS)
-        ax.set_title(f"{name}\nAUROC = {auroc:.3f}", fontsize=_LABEL_FS)
+    panels = [(axes[0], "bias", "Bias"), (axes[1], "variance", "Variance")]
+    for ax, term, name in panels:
+        in_m, in_s = _mean_std_over_blocks(scores_in_per_block, term, blocks)
+        ood_m, ood_s = _mean_std_over_blocks(
+            scores_ood_per_block, term, blocks,
+        )
+        ax.plot(x, in_m, "-o", color="#377eb8", label="in-dist")
+        ax.fill_between(x, in_m - in_s, in_m + in_s, color="#377eb8",
+                        alpha=0.18)
+        ax.plot(x, ood_m, "--s", color="#e41a1c", label="OOD")
+        ax.fill_between(x, ood_m - ood_s, ood_m + ood_s, color="#e41a1c",
+                        alpha=0.18)
+        ax.set_xlabel("Conv block", fontsize=_LABEL_FS)
+        ax.set_ylabel(f"{name} score (mean ± std)", fontsize=_LABEL_FS)
+        ax.set_title(name, fontsize=_LABEL_FS)
+        ax.set_xticks(x)
         ax.tick_params(labelsize=_TICK_FS)
         ax.grid(alpha=0.3)
         ax.legend(fontsize=9)
 
     fig.suptitle(
-        title or "Score distribution — raw vs debiased",
+        title or "Bias & Variance evolution with block depth (ID vs OOD)",
         fontsize=_TITLE_FS,
     )
     fig.savefig(save_path, dpi=150, bbox_inches="tight")
     plt.close(fig)
 
 
-def plot_per_block_auroc_bars(
-    auroc_raw: Sequence[float],
-    auroc_debiased: Sequence[float],
+def plot_bias_variance_vs_percentile(
+    agg_in: dict,
+    agg_ood: dict,
     save_path: str | Path,
     *,
-    block_labels: Sequence[str] | None = None,
-    aggregated: tuple[float, float] | None = None,
     title: str | None = None,
 ) -> None:
-    """Per-block OOD AUROC before vs after debiasing (grouped bars).
+    """Bias & Variance score separation as a function of percentile.
 
-    Two horizontal bars per block — raw error AUROC and debiased AUROC —
-    so it is immediately visible which block carries the most
-    debiasing-recoverable anomaly signal (typically the early, high-
-    resolution blocks, whose raw error is dominated by decoder bias).
-    Optionally appends an "aggregated" group combining all blocks.
+    ``agg_in`` / ``agg_ood`` are ``{term: (N,)}`` aggregated per-image
+    scores. For each term, sweep the percentile ``q ∈ [1, 99]`` and plot
+    the ``q``-th percentile of the ID and OOD score distributions. The
+    vertical gap between the two curves is the separability of that term;
+    a term whose OOD curve sits well above the ID curve discriminates OOD
+    well across the whole range.
     """
-    raw = list(auroc_raw)
-    deb = list(auroc_debiased)
-    n = len(raw)
-    names = (
-        list(block_labels) if block_labels is not None
-        else [f"Block {k}" for k in range(n)]
-    )
-    if aggregated is not None:
-        raw = raw + [aggregated[0]]
-        deb = deb + [aggregated[1]]
-        names = names + ["Aggregated"]
+    qs = np.linspace(1.0, 99.0, 99)
 
-    y = np.arange(len(names))[::-1]  # block 0 on top
-    h = 0.38
-
-    fig, ax = plt.subplots(
-        figsize=(7.5, 0.7 * len(names) + 1.4), constrained_layout=True,
-    )
-    b_raw = ax.barh(y + h / 2, raw, height=h, color="#9bbcd6",
-                    label="raw error")
-    b_deb = ax.barh(y - h / 2, deb, height=h, color="#1f4e79",
-                    label="debiased")
-    ax.bar_label(b_raw, fmt="%.3f", fontsize=8, padding=2)
-    ax.bar_label(b_deb, fmt="%.3f", fontsize=8, padding=2)
-
-    ax.axvline(0.5, color="gray", linestyle=":", linewidth=0.8)
-    ax.set_yticks(y)
-    ax.set_yticklabels(names, fontsize=_LABEL_FS)
-    ax.set_xlabel("OOD AUROC", fontsize=_LABEL_FS)
-    ax.set_xlim(0.0, 1.05)
-    ax.tick_params(labelsize=_TICK_FS)
-    ax.grid(alpha=0.3, axis="x")
-    ax.legend(loc="lower right", fontsize=9)
+    fig, axes = plt.subplots(1, 2, figsize=(12, 4.4),
+                             constrained_layout=True)
+    panels = [(axes[0], "bias", "Bias"), (axes[1], "variance", "Variance")]
+    for ax, term, name in panels:
+        in_s = np.asarray(agg_in[term]).ravel()
+        ood_s = np.asarray(agg_ood[term]).ravel()
+        in_q = np.percentile(in_s, qs) if in_s.size else np.full_like(qs, np.nan)
+        ood_q = (np.percentile(ood_s, qs) if ood_s.size
+                 else np.full_like(qs, np.nan))
+        ax.plot(qs, in_q, "-", color="#377eb8", label="in-dist")
+        ax.plot(qs, ood_q, "--", color="#e41a1c", label="OOD")
+        ax.set_xlabel("Percentile of score distribution", fontsize=_LABEL_FS)
+        ax.set_ylabel(f"{name} score value", fontsize=_LABEL_FS)
+        ax.set_title(name, fontsize=_LABEL_FS)
+        ax.set_xlim(0, 100)
+        ax.tick_params(labelsize=_TICK_FS)
+        ax.grid(alpha=0.3)
+        ax.legend(fontsize=9)
 
     fig.suptitle(
-        title or "Per-block OOD AUROC — raw vs debiased",
+        title or "Bias & Variance score vs percentile (ID vs OOD)",
         fontsize=_TITLE_FS,
     )
     fig.savefig(save_path, dpi=150, bbox_inches="tight")
@@ -884,7 +848,7 @@ def plot_per_block_auroc_bars(
 
 
 # ---------------------------------------------------------------------------
-# Ensemble bias/variance decomposition (see lrad.ensemble)
+# Full Risk | Bias | Variance maps and AUROC summaries
 # ---------------------------------------------------------------------------
 
 def plot_ensemble_decomposition(
