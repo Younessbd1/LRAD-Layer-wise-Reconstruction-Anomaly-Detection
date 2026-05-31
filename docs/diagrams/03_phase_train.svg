@@ -1,0 +1,314 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1060 920" width="1060" height="920">
+  <defs>
+    <linearGradient id="g-hdr" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#065F46"/><stop offset="100%" stop-color="#0F766E"/>
+    </linearGradient>
+    <linearGradient id="g-s1hdr" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#1E3A8A"/><stop offset="100%" stop-color="#1D4ED8"/>
+    </linearGradient>
+    <linearGradient id="g-s2hdr" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#7C2D12"/><stop offset="100%" stop-color="#C2410C"/>
+    </linearGradient>
+    <linearGradient id="g-clf" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#1E40AF"/><stop offset="100%" stop-color="#1D4ED8"/>
+    </linearGradient>
+    <linearGradient id="g-clf-frz" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#374151"/><stop offset="100%" stop-color="#4B5563"/>
+    </linearGradient>
+    <linearGradient id="g-gen" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#047857"/><stop offset="100%" stop-color="#059669"/>
+    </linearGradient>
+    <linearGradient id="g-att" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#92400E"/><stop offset="100%" stop-color="#D97706"/>
+    </linearGradient>
+    <linearGradient id="g-loss" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#9F1239"/><stop offset="100%" stop-color="#BE123C"/>
+    </linearGradient>
+    <linearGradient id="g-opt" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#4C1D95"/><stop offset="100%" stop-color="#7C3AED"/>
+    </linearGradient>
+    <linearGradient id="g-dec" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#C2410C"/><stop offset="100%" stop-color="#EA580C"/>
+    </linearGradient>
+    <linearGradient id="g-inp" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#0369A1"/><stop offset="100%" stop-color="#0284C7"/>
+    </linearGradient>
+    <filter id="shd" x="-8%" y="-8%" width="122%" height="140%">
+      <feDropShadow dx="0" dy="3" stdDeviation="5" flood-opacity="0.18"/>
+    </filter>
+    <marker id="arr" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+      <path d="M0,0 L10,3.5 L0,7 Z" fill="#475569"/>
+    </marker>
+    <marker id="arr-r" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+      <path d="M0,0 L10,3.5 L0,7 Z" fill="#BE123C"/>
+    </marker>
+    <marker id="arr-g" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+      <path d="M0,0 L10,3.5 L0,7 Z" fill="#059669"/>
+    </marker>
+  </defs>
+
+  <!-- Background -->
+  <rect width="1060" height="920" fill="#F1F5F9"/>
+
+  <!-- ── Header ── -->
+  <rect width="1060" height="72" fill="url(#g-hdr)"/>
+  <text x="530" y="33" text-anchor="middle" font-family="Arial,Helvetica,sans-serif" font-size="22" font-weight="bold" fill="white">Phase d'Entraînement</text>
+  <text x="530" y="56" text-anchor="middle" font-family="Arial,Helvetica,sans-serif" font-size="13" fill="#A7F3D0">Étape 1 : classifieur FacialCNN (6 blocs)  ·  Étape 2 : 6 décodeurs (classifieur gelé)</text>
+
+  <!-- ═══════════════════════════════════════════════════════
+       LEFT — STAGE 1: Classifier training
+       ═══════════════════════════════════════════════════════ -->
+
+  <!-- Stage 1 header -->
+  <rect x="18" y="84" width="492" height="38" rx="9" fill="url(#g-s1hdr)"/>
+  <text x="264" y="107" text-anchor="middle" font-family="Arial,sans-serif" font-size="14" font-weight="bold" fill="white">Étape 1 — Entraînement du Classifieur</text>
+
+  <!-- Input left -->
+  <rect x="124" y="136" width="280" height="44" rx="8" fill="url(#g-inp)" filter="url(#shd)"/>
+  <text x="264" y="155" text-anchor="middle" font-family="Arial,sans-serif" font-size="12.5" font-weight="bold" fill="white">Batch d'images (B, 3, 64, 64)</text>
+  <text x="264" y="171" text-anchor="middle" font-family="Courier New,monospace" font-size="11" fill="#BAE6FD">img, gender_label, attr_label</text>
+
+  <line x1="264" y1="180" x2="264" y2="205" stroke="#475569" stroke-width="2.5" marker-end="url(#arr)"/>
+
+  <!-- Classifier (trainable) -->
+  <rect x="64" y="207" width="400" height="72" rx="10" fill="url(#g-clf)" filter="url(#shd)"/>
+  <text x="264" y="230" text-anchor="middle" font-family="Arial,sans-serif" font-size="13" font-weight="bold" fill="white">FacialCNN  (6 blocs)</text>
+  <text x="264" y="249" text-anchor="middle" font-family="Arial,sans-serif" font-size="11.5" fill="#BFDBFE">Tous les paramètres sont entraînables</text>
+  <text x="264" y="267" text-anchor="middle" font-family="Courier New,monospace" font-size="10.5" fill="#93C5FD">forward(img) → gender_logits, attr_logits</text>
+  <text x="264" y="271" text-anchor="middle" font-family="Arial,sans-serif" font-size="9" fill="rgba(255,255,255,0.4)">channels=[32,64,128,256,256,256]</text>
+
+  <!-- Branch arrows to heads -->
+  <path d="M 205 279 C 175 297 155 307 155 324" stroke="#475569" stroke-width="2" fill="none" marker-end="url(#arr)"/>
+  <path d="M 323 279 C 353 297 373 307 373 324" stroke="#475569" stroke-width="2" fill="none" marker-end="url(#arr)"/>
+
+  <!-- Heads -->
+  <rect x="66" y="326" width="175" height="50" rx="8" fill="url(#g-gen)" filter="url(#shd)"/>
+  <text x="153" y="347" text-anchor="middle" font-family="Arial,sans-serif" font-size="11.5" font-weight="bold" fill="white">Tête Genre</text>
+  <text x="153" y="363" text-anchor="middle" font-family="Courier New,monospace" font-size="10" fill="#6EE7B7">gender_logits (B,2)</text>
+  <text x="153" y="375" text-anchor="middle" font-family="Arial,sans-serif" font-size="9" fill="#D1FAE5">Linear(256→2)</text>
+
+  <rect x="287" y="326" width="175" height="50" rx="8" fill="url(#g-att)" filter="url(#shd)"/>
+  <text x="374" y="347" text-anchor="middle" font-family="Arial,sans-serif" font-size="11.5" font-weight="bold" fill="white">Tête Attributs</text>
+  <text x="374" y="363" text-anchor="middle" font-family="Courier New,monospace" font-size="10" fill="#FCD34D">attr_logits (B,6)</text>
+  <text x="374" y="375" text-anchor="middle" font-family="Arial,sans-serif" font-size="9" fill="#FDE68A">Linear(256→6)</text>
+
+  <!-- Loss arrows -->
+  <line x1="153" y1="376" x2="153" y2="400" stroke="#BE123C" stroke-width="2" marker-end="url(#arr-r)"/>
+  <line x1="374" y1="376" x2="374" y2="400" stroke="#BE123C" stroke-width="2" marker-end="url(#arr-r)"/>
+
+  <!-- Loss boxes -->
+  <rect x="66" y="402" width="175" height="44" rx="8" fill="url(#g-loss)" filter="url(#shd)"/>
+  <text x="153" y="421" text-anchor="middle" font-family="Arial,sans-serif" font-size="10.5" font-weight="bold" fill="white">CrossEntropyLoss</text>
+  <text x="153" y="438" text-anchor="middle" font-family="Arial,sans-serif" font-size="10" fill="#FECDD3">ℒ_genre = CE(ŷ, y_genre)</text>
+
+  <rect x="287" y="402" width="175" height="44" rx="8" fill="url(#g-loss)" filter="url(#shd)"/>
+  <text x="374" y="421" text-anchor="middle" font-family="Arial,sans-serif" font-size="10.5" font-weight="bold" fill="white">BCEWithLogitsLoss</text>
+  <text x="374" y="438" text-anchor="middle" font-family="Arial,sans-serif" font-size="10" fill="#FECDD3">ℒ_attrs = BCE(ŷ, y_attrs)</text>
+
+  <!-- Combine losses -->
+  <path d="M 153 446 C 153 464 264 464 264 479" stroke="#BE123C" stroke-width="2" fill="none" marker-end="url(#arr-r)"/>
+  <path d="M 374 446 C 374 464 264 464 264 479" stroke="#BE123C" stroke-width="2" fill="none" marker-end="url(#arr-r)"/>
+
+  <!-- Total loss -->
+  <rect x="124" y="481" width="280" height="44" rx="8" fill="#7F1D1D" filter="url(#shd)"/>
+  <text x="264" y="500" text-anchor="middle" font-family="Arial,sans-serif" font-size="11.5" font-weight="bold" fill="white">Perte totale</text>
+  <text x="264" y="518" text-anchor="middle" font-family="Arial,sans-serif" font-size="11" fill="#FECDD3">ℒ = ℒ_genre + 2 × ℒ_attrs</text>
+
+  <line x1="264" y1="525" x2="264" y2="545" stroke="#475569" stroke-width="2.5" marker-end="url(#arr)"/>
+
+  <!-- Backprop -->
+  <rect x="124" y="547" width="280" height="40" rx="8" fill="#1E1B4B" filter="url(#shd)"/>
+  <text x="264" y="564" text-anchor="middle" font-family="Arial,sans-serif" font-size="11.5" font-weight="bold" fill="#A5B4FC">Rétropropagation</text>
+  <text x="264" y="580" text-anchor="middle" font-family="Arial,sans-serif" font-size="10" fill="#818CF8">∂ℒ/∂θ — à travers tout le réseau</text>
+
+  <line x1="264" y1="587" x2="264" y2="607" stroke="#475569" stroke-width="2.5" marker-end="url(#arr)"/>
+
+  <!-- Optimizer -->
+  <rect x="94" y="609" width="340" height="50" rx="9" fill="url(#g-opt)" filter="url(#shd)"/>
+  <text x="264" y="630" text-anchor="middle" font-family="Arial,sans-serif" font-size="12.5" font-weight="bold" fill="white">Adam — mise à jour des poids</text>
+  <text x="264" y="649" text-anchor="middle" font-family="Courier New,monospace" font-size="10.5" fill="#DDD6FE">lr=3e-4   weight_decay=1e-3   epochs=25</text>
+
+  <!-- Recurrence arrow -->
+  <path d="M 82 630 C 44 630 44 258 82 258" stroke="#059669" stroke-width="1.5" stroke-dasharray="5,3" fill="none" marker-end="url(#arr-g)"/>
+  <text x="20" y="450" text-anchor="middle" font-family="Arial,sans-serif" font-size="10" fill="#059669" transform="rotate(-90,20,450)">époque suivante</text>
+
+  <!-- Notes -->
+  <rect x="64" y="676" width="446" height="38" rx="7" fill="#FEF3C7" stroke="#D97706" stroke-width="1.2"/>
+  <text x="287" y="693" text-anchor="middle" font-family="Arial,sans-serif" font-size="11" font-weight="bold" fill="#92400E">Pas d'early stopping  (val_ratio=0)</text>
+  <text x="287" y="708" text-anchor="middle" font-family="Arial,sans-serif" font-size="10" fill="#78350F">Entraînement sur 25 époques complètes — diversité d'ensemble via init aléatoire + shuffle</text>
+
+  <rect x="64" y="724" width="446" height="36" rx="7" fill="#ECFDF5" stroke="#059669" stroke-width="1.2"/>
+  <text x="287" y="741" text-anchor="middle" font-family="Arial,sans-serif" font-size="11" font-weight="bold" fill="#047857">Poids finaux conservés (pas de restauration)</text>
+  <text x="287" y="756" text-anchor="middle" font-family="Arial,sans-serif" font-size="10" fill="#065F46">Chaque modèle de l'ensemble garde ses poids de la dernière époque</text>
+
+  <!-- ═══════════════════════════════════════════════════════
+       RIGHT — STAGE 2: Decoder training
+       ═══════════════════════════════════════════════════════ -->
+
+  <!-- Separator -->
+  <line x1="530" y1="84" x2="530" y2="850" stroke="#CBD5E1" stroke-width="2" stroke-dasharray="6,4"/>
+
+  <!-- Stage 2 header -->
+  <rect x="548" y="84" width="494" height="38" rx="9" fill="url(#g-s2hdr)"/>
+  <text x="795" y="107" text-anchor="middle" font-family="Arial,sans-serif" font-size="14" font-weight="bold" fill="white">Étape 2 — Entraînement des 6 Décodeurs</text>
+
+  <!-- Input right -->
+  <rect x="655" y="136" width="280" height="44" rx="8" fill="url(#g-inp)" filter="url(#shd)"/>
+  <text x="795" y="155" text-anchor="middle" font-family="Arial,sans-serif" font-size="12.5" font-weight="bold" fill="white">Batch d'images (B, 3, 64, 64)</text>
+  <text x="795" y="171" text-anchor="middle" font-family="Courier New,monospace" font-size="11" fill="#BAE6FD">img  (labels non utilisés)</text>
+
+  <line x1="795" y1="180" x2="795" y2="205" stroke="#475569" stroke-width="2.5" marker-end="url(#arr)"/>
+
+  <!-- Classifier FROZEN -->
+  <rect x="595" y="207" width="400" height="72" rx="10" fill="url(#g-clf-frz)" filter="url(#shd)"/>
+  <rect x="615" y="220" width="18" height="14" rx="3" fill="none" stroke="#9CA3AF" stroke-width="1.5"/>
+  <path d="M619 220 Q619 214 625 214 Q631 214 631 220" fill="none" stroke="#9CA3AF" stroke-width="1.5"/>
+  <circle cx="625" cy="228" r="2.5" fill="#9CA3AF"/>
+  <text x="795" y="236" text-anchor="middle" font-family="Arial,sans-serif" font-size="13" font-weight="bold" fill="#D1D5DB">FacialCNN  🔒  (poids gelés)</text>
+  <text x="795" y="254" text-anchor="middle" font-family="Arial,sans-serif" font-size="11.5" fill="#9CA3AF">requires_grad = False pour tous les paramètres</text>
+  <text x="795" y="271" text-anchor="middle" font-family="Courier New,monospace" font-size="10" fill="#6B7280">forward_features(img) → Act₁…Act₆  (no_grad)</text>
+
+  <line x1="795" y1="279" x2="795" y2="303" stroke="#475569" stroke-width="2.5" marker-end="url(#arr)"/>
+
+  <!-- Activations bar -->
+  <rect x="575" y="305" width="440" height="34" rx="8" fill="#1E293B" stroke="#475569" stroke-width="1"/>
+  <text x="795" y="320" text-anchor="middle" font-family="Arial,sans-serif" font-size="11.5" font-weight="bold" fill="#CBD5E1">6 Activations (sans gradient)</text>
+  <text x="795" y="333" text-anchor="middle" font-family="Courier New,monospace" font-size="10" fill="#94A3B8">Act₁ Act₂ Act₃ Act₄ Act₅ Act₆</text>
+
+  <!-- 6 decoder boxes (compact) — fitting in right column -->
+  <!-- Stage 2 right area: x=548 to x=1042 (width=494) -->
+  <!-- 6 boxes × 65px + 5 gaps × 5px = 390+25=415. Margin=(494-415)/2=39. Start at x=548+39=587 -->
+  <!-- Box centers: 587+32=619, 619+70=689, 689+70=759, 759+70=829, 829+70=899, 899+70=969 -->
+
+  <!-- arrows from activations to decoders -->
+  <line x1="619" y1="339" x2="619" y2="360" stroke="#EA580C" stroke-width="1.5" marker-end="url(#arr)"/>
+  <line x1="689" y1="339" x2="689" y2="360" stroke="#EA580C" stroke-width="1.5" marker-end="url(#arr)"/>
+  <line x1="759" y1="339" x2="759" y2="360" stroke="#EA580C" stroke-width="1.5" marker-end="url(#arr)"/>
+  <line x1="829" y1="339" x2="829" y2="360" stroke="#EA580C" stroke-width="1.5" marker-end="url(#arr)"/>
+  <line x1="899" y1="339" x2="899" y2="360" stroke="#EA580C" stroke-width="1.5" marker-end="url(#arr)"/>
+  <line x1="969" y1="339" x2="969" y2="360" stroke="#EA580C" stroke-width="1.5" marker-end="url(#arr)"/>
+
+  <!-- 6 decoder compact boxes -->
+  <rect x="587" y="362" width="64" height="62" rx="7" fill="url(#g-dec)" filter="url(#shd)"/>
+  <text x="619" y="381" text-anchor="middle" font-family="Arial,sans-serif" font-size="9.5" font-weight="bold" fill="white">Déc₁</text>
+  <text x="619" y="395" text-anchor="middle" font-family="Courier New,monospace" font-size="8" fill="#FED7AA">Act₁→Rec₁</text>
+  <text x="619" y="408" text-anchor="middle" font-family="Arial,sans-serif" font-size="7.5" fill="rgba(255,255,255,0.6)">N_ups=1</text>
+  <text x="619" y="420" text-anchor="middle" font-family="Arial,sans-serif" font-size="7" fill="rgba(255,255,255,0.5)">entraînable</text>
+
+  <rect x="657" y="362" width="64" height="62" rx="7" fill="url(#g-dec)" filter="url(#shd)"/>
+  <text x="689" y="381" text-anchor="middle" font-family="Arial,sans-serif" font-size="9.5" font-weight="bold" fill="white">Déc₂</text>
+  <text x="689" y="395" text-anchor="middle" font-family="Courier New,monospace" font-size="8" fill="#FED7AA">Act₂→Rec₂</text>
+  <text x="689" y="408" text-anchor="middle" font-family="Arial,sans-serif" font-size="7.5" fill="rgba(255,255,255,0.6)">N_ups=2</text>
+  <text x="689" y="420" text-anchor="middle" font-family="Arial,sans-serif" font-size="7" fill="rgba(255,255,255,0.5)">entraînable</text>
+
+  <rect x="727" y="362" width="64" height="62" rx="7" fill="url(#g-dec)" filter="url(#shd)"/>
+  <text x="759" y="381" text-anchor="middle" font-family="Arial,sans-serif" font-size="9.5" font-weight="bold" fill="white">Déc₃</text>
+  <text x="759" y="395" text-anchor="middle" font-family="Courier New,monospace" font-size="8" fill="#FED7AA">Act₃→Rec₃</text>
+  <text x="759" y="408" text-anchor="middle" font-family="Arial,sans-serif" font-size="7.5" fill="rgba(255,255,255,0.6)">N_ups=3</text>
+  <text x="759" y="420" text-anchor="middle" font-family="Arial,sans-serif" font-size="7" fill="rgba(255,255,255,0.5)">entraînable</text>
+
+  <rect x="797" y="362" width="64" height="62" rx="7" fill="url(#g-dec)" filter="url(#shd)"/>
+  <text x="829" y="381" text-anchor="middle" font-family="Arial,sans-serif" font-size="9.5" font-weight="bold" fill="white">Déc₄</text>
+  <text x="829" y="395" text-anchor="middle" font-family="Courier New,monospace" font-size="8" fill="#FED7AA">Act₄→Rec₄</text>
+  <text x="829" y="408" text-anchor="middle" font-family="Arial,sans-serif" font-size="7.5" fill="rgba(255,255,255,0.6)">N_ups=4</text>
+  <text x="829" y="420" text-anchor="middle" font-family="Arial,sans-serif" font-size="7" fill="rgba(255,255,255,0.5)">entraînable</text>
+
+  <rect x="867" y="362" width="64" height="62" rx="7" fill="url(#g-dec)" filter="url(#shd)"/>
+  <text x="899" y="381" text-anchor="middle" font-family="Arial,sans-serif" font-size="9.5" font-weight="bold" fill="white">Déc₅</text>
+  <text x="899" y="395" text-anchor="middle" font-family="Courier New,monospace" font-size="8" fill="#FED7AA">Act₅→Rec₅</text>
+  <text x="899" y="408" text-anchor="middle" font-family="Arial,sans-serif" font-size="7.5" fill="rgba(255,255,255,0.6)">N_ups=5</text>
+  <text x="899" y="420" text-anchor="middle" font-family="Arial,sans-serif" font-size="7" fill="rgba(255,255,255,0.5)">entraînable</text>
+
+  <rect x="937" y="362" width="64" height="62" rx="7" fill="url(#g-dec)" filter="url(#shd)"/>
+  <text x="969" y="381" text-anchor="middle" font-family="Arial,sans-serif" font-size="9.5" font-weight="bold" fill="white">Déc₆</text>
+  <text x="969" y="395" text-anchor="middle" font-family="Courier New,monospace" font-size="8" fill="#FED7AA">Act₆→Rec₆</text>
+  <text x="969" y="408" text-anchor="middle" font-family="Arial,sans-serif" font-size="7.5" fill="rgba(255,255,255,0.6)">N_ups=5</text>
+  <text x="969" y="420" text-anchor="middle" font-family="Arial,sans-serif" font-size="7" fill="rgba(255,255,255,0.5)">entraînable</text>
+
+  <!-- MSE arrows -->
+  <line x1="619" y1="424" x2="619" y2="447" stroke="#BE123C" stroke-width="1.5" marker-end="url(#arr-r)"/>
+  <line x1="689" y1="424" x2="689" y2="447" stroke="#BE123C" stroke-width="1.5" marker-end="url(#arr-r)"/>
+  <line x1="759" y1="424" x2="759" y2="447" stroke="#BE123C" stroke-width="1.5" marker-end="url(#arr-r)"/>
+  <line x1="829" y1="424" x2="829" y2="447" stroke="#BE123C" stroke-width="1.5" marker-end="url(#arr-r)"/>
+  <line x1="899" y1="424" x2="899" y2="447" stroke="#BE123C" stroke-width="1.5" marker-end="url(#arr-r)"/>
+  <line x1="969" y1="424" x2="969" y2="447" stroke="#BE123C" stroke-width="1.5" marker-end="url(#arr-r)"/>
+
+  <!-- MSE loss mini boxes -->
+  <rect x="587" y="449" width="64" height="36" rx="5" fill="url(#g-loss)" filter="url(#shd)"/>
+  <text x="619" y="463" text-anchor="middle" font-family="Arial,sans-serif" font-size="9" font-weight="bold" fill="white">MSE₁</text>
+  <text x="619" y="478" text-anchor="middle" font-family="Arial,sans-serif" font-size="8.5" fill="#FECDD3">‖Rec₁-img‖²</text>
+  <rect x="657" y="449" width="64" height="36" rx="5" fill="url(#g-loss)" filter="url(#shd)"/>
+  <text x="689" y="463" text-anchor="middle" font-family="Arial,sans-serif" font-size="9" font-weight="bold" fill="white">MSE₂</text>
+  <text x="689" y="478" text-anchor="middle" font-family="Arial,sans-serif" font-size="8.5" fill="#FECDD3">‖Rec₂-img‖²</text>
+  <rect x="727" y="449" width="64" height="36" rx="5" fill="url(#g-loss)" filter="url(#shd)"/>
+  <text x="759" y="463" text-anchor="middle" font-family="Arial,sans-serif" font-size="9" font-weight="bold" fill="white">MSE₃</text>
+  <text x="759" y="478" text-anchor="middle" font-family="Arial,sans-serif" font-size="8.5" fill="#FECDD3">‖Rec₃-img‖²</text>
+  <rect x="797" y="449" width="64" height="36" rx="5" fill="url(#g-loss)" filter="url(#shd)"/>
+  <text x="829" y="463" text-anchor="middle" font-family="Arial,sans-serif" font-size="9" font-weight="bold" fill="white">MSE₄</text>
+  <text x="829" y="478" text-anchor="middle" font-family="Arial,sans-serif" font-size="8.5" fill="#FECDD3">‖Rec₄-img‖²</text>
+  <rect x="867" y="449" width="64" height="36" rx="5" fill="url(#g-loss)" filter="url(#shd)"/>
+  <text x="899" y="463" text-anchor="middle" font-family="Arial,sans-serif" font-size="9" font-weight="bold" fill="white">MSE₅</text>
+  <text x="899" y="478" text-anchor="middle" font-family="Arial,sans-serif" font-size="8.5" fill="#FECDD3">‖Rec₅-img‖²</text>
+  <rect x="937" y="449" width="64" height="36" rx="5" fill="url(#g-loss)" filter="url(#shd)"/>
+  <text x="969" y="463" text-anchor="middle" font-family="Arial,sans-serif" font-size="9" font-weight="bold" fill="white">MSE₆</text>
+  <text x="969" y="478" text-anchor="middle" font-family="Arial,sans-serif" font-size="8.5" fill="#FECDD3">‖Rec₆-img‖²</text>
+
+  <!-- Combine to total -->
+  <path d="M 619 485 L 619 505 L 795 505 L 795 521" stroke="#BE123C" stroke-width="1.5" fill="none" marker-end="url(#arr-r)"/>
+  <path d="M 689 485 L 689 505" stroke="#BE123C" stroke-width="1.5" fill="none"/>
+  <path d="M 759 485 L 759 505" stroke="#BE123C" stroke-width="1.5" fill="none"/>
+  <path d="M 829 485 L 829 505" stroke="#BE123C" stroke-width="1.5" fill="none"/>
+  <path d="M 899 485 L 899 505 L 795 505" stroke="#BE123C" stroke-width="1.5" fill="none"/>
+  <path d="M 969 485 L 969 505 L 899 505" stroke="#BE123C" stroke-width="1.5" fill="none"/>
+
+  <!-- Total MSE loss -->
+  <rect x="655" y="523" width="280" height="42" rx="8" fill="#7F1D1D" filter="url(#shd)"/>
+  <text x="795" y="541" text-anchor="middle" font-family="Arial,sans-serif" font-size="11.5" font-weight="bold" fill="white">Perte totale décodeurs</text>
+  <text x="795" y="558" text-anchor="middle" font-family="Arial,sans-serif" font-size="11" fill="#FECDD3">ℒ_dec = Σₖ MSEk  (k = 1…6)</text>
+
+  <line x1="795" y1="565" x2="795" y2="585" stroke="#475569" stroke-width="2.5" marker-end="url(#arr)"/>
+
+  <!-- Backprop -->
+  <rect x="655" y="587" width="280" height="40" rx="8" fill="#1E1B4B" filter="url(#shd)"/>
+  <text x="795" y="605" text-anchor="middle" font-family="Arial,sans-serif" font-size="11.5" font-weight="bold" fill="#A5B4FC">Rétropropagation</text>
+  <text x="795" y="620" text-anchor="middle" font-family="Arial,sans-serif" font-size="10.5" fill="#818CF8">gradients → 6 décodeurs uniquement</text>
+
+  <line x1="795" y1="627" x2="795" y2="647" stroke="#475569" stroke-width="2.5" marker-end="url(#arr)"/>
+
+  <!-- Optimizer -->
+  <rect x="625" y="649" width="340" height="50" rx="9" fill="url(#g-opt)" filter="url(#shd)"/>
+  <text x="795" y="670" text-anchor="middle" font-family="Arial,sans-serif" font-size="12.5" font-weight="bold" fill="white">Adam — mise à jour des décodeurs</text>
+  <text x="795" y="688" text-anchor="middle" font-family="Courier New,monospace" font-size="10.5" fill="#DDD6FE">lr=1e-3   weight_decay=1e-5   epochs=50</text>
+
+  <!-- Recurrence arrow -->
+  <path d="M 1032 670 C 1052 670 1052 350 1032 350" stroke="#059669" stroke-width="1.5" stroke-dasharray="5,3" fill="none" marker-end="url(#arr-g)"/>
+  <text x="1055" y="510" text-anchor="middle" font-family="Arial,sans-serif" font-size="10" fill="#059669" transform="rotate(90,1055,510)">époque suivante</text>
+
+  <!-- Note visualisation -->
+  <rect x="595" y="716" width="456" height="44" rx="7" fill="#FEF3C7" stroke="#D97706" stroke-width="1.2"/>
+  <text x="823" y="733" text-anchor="middle" font-family="Arial,sans-serif" font-size="11" font-weight="bold" fill="#92400E">Décodeurs : visualisation uniquement</text>
+  <text x="823" y="752" text-anchor="middle" font-family="Arial,sans-serif" font-size="10" fill="#78350F">Non utilisés pour le score OOD — servent aux plots de reconstruction par bloc</text>
+
+  <!-- ── Bottom summary ── -->
+  <rect x="18" y="778" width="1024" height="50" rx="9" fill="#0F172A" filter="url(#shd)"/>
+  <text x="530" y="799" text-anchor="middle" font-family="Arial,sans-serif" font-size="11.5" font-weight="bold" fill="#E2E8F0">Résumé des deux étapes d'entraînement</text>
+  <text x="530" y="817" text-anchor="middle" font-family="Arial,sans-serif" font-size="10.5" fill="#94A3B8">Étape 1 : ℒ = CE + 2×BCE, classifieur complet, Adam (lr=3e-4), 25 époques  ·  Étape 2 : ℒ = Σ MSEk, 6 décodeurs, Adam (lr=1e-3), 50 époques</text>
+
+  <!-- Legend -->
+  <rect x="18" y="838" width="1024" height="24" rx="5" fill="#E2E8F0" stroke="#CBD5E1" stroke-width="1"/>
+  <rect x="30" y="844" width="10" height="10" rx="2" fill="#1D4ED8"/>
+  <text x="45" y="853" font-family="Arial,sans-serif" font-size="10" fill="#334155">Classifieur 6 blocs (étape 1)</text>
+  <rect x="208" y="844" width="10" height="10" rx="2" fill="#4B5563"/>
+  <text x="223" y="853" font-family="Arial,sans-serif" font-size="10" fill="#334155">Classifieur gelé (étape 2)</text>
+  <rect x="380" y="844" width="10" height="10" rx="2" fill="#EA580C"/>
+  <text x="395" y="853" font-family="Arial,sans-serif" font-size="10" fill="#334155">6 décodeurs entraînables</text>
+  <rect x="555" y="844" width="10" height="10" rx="2" fill="#BE123C"/>
+  <text x="570" y="853" font-family="Arial,sans-serif" font-size="10" fill="#334155">Fonctions de perte</text>
+  <rect x="695" y="844" width="10" height="10" rx="2" fill="#7C3AED"/>
+  <text x="710" y="853" font-family="Arial,sans-serif" font-size="10" fill="#334155">Optimiseur Adam</text>
+  <rect x="830" y="844" width="10" height="10" rx="2" fill="#0284C7"/>
+  <text x="845" y="853" font-family="Arial,sans-serif" font-size="10" fill="#334155">Batch d'images</text>
+
+  <text x="530" y="898" text-anchor="middle" font-family="Arial,sans-serif" font-size="9.5" fill="#94A3B8">LRAD · Phase d'entraînement · channels=[32,64,128,256,256,256] · Ensemble de 10 modèles (seeds 42-51) · val_ratio=0</text>
+</svg>

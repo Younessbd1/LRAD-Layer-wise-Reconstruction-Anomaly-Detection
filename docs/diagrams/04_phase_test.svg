@@ -1,0 +1,221 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1060 980" width="1060" height="980">
+  <defs>
+    <linearGradient id="g-hdr" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#4C1D95"/><stop offset="100%" stop-color="#BE185D"/>
+    </linearGradient>
+    <linearGradient id="g-inp" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#0369A1"/><stop offset="100%" stop-color="#0284C7"/>
+    </linearGradient>
+    <linearGradient id="g-model" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#1E3A8A"/><stop offset="100%" stop-color="#1D4ED8"/>
+    </linearGradient>
+    <linearGradient id="g-mean" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#0F766E"/><stop offset="100%" stop-color="#0D9488"/>
+    </linearGradient>
+    <linearGradient id="g-bias" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#9F1239"/><stop offset="100%" stop-color="#BE123C"/>
+    </linearGradient>
+    <linearGradient id="g-var" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#5B21B6"/><stop offset="100%" stop-color="#7C3AED"/>
+    </linearGradient>
+    <linearGradient id="g-risk" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#374151"/><stop offset="100%" stop-color="#4B5563"/>
+    </linearGradient>
+    <linearGradient id="g-agg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#78350F"/><stop offset="100%" stop-color="#92400E"/>
+    </linearGradient>
+    <linearGradient id="g-ood-hi" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#7F1D1D"/><stop offset="100%" stop-color="#991B1B"/>
+    </linearGradient>
+    <linearGradient id="g-ood-lo" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#14532D"/><stop offset="100%" stop-color="#166534"/>
+    </linearGradient>
+    <filter id="shd" x="-8%" y="-8%" width="122%" height="140%">
+      <feDropShadow dx="0" dy="3" stdDeviation="5" flood-opacity="0.18"/>
+    </filter>
+    <filter id="shd-lg" x="-5%" y="-5%" width="115%" height="130%">
+      <feDropShadow dx="0" dy="4" stdDeviation="8" flood-opacity="0.22"/>
+    </filter>
+    <marker id="arr" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+      <path d="M0,0 L10,3.5 L0,7 Z" fill="#94A3B8"/>
+    </marker>
+    <marker id="arr-r" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+      <path d="M0,0 L10,3.5 L0,7 Z" fill="#BE123C"/>
+    </marker>
+  </defs>
+
+  <!-- Background -->
+  <rect width="1060" height="980" fill="#0F172A"/>
+  <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
+    <path d="M 40 0 L 0 0 0 40" fill="none" stroke="rgba(255,255,255,0.03)" stroke-width="1"/>
+  </pattern>
+  <rect width="1060" height="980" fill="url(#grid)"/>
+
+  <!-- ── Header ── -->
+  <rect width="1060" height="72" fill="url(#g-hdr)"/>
+  <text x="530" y="33" text-anchor="middle" font-family="Arial,Helvetica,sans-serif" font-size="22" font-weight="bold" fill="white">Phase de Test — Détection OOD par Ensemble</text>
+  <text x="530" y="56" text-anchor="middle" font-family="Arial,Helvetica,sans-serif" font-size="13" fill="#F5D0FE">10 modèles indépendants · 6 blocs chacun · Décomposition Biais–Variance · Score p95</text>
+
+  <!-- ── INPUT ── -->
+  <rect x="380" y="90" width="300" height="50" rx="9" fill="url(#g-inp)" filter="url(#shd)"/>
+  <text x="530" y="110" text-anchor="middle" font-family="Arial,sans-serif" font-size="13" font-weight="bold" fill="white">Image de test  x</text>
+  <text x="530" y="129" text-anchor="middle" font-family="Courier New,monospace" font-size="12" fill="#BAE6FD">(B, 3, 64, 64)</text>
+
+  <line x1="530" y1="140" x2="530" y2="164" stroke="#94A3B8" stroke-width="2.5" marker-end="url(#arr)"/>
+
+  <!-- ── ENSEMBLE SECTION ── -->
+  <text x="530" y="176" text-anchor="middle" font-family="Arial,sans-serif" font-size="11.5" fill="#64748B" font-style="italic">Ensemble de M=10 modèles (seeds 42…51) — diversité par init. aléatoire + ordre des batches</text>
+
+  <!-- 4 model boxes visible, dots in middle -->
+  <!-- Model 1 -->
+  <rect x="18" y="184" width="188" height="120" rx="10" fill="#1E293B" stroke="#334155" stroke-width="1.5" filter="url(#shd)"/>
+  <rect x="18" y="184" width="188" height="30" rx="10" fill="url(#g-model)"/>
+  <rect x="18" y="202" width="188" height="12" fill="url(#g-model)"/>
+  <text x="112" y="202" text-anchor="middle" font-family="Arial,sans-serif" font-size="11" font-weight="bold" fill="white">Modèle m=1  (seed=42)</text>
+  <text x="112" y="226" text-anchor="middle" font-family="Arial,sans-serif" font-size="10" fill="#93C5FD">FacialCNN 6 blocs (gelé)</text>
+  <text x="112" y="241" text-anchor="middle" font-family="Arial,sans-serif" font-size="10" fill="#94A3B8">+ 6 Décodeurs (gelés)</text>
+  <line x1="35" y1="253" x2="189" y2="253" stroke="#334155" stroke-width="1"/>
+  <text x="112" y="268" text-anchor="middle" font-family="Arial,sans-serif" font-size="9.5" fill="#EA580C">f̂ ¹_k(x)  k=1…6</text>
+  <text x="112" y="282" text-anchor="middle" font-family="Courier New,monospace" font-size="8.5" fill="#6B7280">6 reconstructions (B,3,64,64)</text>
+  <text x="112" y="295" text-anchor="middle" font-family="Courier New,monospace" font-size="8.5" fill="#6B7280">Réponse Act₁…Act₆</text>
+
+  <!-- Model 2 -->
+  <rect x="218" y="184" width="188" height="120" rx="10" fill="#1E293B" stroke="#334155" stroke-width="1.5" filter="url(#shd)"/>
+  <rect x="218" y="184" width="188" height="30" rx="10" fill="url(#g-model)"/>
+  <rect x="218" y="202" width="188" height="12" fill="url(#g-model)"/>
+  <text x="312" y="202" text-anchor="middle" font-family="Arial,sans-serif" font-size="11" font-weight="bold" fill="white">Modèle m=2  (seed=43)</text>
+  <text x="312" y="226" text-anchor="middle" font-family="Arial,sans-serif" font-size="10" fill="#93C5FD">FacialCNN 6 blocs (gelé)</text>
+  <text x="312" y="241" text-anchor="middle" font-family="Arial,sans-serif" font-size="10" fill="#94A3B8">+ 6 Décodeurs (gelés)</text>
+  <line x1="235" y1="253" x2="389" y2="253" stroke="#334155" stroke-width="1"/>
+  <text x="312" y="268" text-anchor="middle" font-family="Arial,sans-serif" font-size="9.5" fill="#EA580C">f̂ ²_k(x)  k=1…6</text>
+  <text x="312" y="282" text-anchor="middle" font-family="Courier New,monospace" font-size="8.5" fill="#6B7280">6 reconstructions (B,3,64,64)</text>
+  <text x="312" y="295" text-anchor="middle" font-family="Courier New,monospace" font-size="8.5" fill="#6B7280">Réponse Act₁…Act₆</text>
+
+  <!-- Dots -->
+  <text x="530" y="242" text-anchor="middle" font-family="Arial,sans-serif" font-size="30" fill="#334155">· · · · ·</text>
+  <text x="530" y="265" text-anchor="middle" font-family="Arial,sans-serif" font-size="11" fill="#475569">10 modèles au total</text>
+
+  <!-- Model 9 -->
+  <rect x="654" y="184" width="188" height="120" rx="10" fill="#1E293B" stroke="#334155" stroke-width="1.5" filter="url(#shd)"/>
+  <rect x="654" y="184" width="188" height="30" rx="10" fill="url(#g-model)"/>
+  <rect x="654" y="202" width="188" height="12" fill="url(#g-model)"/>
+  <text x="748" y="202" text-anchor="middle" font-family="Arial,sans-serif" font-size="11" font-weight="bold" fill="white">Modèle m=9  (seed=50)</text>
+  <text x="748" y="226" text-anchor="middle" font-family="Arial,sans-serif" font-size="10" fill="#93C5FD">FacialCNN 6 blocs (gelé)</text>
+  <text x="748" y="241" text-anchor="middle" font-family="Arial,sans-serif" font-size="10" fill="#94A3B8">+ 6 Décodeurs (gelés)</text>
+  <line x1="671" y1="253" x2="825" y2="253" stroke="#334155" stroke-width="1"/>
+  <text x="748" y="268" text-anchor="middle" font-family="Arial,sans-serif" font-size="9.5" fill="#EA580C">f̂ ⁹_k(x)  k=1…6</text>
+  <text x="748" y="282" text-anchor="middle" font-family="Courier New,monospace" font-size="8.5" fill="#6B7280">6 reconstructions (B,3,64,64)</text>
+  <text x="748" y="295" text-anchor="middle" font-family="Courier New,monospace" font-size="8.5" fill="#6B7280">Réponse Act₁…Act₆</text>
+
+  <!-- Model 10 -->
+  <rect x="854" y="184" width="188" height="120" rx="10" fill="#1E293B" stroke="#334155" stroke-width="1.5" filter="url(#shd)"/>
+  <rect x="854" y="184" width="188" height="30" rx="10" fill="url(#g-model)"/>
+  <rect x="854" y="202" width="188" height="12" fill="url(#g-model)"/>
+  <text x="948" y="202" text-anchor="middle" font-family="Arial,sans-serif" font-size="11" font-weight="bold" fill="white">Modèle m=10  (seed=51)</text>
+  <text x="948" y="226" text-anchor="middle" font-family="Arial,sans-serif" font-size="10" fill="#93C5FD">FacialCNN 6 blocs (gelé)</text>
+  <text x="948" y="241" text-anchor="middle" font-family="Arial,sans-serif" font-size="10" fill="#94A3B8">+ 6 Décodeurs (gelés)</text>
+  <line x1="871" y1="253" x2="1025" y2="253" stroke="#334155" stroke-width="1"/>
+  <text x="948" y="268" text-anchor="middle" font-family="Arial,sans-serif" font-size="9.5" fill="#EA580C">f̂ ¹⁰_k(x)  k=1…6</text>
+  <text x="948" y="282" text-anchor="middle" font-family="Courier New,monospace" font-size="8.5" fill="#6B7280">6 reconstructions (B,3,64,64)</text>
+  <text x="948" y="295" text-anchor="middle" font-family="Courier New,monospace" font-size="8.5" fill="#6B7280">Réponse Act₁…Act₆</text>
+
+  <!-- Converge arrows to ensemble mean -->
+  <path d="M 112 304 C 112 334 530 334 530 350" stroke="#475569" stroke-width="1.8" fill="none" marker-end="url(#arr)"/>
+  <path d="M 312 304 C 312 334 530 334 530 350" stroke="#475569" stroke-width="1.8" fill="none" marker-end="url(#arr)"/>
+  <path d="M 748 304 C 748 334 530 334 530 350" stroke="#475569" stroke-width="1.8" fill="none" marker-end="url(#arr)"/>
+  <path d="M 948 304 C 948 334 530 334 530 350" stroke="#475569" stroke-width="1.8" fill="none" marker-end="url(#arr)"/>
+
+  <!-- ── ENSEMBLE MEAN ── -->
+  <rect x="235" y="352" width="590" height="52" rx="10" fill="url(#g-mean)" filter="url(#shd-lg)"/>
+  <text x="530" y="374" text-anchor="middle" font-family="Arial,sans-serif" font-size="13" font-weight="bold" fill="white">Moyenne d'ensemble par bloc  k = 1…6</text>
+  <text x="530" y="394" text-anchor="middle" font-family="Arial,sans-serif" font-size="12" fill="#CCFBF1">f̄_k(x) = (1/10) · Σₘ f̂ᵐ_k(x)     →     (B, 3, 64, 64)  par bloc</text>
+
+  <line x1="530" y1="404" x2="530" y2="428" stroke="#94A3B8" stroke-width="2.5" marker-end="url(#arr)"/>
+
+  <!-- ── DECOMPOSITION ── -->
+  <text x="530" y="442" text-anchor="middle" font-family="Arial,sans-serif" font-size="12" fill="#94A3B8" font-style="italic">Décomposition Biais–Variance  (par bloc k, par pixel i, moyenné RGB  —  identité exacte : Risk = Bias + Variance)</text>
+
+  <!-- Three decomposition boxes -->
+  <!-- RISK -->
+  <rect x="18" y="450" width="318" height="118" rx="10" fill="#1E293B" stroke="#4B5563" stroke-width="1.5" filter="url(#shd)"/>
+  <rect x="18" y="450" width="318" height="34" rx="10" fill="url(#g-risk)"/>
+  <rect x="18" y="472" width="318" height="12" fill="url(#g-risk)"/>
+  <text x="177" y="471" text-anchor="middle" font-family="Arial,sans-serif" font-size="12.5" font-weight="bold" fill="white">Risque (Risk_k)</text>
+  <text x="177" y="500" text-anchor="middle" font-family="Arial,sans-serif" font-size="11" fill="#D1D5DB">Erreur quadratique moyenne</text>
+  <text x="177" y="518" text-anchor="middle" font-family="Arial,sans-serif" font-size="11" fill="#9CA3AF">de l'ensemble des M reconst.</text>
+  <rect x="38" y="528" width="278" height="30" rx="6" fill="rgba(255,255,255,0.05)" stroke="rgba(255,255,255,0.1)" stroke-width="1"/>
+  <text x="177" y="545" text-anchor="middle" font-family="Courier New,monospace" font-size="11.5" fill="#E2E8F0">Risk_k = (1/M) Σₘ (x − f̂ᵐ_k)²</text>
+  <text x="177" y="560" text-anchor="middle" font-family="Arial,sans-serif" font-size="10" fill="#6B7280">map (B, H, W) — k=1…6</text>
+
+  <!-- BIAS -->
+  <rect x="371" y="450" width="318" height="118" rx="10" fill="#1E293B" stroke="#BE123C" stroke-width="2" filter="url(#shd-lg)"/>
+  <rect x="371" y="450" width="318" height="34" rx="10" fill="url(#g-bias)"/>
+  <rect x="371" y="472" width="318" height="12" fill="url(#g-bias)"/>
+  <text x="530" y="471" text-anchor="middle" font-family="Arial,sans-serif" font-size="12.5" font-weight="bold" fill="white">Biais  (Bias_k)  ← Signal OOD</text>
+  <text x="530" y="500" text-anchor="middle" font-family="Arial,sans-serif" font-size="11" fill="#FECDD3">Erreur du modèle consensus</text>
+  <text x="530" y="518" text-anchor="middle" font-family="Arial,sans-serif" font-size="11" fill="#FDA4AF">(erreur irréductible après ensemblage)</text>
+  <rect x="391" y="528" width="278" height="30" rx="6" fill="rgba(255,255,255,0.06)" stroke="#BE123C" stroke-width="1"/>
+  <text x="530" y="545" text-anchor="middle" font-family="Courier New,monospace" font-size="11.5" fill="#FECDD3">Bias_k = (x − f̄_k)²</text>
+  <text x="530" y="560" text-anchor="middle" font-family="Arial,sans-serif" font-size="10" fill="#9F1239">map (B, H, W) — utilisé pour le score OOD</text>
+
+  <!-- VARIANCE -->
+  <rect x="724" y="450" width="318" height="118" rx="10" fill="#1E293B" stroke="#7C3AED" stroke-width="1.5" filter="url(#shd)"/>
+  <rect x="724" y="450" width="318" height="34" rx="10" fill="url(#g-var)"/>
+  <rect x="724" y="472" width="318" height="12" fill="url(#g-var)"/>
+  <text x="883" y="471" text-anchor="middle" font-family="Arial,sans-serif" font-size="12.5" font-weight="bold" fill="white">Variance  (Var_k)</text>
+  <text x="883" y="500" text-anchor="middle" font-family="Arial,sans-serif" font-size="11" fill="#DDD6FE">Désaccord entre les 10 modèles</text>
+  <text x="883" y="518" text-anchor="middle" font-family="Arial,sans-serif" font-size="11" fill="#C4B5FD">(incertitude épistémique)</text>
+  <rect x="744" y="528" width="278" height="30" rx="6" fill="rgba(255,255,255,0.05)" stroke="rgba(255,255,255,0.1)" stroke-width="1"/>
+  <text x="883" y="545" text-anchor="middle" font-family="Courier New,monospace" font-size="11.5" fill="#DDD6FE">Var_k = (1/M) Σₘ (f̂ᵐ_k − f̄_k)²</text>
+  <text x="883" y="560" text-anchor="middle" font-family="Arial,sans-serif" font-size="10" fill="#6B7280">map (B, H, W) — k=1…6</text>
+
+  <!-- Identity -->
+  <rect x="180" y="580" width="700" height="28" rx="7" fill="rgba(255,255,255,0.05)" stroke="rgba(255,255,255,0.14)" stroke-width="1"/>
+  <text x="530" y="599" text-anchor="middle" font-family="Arial,sans-serif" font-size="12" fill="#E2E8F0" font-style="italic">Identité algébrique exacte (pixel par pixel) :   Risk_k  =  Bias_k  +  Variance_k     ∀k ∈ {1…6}</text>
+
+  <!-- Arrow bias → aggregation -->
+  <line x1="530" y1="608" x2="530" y2="634" stroke="#BE123C" stroke-width="2.5" marker-end="url(#arr-r)"/>
+
+  <!-- ── AGGREGATION ── -->
+  <rect x="185" y="636" width="700" height="78" rx="10" fill="url(#g-agg)" filter="url(#shd-lg)"/>
+  <text x="530" y="659" text-anchor="middle" font-family="Arial,sans-serif" font-size="13" font-weight="bold" fill="white">Agrégation — Score d'Anomalie OOD</text>
+  <text x="530" y="679" text-anchor="middle" font-family="Arial,sans-serif" font-size="12" fill="#FEF3C7">Score(x) = Σₖ wₖ · red_pixels(Bias_k(x))     (k = 1…6)</text>
+  <text x="530" y="700" text-anchor="middle" font-family="Arial,sans-serif" font-size="11" fill="#D97706">Réduction pixel→scalaire  :  p95 (défaut) / mean / max  ·  wₖ uniformes (1/6) par défaut</text>
+
+  <line x1="530" y1="714" x2="530" y2="744" stroke="#94A3B8" stroke-width="2.5" marker-end="url(#arr)"/>
+
+  <!-- ── DECISION ── -->
+  <rect x="100" y="746" width="330" height="80" rx="11" fill="url(#g-ood-lo)" filter="url(#shd)"/>
+  <text x="265" y="773" text-anchor="middle" font-family="Arial,sans-serif" font-size="14" font-weight="bold" fill="white">Score faible</text>
+  <text x="265" y="793" text-anchor="middle" font-family="Arial,sans-serif" font-size="12" fill="#86EFAC">In-Distribution (ID)</text>
+  <text x="265" y="812" text-anchor="middle" font-family="Arial,sans-serif" font-size="11" fill="#4ADE80">Visage similaire aux données train (sans lunettes)</text>
+
+  <path d="M 462 730 C 420 742 325 742 265 746" stroke="#16A34A" stroke-width="2" fill="none" marker-end="url(#arr-r)"/>
+
+  <rect x="630" y="746" width="330" height="80" rx="11" fill="url(#g-ood-hi)" filter="url(#shd)"/>
+  <text x="795" y="773" text-anchor="middle" font-family="Arial,sans-serif" font-size="14" font-weight="bold" fill="white">Score élevé</text>
+  <text x="795" y="793" text-anchor="middle" font-family="Arial,sans-serif" font-size="12" fill="#FCA5A5">Out-of-Distribution (OOD)</text>
+  <text x="795" y="812" text-anchor="middle" font-family="Arial,sans-serif" font-size="11" fill="#F87171">Anomalie détectée — ex. lunettes (Eyeglasses=1)</text>
+
+  <path d="M 598 730 C 640 742 735 742 795 746" stroke="#DC2626" stroke-width="2" fill="none" marker-end="url(#arr-r)"/>
+
+  <text x="530" y="800" text-anchor="middle" font-family="Arial,sans-serif" font-size="11" fill="#64748B">Évaluation : AUROC  &amp;  FPR@95TPR sur le jeu de test CelebA (Eyeglasses)</text>
+
+  <!-- ── METRICS BOX ── -->
+  <rect x="18" y="843" width="1024" height="60" rx="10" fill="#1E293B" stroke="#334155" stroke-width="1.5"/>
+  <text x="530" y="863" text-anchor="middle" font-family="Arial,sans-serif" font-size="12" font-weight="bold" fill="#E2E8F0">Métriques d'évaluation OOD</text>
+  <text x="160" y="885" text-anchor="middle" font-family="Arial,sans-serif" font-size="11" fill="#94A3B8">AUROC</text>
+  <text x="160" y="898" text-anchor="middle" font-family="Arial,sans-serif" font-size="11" fill="#CBD5E1">Aire sous la courbe ROC</text>
+  <text x="390" y="885" text-anchor="middle" font-family="Arial,sans-serif" font-size="11" fill="#94A3B8">FPR @ 95% TPR</text>
+  <text x="390" y="898" text-anchor="middle" font-family="Arial,sans-serif" font-size="11" fill="#CBD5E1">Taux faux positifs au seuil 95%</text>
+  <text x="640" y="885" text-anchor="middle" font-family="Arial,sans-serif" font-size="11" fill="#94A3B8">Réduction : p95 / mean / max</text>
+  <text x="640" y="898" text-anchor="middle" font-family="Arial,sans-serif" font-size="11" fill="#CBD5E1">pixel (B,H,W) → scalaire (B,)</text>
+  <text x="890" y="885" text-anchor="middle" font-family="Arial,sans-serif" font-size="11" fill="#94A3B8">6 blocs · wₖ uniformes</text>
+  <text x="890" y="898" text-anchor="middle" font-family="Arial,sans-serif" font-size="11" fill="#CBD5E1">Combinaison des 6 scores</text>
+  <line x1="270" y1="856" x2="270" y2="896" stroke="#334155" stroke-width="1"/>
+  <line x1="510" y1="856" x2="510" y2="896" stroke="#334155" stroke-width="1"/>
+  <line x1="762" y1="856" x2="762" y2="896" stroke="#334155" stroke-width="1"/>
+
+  <text x="530" y="960" text-anchor="middle" font-family="Arial,sans-serif" font-size="9.5" fill="#334155">LRAD · Phase de test · 10 modèles (seeds 42-51) · 6 blocs · Biais = erreur consensus (OOD) · Variance = incertitude épistémique · Risk = Bias + Variance (exacte)</text>
+</svg>

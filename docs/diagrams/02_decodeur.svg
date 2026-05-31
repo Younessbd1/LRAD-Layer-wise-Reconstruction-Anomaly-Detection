@@ -1,0 +1,277 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1060 920" width="1060" height="920">
+  <defs>
+    <linearGradient id="g-hdr" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#7C2D12"/><stop offset="100%" stop-color="#C2410C"/>
+    </linearGradient>
+    <linearGradient id="g-clf" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#1E293B"/><stop offset="100%" stop-color="#334155"/>
+    </linearGradient>
+    <linearGradient id="g-dec" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#C2410C"/><stop offset="100%" stop-color="#EA580C"/>
+    </linearGradient>
+    <linearGradient id="g-out" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#065F46"/><stop offset="100%" stop-color="#059669"/>
+    </linearGradient>
+    <linearGradient id="g-detail" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#5B21B6"/><stop offset="100%" stop-color="#7C3AED"/>
+    </linearGradient>
+    <linearGradient id="g-convt" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#1D4ED8"/><stop offset="100%" stop-color="#2563EB"/>
+    </linearGradient>
+    <filter id="shd" x="-8%" y="-8%" width="122%" height="140%">
+      <feDropShadow dx="0" dy="3" stdDeviation="5" flood-opacity="0.18"/>
+    </filter>
+    <marker id="arr" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+      <path d="M0,0 L10,3.5 L0,7 Z" fill="#475569"/>
+    </marker>
+  </defs>
+
+  <!-- Background -->
+  <rect width="1060" height="920" fill="#F1F5F9"/>
+  <rect x="0" y="72" width="5" height="848" fill="#EA580C" opacity="0.4"/>
+  <rect x="1055" y="72" width="5" height="848" fill="#7C3AED" opacity="0.4"/>
+
+  <!-- ── Header ── -->
+  <rect width="1060" height="72" fill="url(#g-hdr)"/>
+  <text x="530" y="33" text-anchor="middle" font-family="Arial,Helvetica,sans-serif" font-size="22" font-weight="bold" fill="white">Architecture des Décodeurs par Bloc</text>
+  <text x="530" y="56" text-anchor="middle" font-family="Arial,Helvetica,sans-serif" font-size="13" fill="#FED7AA">6 BlockDecoders — reconstruction 2×2→64×64 ou 32×32→64×64 depuis les activations du classifieur</text>
+
+  <!-- ── Classifier bar (frozen) ── -->
+  <rect x="28" y="90" width="1004" height="50" rx="10" fill="url(#g-clf)" filter="url(#shd)"/>
+  <rect x="48" y="103" width="18" height="13" rx="2" fill="none" stroke="#94A3B8" stroke-width="1.5"/>
+  <path d="M51 103 Q51 97 57 97 Q63 97 63 103" fill="none" stroke="#94A3B8" stroke-width="1.5"/>
+  <circle cx="57" cy="110" r="2" fill="#94A3B8"/>
+  <text x="530" y="111" text-anchor="middle" font-family="Arial,sans-serif" font-size="13" font-weight="bold" fill="#CBD5E1">Classifieur FacialCNN  (6 blocs, poids gelés)</text>
+  <text x="530" y="129" text-anchor="middle" font-family="Arial,sans-serif" font-size="11" fill="#64748B">Activations Act₁ … Act₆ extraites en inférence  (torch.no_grad)</text>
+
+  <!-- ── 6 DECODER COLUMNS ── -->
+  <!-- Col width=155px, gap=10px, 6 cols total=930+50=980, margin=(1060-980)/2=40 -->
+  <!-- Col left edges: 40, 205, 370, 535, 700, 865  ·  Centers: 117, 282, 447, 612, 777, 942 -->
+
+  <!-- Activation taps -->
+  <line x1="117" y1="140" x2="117" y2="163" stroke="#64748B" stroke-width="2" marker-end="url(#arr)"/>
+  <text x="117" y="156" text-anchor="middle" font-family="Courier New,monospace" font-size="9" fill="#475569">Act₁</text>
+  <line x1="282" y1="140" x2="282" y2="163" stroke="#64748B" stroke-width="2" marker-end="url(#arr)"/>
+  <text x="282" y="156" text-anchor="middle" font-family="Courier New,monospace" font-size="9" fill="#475569">Act₂</text>
+  <line x1="447" y1="140" x2="447" y2="163" stroke="#64748B" stroke-width="2" marker-end="url(#arr)"/>
+  <text x="447" y="156" text-anchor="middle" font-family="Courier New,monospace" font-size="9" fill="#475569">Act₃</text>
+  <line x1="612" y1="140" x2="612" y2="163" stroke="#64748B" stroke-width="2" marker-end="url(#arr)"/>
+  <text x="612" y="156" text-anchor="middle" font-family="Courier New,monospace" font-size="9" fill="#475569">Act₄</text>
+  <line x1="777" y1="140" x2="777" y2="163" stroke="#64748B" stroke-width="2" marker-end="url(#arr)"/>
+  <text x="777" y="156" text-anchor="middle" font-family="Courier New,monospace" font-size="9" fill="#475569">Act₅</text>
+  <line x1="942" y1="140" x2="942" y2="163" stroke="#64748B" stroke-width="2" marker-end="url(#arr)"/>
+  <text x="942" y="156" text-anchor="middle" font-family="Courier New,monospace" font-size="9" fill="#475569">Act₆</text>
+
+  <!-- ─ Decoder 1 ─  (32ch, 32×32) N_ups=1 -->
+  <rect x="40" y="165" width="155" height="193" rx="10" fill="url(#g-dec)" filter="url(#shd)"/>
+  <rect x="40" y="165" width="155" height="30" rx="10" fill="rgba(0,0,0,0.25)"/>
+  <rect x="40" y="183" width="155" height="12" fill="rgba(0,0,0,0.25)"/>
+  <text x="117" y="183" text-anchor="middle" font-family="Arial,sans-serif" font-size="12" font-weight="bold" fill="white">Décodeur 1</text>
+  <text x="117" y="210" text-anchor="middle" font-family="Courier New,monospace" font-size="9.5" fill="#FED7AA">Entrée : (32, 32, 32)</text>
+  <rect x="55" y="220" width="125" height="58" rx="5" fill="rgba(255,255,255,0.13)"/>
+  <text x="117" y="235" text-anchor="middle" font-family="Arial,sans-serif" font-size="9.5" fill="white">1 × ConvTranspose2d</text>
+  <text x="117" y="249" text-anchor="middle" font-family="Courier New,monospace" font-size="8.5" fill="#FED7AA">32→16 (k=4, s=2, p=1)</text>
+  <text x="117" y="263" text-anchor="middle" font-family="Arial,sans-serif" font-size="9" fill="rgba(255,255,255,0.7)">BN + ReLU</text>
+  <text x="117" y="278" text-anchor="middle" font-family="Arial,sans-serif" font-size="9" fill="rgba(255,255,255,0.5)">→ (16, 64, 64)</text>
+  <line x1="55" y1="284" x2="165" y2="284" stroke="rgba(255,255,255,0.18)" stroke-width="1"/>
+  <rect x="55" y="290" width="125" height="32" rx="5" fill="rgba(255,255,255,0.1)"/>
+  <text x="117" y="305" text-anchor="middle" font-family="Arial,sans-serif" font-size="9.5" fill="white">Conv1×1 (16→3)</text>
+  <text x="117" y="318" text-anchor="middle" font-family="Arial,sans-serif" font-size="9" fill="#FED7AA">+ Sigmoid</text>
+  <text x="117" y="347" text-anchor="middle" font-family="Courier New,monospace" font-size="9.5" fill="#6EE7B7">→ (3, 64, 64)</text>
+  <text x="117" y="352" text-anchor="middle" font-family="Arial,sans-serif" font-size="8" fill="rgba(255,255,255,0.4)">N_ups=1</text>
+
+  <!-- ─ Decoder 2 ─  (64ch, 16×16) N_ups=2 -->
+  <rect x="205" y="165" width="155" height="193" rx="10" fill="url(#g-dec)" filter="url(#shd)"/>
+  <rect x="205" y="165" width="155" height="30" rx="10" fill="rgba(0,0,0,0.25)"/>
+  <rect x="205" y="183" width="155" height="12" fill="rgba(0,0,0,0.25)"/>
+  <text x="282" y="183" text-anchor="middle" font-family="Arial,sans-serif" font-size="12" font-weight="bold" fill="white">Décodeur 2</text>
+  <text x="282" y="210" text-anchor="middle" font-family="Courier New,monospace" font-size="9.5" fill="#FED7AA">Entrée : (64, 16, 16)</text>
+  <rect x="220" y="220" width="125" height="58" rx="5" fill="rgba(255,255,255,0.13)"/>
+  <text x="282" y="235" text-anchor="middle" font-family="Arial,sans-serif" font-size="9.5" fill="white">2 × ConvTranspose2d</text>
+  <text x="282" y="249" text-anchor="middle" font-family="Courier New,monospace" font-size="8.5" fill="#FED7AA">64→32→16 (k=4, s=2)</text>
+  <text x="282" y="263" text-anchor="middle" font-family="Arial,sans-serif" font-size="9" fill="rgba(255,255,255,0.7)">BN + ReLU (×2)</text>
+  <text x="282" y="278" text-anchor="middle" font-family="Arial,sans-serif" font-size="9" fill="rgba(255,255,255,0.5)">→ (16, 64, 64)</text>
+  <line x1="220" y1="284" x2="330" y2="284" stroke="rgba(255,255,255,0.18)" stroke-width="1"/>
+  <rect x="220" y="290" width="125" height="32" rx="5" fill="rgba(255,255,255,0.1)"/>
+  <text x="282" y="305" text-anchor="middle" font-family="Arial,sans-serif" font-size="9.5" fill="white">Conv1×1 (16→3)</text>
+  <text x="282" y="318" text-anchor="middle" font-family="Arial,sans-serif" font-size="9" fill="#FED7AA">+ Sigmoid</text>
+  <text x="282" y="347" text-anchor="middle" font-family="Courier New,monospace" font-size="9.5" fill="#6EE7B7">→ (3, 64, 64)</text>
+  <text x="282" y="352" text-anchor="middle" font-family="Arial,sans-serif" font-size="8" fill="rgba(255,255,255,0.4)">N_ups=2</text>
+
+  <!-- ─ Decoder 3 ─  (128ch, 8×8) N_ups=3 -->
+  <rect x="370" y="165" width="155" height="193" rx="10" fill="url(#g-dec)" filter="url(#shd)"/>
+  <rect x="370" y="165" width="155" height="30" rx="10" fill="rgba(0,0,0,0.25)"/>
+  <rect x="370" y="183" width="155" height="12" fill="rgba(0,0,0,0.25)"/>
+  <text x="447" y="183" text-anchor="middle" font-family="Arial,sans-serif" font-size="12" font-weight="bold" fill="white">Décodeur 3</text>
+  <text x="447" y="210" text-anchor="middle" font-family="Courier New,monospace" font-size="9.5" fill="#FED7AA">Entrée : (128, 8, 8)</text>
+  <rect x="385" y="220" width="125" height="58" rx="5" fill="rgba(255,255,255,0.13)"/>
+  <text x="447" y="235" text-anchor="middle" font-family="Arial,sans-serif" font-size="9.5" fill="white">3 × ConvTranspose2d</text>
+  <text x="447" y="249" text-anchor="middle" font-family="Courier New,monospace" font-size="8.5" fill="#FED7AA">128→64→32→16</text>
+  <text x="447" y="263" text-anchor="middle" font-family="Arial,sans-serif" font-size="9" fill="rgba(255,255,255,0.7)">BN + ReLU (×3)</text>
+  <text x="447" y="278" text-anchor="middle" font-family="Arial,sans-serif" font-size="9" fill="rgba(255,255,255,0.5)">→ (16, 64, 64)</text>
+  <line x1="385" y1="284" x2="495" y2="284" stroke="rgba(255,255,255,0.18)" stroke-width="1"/>
+  <rect x="385" y="290" width="125" height="32" rx="5" fill="rgba(255,255,255,0.1)"/>
+  <text x="447" y="305" text-anchor="middle" font-family="Arial,sans-serif" font-size="9.5" fill="white">Conv1×1 (16→3)</text>
+  <text x="447" y="318" text-anchor="middle" font-family="Arial,sans-serif" font-size="9" fill="#FED7AA">+ Sigmoid</text>
+  <text x="447" y="347" text-anchor="middle" font-family="Courier New,monospace" font-size="9.5" fill="#6EE7B7">→ (3, 64, 64)</text>
+  <text x="447" y="352" text-anchor="middle" font-family="Arial,sans-serif" font-size="8" fill="rgba(255,255,255,0.4)">N_ups=3</text>
+
+  <!-- ─ Decoder 4 ─  (256ch, 4×4) N_ups=4 -->
+  <rect x="535" y="165" width="155" height="193" rx="10" fill="url(#g-dec)" filter="url(#shd)"/>
+  <rect x="535" y="165" width="155" height="30" rx="10" fill="rgba(0,0,0,0.25)"/>
+  <rect x="535" y="183" width="155" height="12" fill="rgba(0,0,0,0.25)"/>
+  <text x="612" y="183" text-anchor="middle" font-family="Arial,sans-serif" font-size="12" font-weight="bold" fill="white">Décodeur 4</text>
+  <text x="612" y="210" text-anchor="middle" font-family="Courier New,monospace" font-size="9.5" fill="#FED7AA">Entrée : (256, 4, 4)</text>
+  <rect x="550" y="220" width="125" height="58" rx="5" fill="rgba(255,255,255,0.13)"/>
+  <text x="612" y="235" text-anchor="middle" font-family="Arial,sans-serif" font-size="9.5" fill="white">4 × ConvTranspose2d</text>
+  <text x="612" y="249" text-anchor="middle" font-family="Courier New,monospace" font-size="8.5" fill="#FED7AA">256→128→64→32→16</text>
+  <text x="612" y="263" text-anchor="middle" font-family="Arial,sans-serif" font-size="9" fill="rgba(255,255,255,0.7)">BN + ReLU (×4)</text>
+  <text x="612" y="278" text-anchor="middle" font-family="Arial,sans-serif" font-size="9" fill="rgba(255,255,255,0.5)">→ (16, 64, 64)</text>
+  <line x1="550" y1="284" x2="660" y2="284" stroke="rgba(255,255,255,0.18)" stroke-width="1"/>
+  <rect x="550" y="290" width="125" height="32" rx="5" fill="rgba(255,255,255,0.1)"/>
+  <text x="612" y="305" text-anchor="middle" font-family="Arial,sans-serif" font-size="9.5" fill="white">Conv1×1 (16→3)</text>
+  <text x="612" y="318" text-anchor="middle" font-family="Arial,sans-serif" font-size="9" fill="#FED7AA">+ Sigmoid</text>
+  <text x="612" y="347" text-anchor="middle" font-family="Courier New,monospace" font-size="9.5" fill="#6EE7B7">→ (3, 64, 64)</text>
+  <text x="612" y="352" text-anchor="middle" font-family="Arial,sans-serif" font-size="8" fill="rgba(255,255,255,0.4)">N_ups=4</text>
+
+  <!-- ─ Decoder 5 ─  (256ch, 2×2) N_ups=5 -->
+  <rect x="700" y="165" width="155" height="193" rx="10" fill="url(#g-dec)" filter="url(#shd)"/>
+  <rect x="700" y="165" width="155" height="30" rx="10" fill="rgba(0,0,0,0.25)"/>
+  <rect x="700" y="183" width="155" height="12" fill="rgba(0,0,0,0.25)"/>
+  <text x="777" y="183" text-anchor="middle" font-family="Arial,sans-serif" font-size="12" font-weight="bold" fill="white">Décodeur 5</text>
+  <text x="777" y="210" text-anchor="middle" font-family="Courier New,monospace" font-size="9.5" fill="#FED7AA">Entrée : (256, 2, 2)</text>
+  <rect x="715" y="220" width="125" height="58" rx="5" fill="rgba(255,255,255,0.13)"/>
+  <text x="777" y="235" text-anchor="middle" font-family="Arial,sans-serif" font-size="9.5" fill="white">5 × ConvTranspose2d</text>
+  <text x="777" y="249" text-anchor="middle" font-family="Courier New,monospace" font-size="8.5" fill="#FED7AA">256→128→…→16→16</text>
+  <text x="777" y="263" text-anchor="middle" font-family="Arial,sans-serif" font-size="9" fill="rgba(255,255,255,0.7)">BN + ReLU (×5)</text>
+  <text x="777" y="278" text-anchor="middle" font-family="Arial,sans-serif" font-size="9" fill="rgba(255,255,255,0.5)">→ (16, 64, 64)</text>
+  <line x1="715" y1="284" x2="825" y2="284" stroke="rgba(255,255,255,0.18)" stroke-width="1"/>
+  <rect x="715" y="290" width="125" height="32" rx="5" fill="rgba(255,255,255,0.1)"/>
+  <text x="777" y="305" text-anchor="middle" font-family="Arial,sans-serif" font-size="9.5" fill="white">Conv1×1 (16→3)</text>
+  <text x="777" y="318" text-anchor="middle" font-family="Arial,sans-serif" font-size="9" fill="#FED7AA">+ Sigmoid</text>
+  <text x="777" y="347" text-anchor="middle" font-family="Courier New,monospace" font-size="9.5" fill="#6EE7B7">→ (3, 64, 64)</text>
+  <text x="777" y="352" text-anchor="middle" font-family="Arial,sans-serif" font-size="8" fill="rgba(255,255,255,0.4)">N_ups=5</text>
+
+  <!-- ─ Decoder 6 ─  (256ch, 2×2) N_ups=5 (same spatial as 5) -->
+  <rect x="865" y="165" width="155" height="193" rx="10" fill="url(#g-dec)" filter="url(#shd)"/>
+  <rect x="865" y="165" width="155" height="30" rx="10" fill="rgba(0,0,0,0.25)"/>
+  <rect x="865" y="183" width="155" height="12" fill="rgba(0,0,0,0.25)"/>
+  <text x="942" y="183" text-anchor="middle" font-family="Arial,sans-serif" font-size="12" font-weight="bold" fill="white">Décodeur 6</text>
+  <text x="942" y="210" text-anchor="middle" font-family="Courier New,monospace" font-size="9.5" fill="#FED7AA">Entrée : (256, 2, 2)</text>
+  <rect x="880" y="220" width="125" height="58" rx="5" fill="rgba(255,255,255,0.13)"/>
+  <text x="942" y="235" text-anchor="middle" font-family="Arial,sans-serif" font-size="9.5" fill="white">5 × ConvTranspose2d</text>
+  <text x="942" y="249" text-anchor="middle" font-family="Courier New,monospace" font-size="8.5" fill="#FED7AA">256→128→…→16→16</text>
+  <text x="942" y="263" text-anchor="middle" font-family="Arial,sans-serif" font-size="9" fill="rgba(255,255,255,0.7)">BN + ReLU (×5)</text>
+  <text x="942" y="278" text-anchor="middle" font-family="Arial,sans-serif" font-size="9" fill="rgba(255,255,255,0.5)">→ (16, 64, 64)</text>
+  <line x1="880" y1="284" x2="990" y2="284" stroke="rgba(255,255,255,0.18)" stroke-width="1"/>
+  <rect x="880" y="290" width="125" height="32" rx="5" fill="rgba(255,255,255,0.1)"/>
+  <text x="942" y="305" text-anchor="middle" font-family="Arial,sans-serif" font-size="9.5" fill="white">Conv1×1 (16→3)</text>
+  <text x="942" y="318" text-anchor="middle" font-family="Arial,sans-serif" font-size="9" fill="#FED7AA">+ Sigmoid</text>
+  <text x="942" y="347" text-anchor="middle" font-family="Courier New,monospace" font-size="9.5" fill="#6EE7B7">→ (3, 64, 64)</text>
+  <text x="942" y="352" text-anchor="middle" font-family="Arial,sans-serif" font-size="8" fill="rgba(255,255,255,0.4)">N_ups=5</text>
+
+  <!-- Output arrows -->
+  <line x1="117" y1="358" x2="117" y2="378" stroke="#475569" stroke-width="2" marker-end="url(#arr)"/>
+  <line x1="282" y1="358" x2="282" y2="378" stroke="#475569" stroke-width="2" marker-end="url(#arr)"/>
+  <line x1="447" y1="358" x2="447" y2="378" stroke="#475569" stroke-width="2" marker-end="url(#arr)"/>
+  <line x1="612" y1="358" x2="612" y2="378" stroke="#475569" stroke-width="2" marker-end="url(#arr)"/>
+  <line x1="777" y1="358" x2="777" y2="378" stroke="#475569" stroke-width="2" marker-end="url(#arr)"/>
+  <line x1="942" y1="358" x2="942" y2="378" stroke="#475569" stroke-width="2" marker-end="url(#arr)"/>
+
+  <!-- Output boxes -->
+  <rect x="44" y="380" width="146" height="36" rx="7" fill="url(#g-out)" filter="url(#shd)"/>
+  <text x="117" y="395" text-anchor="middle" font-family="Arial,sans-serif" font-size="10" font-weight="bold" fill="white">Recon₁</text>
+  <text x="117" y="409" text-anchor="middle" font-family="Courier New,monospace" font-size="9" fill="#6EE7B7">(3, 64, 64)</text>
+  <rect x="209" y="380" width="146" height="36" rx="7" fill="url(#g-out)" filter="url(#shd)"/>
+  <text x="282" y="395" text-anchor="middle" font-family="Arial,sans-serif" font-size="10" font-weight="bold" fill="white">Recon₂</text>
+  <text x="282" y="409" text-anchor="middle" font-family="Courier New,monospace" font-size="9" fill="#6EE7B7">(3, 64, 64)</text>
+  <rect x="374" y="380" width="146" height="36" rx="7" fill="url(#g-out)" filter="url(#shd)"/>
+  <text x="447" y="395" text-anchor="middle" font-family="Arial,sans-serif" font-size="10" font-weight="bold" fill="white">Recon₃</text>
+  <text x="447" y="409" text-anchor="middle" font-family="Courier New,monospace" font-size="9" fill="#6EE7B7">(3, 64, 64)</text>
+  <rect x="539" y="380" width="146" height="36" rx="7" fill="url(#g-out)" filter="url(#shd)"/>
+  <text x="612" y="395" text-anchor="middle" font-family="Arial,sans-serif" font-size="10" font-weight="bold" fill="white">Recon₄</text>
+  <text x="612" y="409" text-anchor="middle" font-family="Courier New,monospace" font-size="9" fill="#6EE7B7">(3, 64, 64)</text>
+  <rect x="704" y="380" width="146" height="36" rx="7" fill="url(#g-out)" filter="url(#shd)"/>
+  <text x="777" y="395" text-anchor="middle" font-family="Arial,sans-serif" font-size="10" font-weight="bold" fill="white">Recon₅</text>
+  <text x="777" y="409" text-anchor="middle" font-family="Courier New,monospace" font-size="9" fill="#6EE7B7">(3, 64, 64)</text>
+  <rect x="869" y="380" width="146" height="36" rx="7" fill="url(#g-out)" filter="url(#shd)"/>
+  <text x="942" y="395" text-anchor="middle" font-family="Arial,sans-serif" font-size="10" font-weight="bold" fill="white">Recon₆</text>
+  <text x="942" y="409" text-anchor="middle" font-family="Courier New,monospace" font-size="9" fill="#6EE7B7">(3, 64, 64)</text>
+
+  <!-- ── DETAIL PANEL: BlockDecoder 5/6 (N_ups=5) ── -->
+  <rect x="28" y="432" width="1004" height="420" rx="12" fill="white" stroke="#E2E8F0" stroke-width="1.5" filter="url(#shd)"/>
+  <rect x="28" y="432" width="1004" height="44" rx="12" fill="url(#g-detail)"/>
+  <rect x="28" y="454" width="1004" height="22" fill="url(#g-detail)"/>
+  <text x="530" y="460" text-anchor="middle" font-family="Arial,sans-serif" font-size="14" font-weight="bold" fill="white">Détail interne — BlockDecoder 5 (ou 6)  ·  5 étapes ConvTranspose2d  ·  Entrée (256, 2, 2)  →  Sortie (3, 64, 64)</text>
+
+  <!-- Step: input -->
+  <rect x="380" y="490" width="300" height="38" rx="8" fill="#FFF7ED" stroke="#EA580C" stroke-width="1.5"/>
+  <text x="530" y="507" text-anchor="middle" font-family="Arial,sans-serif" font-size="12" font-weight="bold" fill="#9A3412">Act₅ ou Act₆ — Entrée Décodeur</text>
+  <text x="530" y="522" text-anchor="middle" font-family="Courier New,monospace" font-size="11" fill="#C2410C">(B, 256, 2, 2)</text>
+
+  <line x1="530" y1="528" x2="530" y2="544" stroke="#475569" stroke-width="2" marker-end="url(#arr)"/>
+
+  <!-- Step 1 -->
+  <rect x="175" y="546" width="710" height="38" rx="8" fill="url(#g-convt)" filter="url(#shd)"/>
+  <text x="530" y="563" text-anchor="middle" font-family="Arial,sans-serif" font-size="11.5" font-weight="bold" fill="white">ConvTranspose2d (256 → 128, kernel=4, stride=2, pad=1)</text>
+  <text x="530" y="578" text-anchor="middle" font-family="Arial,sans-serif" font-size="11" fill="#BFDBFE">+ BatchNorm2d  +  ReLU     →     (B, 128, 4, 4)</text>
+
+  <line x1="530" y1="584" x2="530" y2="600" stroke="#475569" stroke-width="2" marker-end="url(#arr)"/>
+
+  <!-- Step 2 -->
+  <rect x="175" y="602" width="710" height="38" rx="8" fill="url(#g-convt)" filter="url(#shd)"/>
+  <text x="530" y="619" text-anchor="middle" font-family="Arial,sans-serif" font-size="11.5" font-weight="bold" fill="white">ConvTranspose2d (128 → 64, kernel=4, stride=2, pad=1)</text>
+  <text x="530" y="634" text-anchor="middle" font-family="Arial,sans-serif" font-size="11" fill="#BFDBFE">+ BatchNorm2d  +  ReLU     →     (B, 64, 8, 8)</text>
+
+  <line x1="530" y1="640" x2="530" y2="656" stroke="#475569" stroke-width="2" marker-end="url(#arr)"/>
+
+  <!-- Step 3 -->
+  <rect x="175" y="658" width="710" height="38" rx="8" fill="url(#g-convt)" filter="url(#shd)"/>
+  <text x="530" y="675" text-anchor="middle" font-family="Arial,sans-serif" font-size="11.5" font-weight="bold" fill="white">ConvTranspose2d (64 → 32, kernel=4, stride=2, pad=1)</text>
+  <text x="530" y="690" text-anchor="middle" font-family="Arial,sans-serif" font-size="11" fill="#BFDBFE">+ BatchNorm2d  +  ReLU     →     (B, 32, 16, 16)</text>
+
+  <line x1="530" y1="696" x2="530" y2="712" stroke="#475569" stroke-width="2" marker-end="url(#arr)"/>
+
+  <!-- Step 4 -->
+  <rect x="175" y="714" width="710" height="38" rx="8" fill="url(#g-convt)" filter="url(#shd)"/>
+  <text x="530" y="731" text-anchor="middle" font-family="Arial,sans-serif" font-size="11.5" font-weight="bold" fill="white">ConvTranspose2d (32 → 16, kernel=4, stride=2, pad=1)</text>
+  <text x="530" y="746" text-anchor="middle" font-family="Arial,sans-serif" font-size="11" fill="#BFDBFE">+ BatchNorm2d  +  ReLU     →     (B, 16, 32, 32)</text>
+
+  <line x1="530" y1="752" x2="530" y2="768" stroke="#475569" stroke-width="2" marker-end="url(#arr)"/>
+
+  <!-- Step 5  — ch stays 16 (max(16, 16//2=8)=16) -->
+  <rect x="175" y="770" width="710" height="38" rx="8" fill="url(#g-convt)" filter="url(#shd)"/>
+  <text x="530" y="787" text-anchor="middle" font-family="Arial,sans-serif" font-size="11.5" font-weight="bold" fill="white">ConvTranspose2d (16 → 16, kernel=4, stride=2, pad=1)  ← ch_min=16 atteint</text>
+  <text x="530" y="802" text-anchor="middle" font-family="Arial,sans-serif" font-size="11" fill="#BFDBFE">+ BatchNorm2d  +  ReLU     →     (B, 16, 64, 64)</text>
+
+  <line x1="530" y1="808" x2="530" y2="824" stroke="#475569" stroke-width="2" marker-end="url(#arr)"/>
+
+  <!-- Final conv -->
+  <rect x="310" y="826" width="440" height="38" rx="8" fill="#4C1D95" filter="url(#shd)"/>
+  <text x="530" y="843" text-anchor="middle" font-family="Arial,sans-serif" font-size="12" font-weight="bold" fill="white">Conv2d 1×1 (16 → 3)  +  Sigmoid</text>
+  <text x="530" y="858" text-anchor="middle" font-family="Courier New,monospace" font-size="11" fill="#DDD6FE">→  (B, 3, 64, 64)  —  Image reconstruite ✓</text>
+
+  <!-- formula note -->
+  <text x="90" y="565" font-family="Arial,sans-serif" font-size="9.5" fill="#64748B" font-style="italic">N_ups = log₂(64÷2) = 5</text>
+  <text x="90" y="580" font-family="Arial,sans-serif" font-size="9.5" fill="#64748B" font-style="italic">ch_min = 16</text>
+  <text x="90" y="595" font-family="Arial,sans-serif" font-size="9.5" fill="#64748B" font-style="italic">new_ch = max(16, ch÷2)</text>
+  <text x="90" y="618" font-family="Arial,sans-serif" font-size="9" fill="#94A3B8">256→128: max(16,128)=128</text>
+  <text x="90" y="632" font-family="Arial,sans-serif" font-size="9" fill="#94A3B8">128→64:  max(16,64)=64</text>
+  <text x="90" y="646" font-family="Arial,sans-serif" font-size="9" fill="#94A3B8">64→32:   max(16,32)=32</text>
+  <text x="90" y="660" font-family="Arial,sans-serif" font-size="9" fill="#94A3B8">32→16:   max(16,16)=16</text>
+  <text x="90" y="674" font-family="Arial,sans-serif" font-size="9" fill="#94A3B8">16→16:   max(16,8)=16</text>
+
+  <!-- Legend -->
+  <rect x="28" y="860" width="1004" height="26" rx="6" fill="#E2E8F0" stroke="#CBD5E1" stroke-width="1"/>
+  <rect x="42" y="867" width="11" height="11" rx="2" fill="#EA580C"/>
+  <text x="58" y="876" font-family="Arial,sans-serif" font-size="10.5" fill="#334155">Décodeur par bloc (visualisation)</text>
+  <rect x="265" y="867" width="11" height="11" rx="2" fill="#1D4ED8"/>
+  <text x="281" y="876" font-family="Arial,sans-serif" font-size="10.5" fill="#334155">ConvTranspose2d + BN + ReLU</text>
+  <rect x="488" y="867" width="11" height="11" rx="2" fill="#4C1D95"/>
+  <text x="504" y="876" font-family="Arial,sans-serif" font-size="10.5" fill="#334155">Conv1×1 + Sigmoid (RGB)</text>
+  <rect x="685" y="867" width="11" height="11" rx="2" fill="#059669"/>
+  <text x="701" y="876" font-family="Arial,sans-serif" font-size="10.5" fill="#334155">Image reconstruite (3, 64, 64)</text>
+
+  <text x="530" y="900" text-anchor="middle" font-family="Arial,sans-serif" font-size="9.5" fill="#94A3B8">LRAD · BlockDecoder · 6 décodeurs (N_ups: 1,2,3,4,5,5) · Perte MSE · Classifieur gelé · Visualisation uniquement, non utilisé pour le score OOD</text>
+</svg>
