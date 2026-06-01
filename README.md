@@ -1,9 +1,9 @@
 # LRAD — Détection d'Anomalies par Reconstruction par Couches
 
-> Détection de visages hors-distribution (lunettes) en mesurant **la qualité
-> de reconstruction d'un ensemble profond, couche par couche** — et décomposition
-> de cette erreur en une partie *biais* (l'anomalie) et une partie *variance*
-> (désaccord entre les modèles).
+> On essaie de détecter des visages avec lunettes en mesurant **à quel point
+> un ensemble de modèles arrive à les reconstruire, couche par couche** — et en
+> décomposant cette erreur en une partie *biais* (l'anomalie) et une partie
+> *variance* (le désaccord entre les modèles).
 
 ![Python](https://img.shields.io/badge/python-3.10+-blue)
 ![PyTorch](https://img.shields.io/badge/pytorch-2.4-red)
@@ -11,53 +11,54 @@
 
 ---
 
-## Présentation
+## C'est quoi l'idée
 
-Un CNN entraîné de zéro sur des visages CelebA **sans lunettes**
-(`Eyeglasses == 0`). Par bloc convolutif, un petit décodeur apprend à reconstruire
-l'image d'entrée à partir des activations de ce bloc. Plusieurs modèles sont
-entraînés indépendamment — un **ensemble profond** — et pour toute image on obtient
-une reconstruction par modèle.
+J'ai entraîné un CNN from scratch sur des visages CelebA **sans lunettes**
+(`Eyeglasses == 0`). Pour chaque bloc convolutif, un petit décodeur apprend à
+reconstruire l'image d'entrée à partir des activations de ce bloc. J'ai
+entraîné plusieurs modèles indépendamment — un **ensemble profond** — et pour
+chaque image on obtient une reconstruction par modèle.
 
-L'erreur de reconstruction pixel par pixel, bloc par bloc, se décompose exactement
-en deux termes :
+Ce qui est intéressant, c'est que l'erreur de reconstruction pixel par pixel
+se décompose exactement en deux termes :
 
 ```text
 Risque  =  Biais  +  Variance
 ```
 
-* **Biais** = erreur de la reconstruction *moyenne de l'ensemble* `(x − f̄)²`. C'est
-  l'erreur irréductible du modèle consensus — ce qui subsiste après l'ensemblage.
-  C'est le **score d'anomalie** : un visage portant des lunettes ne peut pas être
-  reconstruit à partir de caractéristiques apprises uniquement sur des visages sans
-  lunettes, donc son biais explose.
-* **Variance** = désaccord entre les modèles entraînés indépendamment
-  `mean_m (f̂ᵐ − f̄)²`. Sur des entrées hors-distribution, les modèles extrapolent
-  différemment — la variance est donc aussi un signal d'**incertitude épistémique**.
+* **Biais** = erreur de la reconstruction *moyenne de l'ensemble* `(x − f̄)²`.
+  C'est l'erreur irréductible — ce qui reste même après avoir agrégé tous les
+  modèles. J'utilise ça comme **score d'anomalie** : un visage avec lunettes ne
+  peut pas être bien reconstruit à partir de features apprises uniquement sur
+  des visages sans lunettes, donc son biais explose.
+* **Variance** = désaccord entre les modèles `mean_m (f̂ᵐ − f̄)²`. Sur des
+  entrées hors-distribution, les modèles extrapolent différemment — c'est donc
+  aussi un signal d'**incertitude épistémique**, mais moins robuste que le biais
+  (voir les docs).
 
-Aucun blanchiment σ, aucune division : l'anomalie est le terme biais brut
+Pas de blanchiment, pas de normalisation : le score d'anomalie c'est simplement
 `biais = risque − variance = (x − f̄)²`.
 
-Les images CelebA avec `Eyeglasses == 1` (lunettes de soleil incluses) ne sont
-jamais vues à l'entraînement et servent uniquement d'ensemble OOD à l'évaluation.
+Les images CelebA avec `Eyeglasses == 1` ne sont jamais vues à l'entraînement —
+elles servent uniquement à évaluer la détection OOD.
 
 ---
 
-## Méthode
+## Comment ça marche
 
-### 1. Protocole de distribution
+### 1. Découpage des données
 
 | Partition    | Sélection            | Rôle                                          |
 |--------------|----------------------|-----------------------------------------------|
-| train / test_in | `Eyeglasses == 0` | visages propres ; entraînement + in-dist tenu |
+| train / test_in | `Eyeglasses == 0` | visages propres ; entraînement + in-dist      |
 | test_ood     | `Eyeglasses == 1`    | OOD à l'éval (jamais vu à l'entraînement)     |
 
-Le pool propre est découpé par ratio (défaut `train_ratio=0.90`,
+On découpe le pool propre par ratio (défaut `train_ratio=0.90`,
 `val_ratio=0.00`). Avec `val_ratio=0`, **il n'y a ni boucle de validation ni
-arrêt précoce** — chaque modèle suit intégralement le planning d'époques, ce qui
-correspond exactement à ce que veut un ensemble profond (la diversité vient
-uniquement de l'initialisation aléatoire + l'ordre de mélange SGD, jamais d'un
-point d'arrêt partagé sur la validation).
+arrêt précoce** — chaque modèle suit intégralement le planning d'époques. C'est
+voulu : la diversité d'un ensemble profond doit venir uniquement de
+l'initialisation aléatoire et de l'ordre SGD, pas d'un point d'arrêt différent
+selon la validation.
 
 ### 2. Le classifieur (`FacialCNN`)
 
@@ -78,73 +79,69 @@ Entrée (B, 3, 64, 64)
     head_attrs  : Linear(256 → 6)   # 6 attributs binaires — sigmoid + BCE
 ```
 
-Le nombre de blocs est fixé par `model.channels` — le modèle par défaut est
-5 blocs ; la config livrée en utilise 6 (`[32, 64, 128, 256, 256, 256]`).
-Les cibles in-distribution sont :
+Le nombre de blocs est fixé par `model.channels` — on utilise 6 blocs
+(`[32, 64, 128, 256, 256, 256]`). Les cibles in-distribution sont :
 
 | Tête    | Attribut(s)                                                                  | Perte               |
 |---------|------------------------------------------------------------------------------|---------------------|
 | gender  | Homme / Femme                                                                | `CrossEntropyLoss`  |
 | attrs   | Young, Smiling, Mouth_Slightly_Open, High_Cheekbones, Pointy_Nose, Oval_Face | `BCEWithLogitsLoss` |
 
-Objectif combiné, un seul backward :
+Loss combinée, un seul backward :
 
 ```text
 loss = CE(gender_logits, gender) + attr_loss_weight · BCE(attr_logits, attrs)
 ```
 
-Les attributs accessoires (Wearing_Hat, Heavy_Makeup, …) ne sont délibérément
-**pas** des cibles — le tronc doit apprendre les traits d'identité/expression,
-pas des caractéristiques d'accessoires qui généraliseraient partiellement aux
-lunettes de soleil.
+J'ai délibérément **exclu** les attributs accessoires (Wearing_Hat, Heavy_Makeup…)
+des cibles — le tronc doit apprendre des traits d'identité/expression, pas des
+caractéristiques qui généraliseraient partiellement aux lunettes.
 
-> **Pas de Dropout.** La diversité de l'ensemble est censée provenir uniquement
-> de l'initialisation aléatoire indépendante + l'ordre SGD (un ensemble profond),
-> pas du MC-Dropout.
+> **Pas de Dropout.** La diversité de l'ensemble vient uniquement de
+> l'initialisation aléatoire + l'ordre SGD — pas du MC-Dropout.
 
 ### 3. Décodeurs par bloc
 
-Le classifieur étant gelé, un `BlockDecoder` par bloc convolutif est entraîné
-(MSE) pour suréchantillonner les activations du bloc vers une reconstruction
-`(3, 64, 64)` via une pile `ConvTranspose2d → BN → ReLU` terminée par une conv
-`1×1` + `Sigmoid`. Ces reconstructions `f̂` alimentent la décomposition
-biais/variance et les visualisations par bloc.
+Le classifieur étant gelé, on entraîne un `BlockDecoder` par bloc convolutif
+(MSE) pour remonter les activations vers une reconstruction `(3, 64, 64)` via
+une pile `ConvTranspose2d → BN → ReLU` terminée par `Conv 1×1 + Sigmoid`. Ces
+reconstructions `f̂` alimentent la décomposition biais/variance et les
+visualisations.
 
-### 4. Décomposition biais/variance de l'ensemble profond
+### 4. Décomposition biais/variance
 
-Pour le bloc `k`, l'image `x`, le pixel `i` (valeur par pixel = moyenne RGB),
-avec les `M` reconstructions `f̂ᵐ` et leur moyenne `f̄ = (1/M) Σ f̂ᵐ` :
+Pour le bloc `k`, l'image `x`, le pixel `i`, avec les `M` reconstructions `f̂ᵐ`
+et leur moyenne `f̄ = (1/M) Σ f̂ᵐ` :
 
 ```text
-Risque_k(x)[i]   = (1/M) Σ_m ( x[i] − f̂ᵐ(x)[i] )²       erreur par modèle
-Biais_k(x)[i]    =          ( x[i] − f̄(x)[i] )²          erreur de la recon. moyenne
-Variance_k(x)[i] = (1/M) Σ_m ( f̂ᵐ(x)[i] − f̄(x)[i] )²   désaccord entre modèles
+Risque_k(x)[i]   = (1/M) Σ_m ( x[i] − f̂ᵐ(x)[i] )²
+Biais_k(x)[i]    =          ( x[i] − f̄(x)[i] )²
+Variance_k(x)[i] = (1/M) Σ_m ( f̂ᵐ(x)[i] − f̄(x)[i] )²
 ```
 
-Ces quantités vérifient `Risque = Biais + Variance` exactement, pixel par pixel
-(vérifié à l'exécution — le résidu max sur le run livré est `1.4e-7`).
+`Risque = Biais + Variance` exactement, pixel par pixel — on le vérifie à
+l'exécution (résidu max sur le run livré : `1.4e-7`).
 
-Les cartes par pixel sont réduites à un scalaire par image avec `agg` ∈
-`{mean, max, p95}` (défaut `p95` — robuste aux pixels isolés mais sensible à une
-occlusion localisée comme les lunettes), puis combinées entre blocs (uniforme ou
-pondéré) et scorées par AUROC sur `test_in` (label 0) vs `test_ood` (label 1).
+Les cartes par pixel sont réduites à un scalaire avec `agg` ∈
+`{mean, max, p95}` (défaut `p95` — robuste aux pixels isolés mais sensible à
+une occlusion localisée comme des lunettes), puis combinées entre blocs et
+scorées par AUROC.
 
 ### 5. Baseline confiance du classifieur
 
-À titre de référence, le runner mono-modèle rapporte aussi les scores OOD
-classiques issus des sorties de têtes :
+Pour comparer, on calcule aussi les scores OOD classiques depuis les têtes :
 
 * `score_msp` — `1 − max softmax(gender)`
 * `score_entropy_gender` — entropie du softmax gender
-* `score_entropy_attrs` — entropie de Bernoulli moyenne sur les 6 têtes d'attributs
+* `score_entropy_attrs` — entropie de Bernoulli moyenne sur les 6 attributs
 * `score_entropy_combined` — entropie `gender + attrs`
 
 ---
 
 ## Résultats
 
-Ensemble de 10 modèles (seeds 42–51), tronc 6 blocs, `agg = p95`, sur la
-partition OOD `Eyeglasses`.
+Ensemble de 10 modèles (seeds 42–51), tronc 6 blocs, `agg = p95`, partition
+OOD `Eyeglasses`.
 
 | Métrique                                      | Valeur         |
 |-----------------------------------------------|----------------|
@@ -154,15 +151,15 @@ partition OOD `Eyeglasses`.
 | AUROC Risque / Variance — agrégé              | 0.591 / 0.575  |
 | Résidu max `Risque = Biais + Variance`        | 1.4e-7         |
 
-La détection OOD sur cette tâche est genuinement difficile — les lunettes
-occultent une région petite et localisée — d'où des AUROCs modestement au-dessus
-du hasard ; les baselines de confiance du classifieur sont plus faibles et
-instables selon les seeds (MSP/entropie AUROC ~0.48–0.70). L'intérêt du projet
-est la **décomposition** : isoler le terme biais qui porte réellement le signal OOD
-du terme variance qui reflète le désaccord de l'ensemble.
+La tâche est genuinement difficile — les lunettes occultent une région petite
+et localisée. Les AUROCs sont modestement au-dessus du hasard, et les baselines
+de confiance (MSP/entropie, ~0.48–0.70 selon les seeds) sont plus instables.
+Ce qui m'intéressait surtout, c'est la **décomposition** elle-même : isoler le
+biais, qui porte vraiment le signal OOD, de la variance, qui reflète juste le
+désaccord entre modèles.
 
-*(Les figures peuvent être régénérées avec `run_ensemble.py` — les graphiques sont
-écrits dans `outputs/`, qui est gitignored.)*
+*(Les figures peuvent être régénérées avec `run_ensemble.py` — les graphiques
+vont dans `outputs/`, qui est gitignored.)*
 
 ---
 
@@ -177,7 +174,7 @@ lrad/
 │   ├── train.py                # entraînement classifieur + décodeurs
 │   ├── evaluate.py             # précision + AUROC OOD confiance classifieur
 │   ├── anomaly_score.py        # erreur par pixel + réductions pixel→scalaire
-│   ├── ensemble.py             # décomposition biais/variance de l'ensemble profond
+│   ├── ensemble.py             # décomposition biais/variance de l'ensemble
 │   ├── plots.py                # toutes les figures
 │   ├── utils.py                # device, seed, logging
 │   └── __init__.py
@@ -185,11 +182,11 @@ lrad/
 │   └── celeba_ood.yaml         # config unique — utilisée par les deux runners
 ├── scripts/
 │   ├── run_celeba.py           # orchestrateur mono-modèle
-│   ├── run_ensemble.py         # orchestrateur ensemble profond + décomposition
+│   ├── run_ensemble.py         # orchestrateur ensemble + décomposition
 │   ├── oar_run_celeba.sh       # wrapper Grid'5000 / OAR (mono-modèle)
 │   └── oar_run_ensemble.sh     # wrapper Grid'5000 / OAR (ensemble)
 ├── tests/                      # pytest : score anomalie, ensemble, entraînement sans val
-├── docs/                       # notes et explications supplémentaires
+├── docs/                       # notes et explications
 ├── requirements.txt            # dépendances épinglées (CUDA 11.8) pour Grid'5000
 ├── setup.py
 └── README.md
@@ -203,7 +200,7 @@ lrad/
 # Installation éditable avec dépendances souples (CPU ou torch déjà installé)
 pip install -e .
 
-# Ou la pile CUDA 11.8 épinglée utilisée sur Grid'5000 (GPU Pascal/A100)
+# Ou la pile CUDA 11.8 épinglée utilisée sur Grid'5000
 pip install -r requirements.txt \
     --extra-index-url https://download.pytorch.org/whl/cu118
 ```
@@ -214,8 +211,7 @@ scikit-learn, matplotlib, pyyaml, Pillow.
 ## Démarrage rapide
 
 ```bash
-# Ensemble profond + décomposition biais/variance (le pipeline principal).
-# size / base_seed / agg viennent du bloc ensemble: de la config.
+# Ensemble + décomposition biais/variance (le pipeline principal)
 python scripts/run_ensemble.py --config configs/celeba_ood.yaml
 
 # Taille / répertoire de sortie personnalisés
@@ -241,7 +237,7 @@ Les deux runners acceptent `--override clé=valeur …` (chemins pointés, ex.
 
 ## Configuration
 
-`configs/celeba_ood.yaml` est la source unique pour les deux runners :
+`configs/celeba_ood.yaml` est la source unique de vérité pour les deux runners :
 
 | Section      | Clés principales                                                                            |
 |--------------|---------------------------------------------------------------------------------------------|
@@ -252,14 +248,11 @@ Les deux runners acceptent `--override clé=valeur …` (chemins pointés, ex.
 | `evaluation` | `n_viz_in_samples`, `n_viz_ood_samples`, `viz_seed`                                         |
 | `ensemble`   | `size`, `base_seed` (le modèle *i* a le seed `base_seed + i`), `agg`                        |
 
-Mettre `training.decoders` à null pour sauter l'entraînement des décodeurs
-(la décomposition de l'ensemble n'a alors rien à reconstruire — à conserver pour
-`run_ensemble`).
+Mettre `training.decoders` à null pour sauter l'entraînement des décodeurs.
 
 ## Sorties
 
-Tout sous `outputs/` est **gitignored** (les runs sont volumineux — poids des
-modèles et graphiques haute résolution). Un run mono-modèle écrit dans
+Tout sous `outputs/` est **gitignored**. Un run mono-modèle écrit dans
 `experiment.output_dir` :
 
 ```text
@@ -301,7 +294,8 @@ sous `outputs/celeba_ood/`.
 ## Téléchargement de CelebA
 
 Si le téléchargement Google Drive de torchvision échoue sur un nœud de calcul,
-récupérer l'archive une fois sur le frontend et la décompresser sous `data/celeba/` :
+il faut récupérer l'archive une fois sur le frontend et la décompresser sous
+`data/celeba/` :
 
 ```text
 data/celeba/img_align_celeba/        (202 599 fichiers .jpg)
