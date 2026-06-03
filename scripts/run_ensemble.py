@@ -58,6 +58,8 @@ from lrad.ensemble import (  # noqa: E402
     evaluate_ensemble_decomposition,
     identity_residual,
     sample_decomposition,
+    sample_mean_error_maps,
+    sample_min_error_maps,
 )
 from lrad.plots import (  # noqa: E402
     plot_bias_variance_vs_block,
@@ -66,6 +68,8 @@ from lrad.plots import (  # noqa: E402
     plot_ensemble_decomposition,
     plot_ensemble_score_hists,
     plot_mean_abs_bias,
+    plot_mean_error_maps,
+    plot_min_error_maps,
     plot_per_block_breakdown,
     plot_recons_only,
     plot_variance_heatmaps,
@@ -328,6 +332,31 @@ def main() -> None:
             title="Ensemble variance heatmap — ID + OOD samples",
         )
 
+        # Per-block mean over models of the absolute error map
+        # (mean_m |x − f̂^m|): the average of the per-model error maps,
+        # pixel by pixel, displayed per block as usual.
+        err_maps = sample_mean_error_maps(
+            models, decoders_list, all_images, device,
+        )
+        plot_mean_error_maps(
+            all_images, err_maps, plot_dir / "mean_error_maps.png",
+            row_labels=row_labels,
+            title="Ensemble-averaged error  mean_m |x − f̂^m|  per conv block  "
+                  f"({size}-model ensemble)",
+        )
+
+        # Same view but the per-pixel *minimum* over models
+        # (min_m |x − f̂^m|): error of the best member, pixel by pixel.
+        min_err_maps = sample_min_error_maps(
+            models, decoders_list, all_images, device,
+        )
+        plot_min_error_maps(
+            all_images, min_err_maps, plot_dir / "min_error_maps.png",
+            row_labels=row_labels,
+            title="Ensemble best-member error  min_m |x − f̂^m|  per conv block  "
+                  f"({size}-model ensemble)",
+        )
+
         # Bias/Variance evolution curves (full test loaders).
         plot_bias_variance_vs_block(
             deb["scores_in"]["per_block"],
@@ -346,8 +375,9 @@ def main() -> None:
             "decomposition_auroc.png, ensemble_score_hists.png, "
             "mean_recon_breakdown.png, mean_recons_only.png, "
             "mean_abs_bias.png, variance_heatmaps_ood.png, "
-            "variance_heatmaps_all.png, bias_variance_vs_block.png, "
-            "bias_variance_vs_percentile.png"
+            "variance_heatmaps_all.png, mean_error_maps.png, "
+            "min_error_maps.png, "
+            "bias_variance_vs_block.png, bias_variance_vs_percentile.png"
         )
     else:
         residual = None
