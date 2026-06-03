@@ -655,6 +655,171 @@ def plot_mean_abs_bias(
     plt.close(fig)
 
 
+def plot_mean_error_maps(
+    images: torch.Tensor,
+    error_maps: dict,
+    save_path: str | Path,
+    *,
+    row_labels: Iterable[str] | None = None,
+    title: str | None = None,
+) -> None:
+    """Per-block ensemble-averaged absolute error heatmaps.
+
+    ``error_maps`` is ``{k: (B, H, W)}`` — the per-pixel mean over the
+    ``M`` models of ``|x − f̂^m_k|`` (see ``lrad.ensemble.mean_error_maps``),
+    already sliced to the displayed samples. For every sample one row is
+    drawn::
+
+        Original | Err L0 | Err L1 | ... | Err Ln
+
+    This is the average of the per-model error maps (the L1 analogue of the
+    Risk term), not the error of the averaged reconstruction. All tiles
+    share one colour scale + colour bar; each is annotated with its mean.
+    """
+    import matplotlib.patheffects as pe
+
+    images_np = _to_image_grid(images)
+    n_rows = images_np.shape[0]
+    blocks = sorted(error_maps.keys())
+    n_blocks = len(blocks)
+    n_cols = 1 + n_blocks
+
+    np_err = {k: _stat_np(error_maps[k]) for k in blocks}
+    vmax = 0.0
+    for k in blocks:
+        vmax = max(vmax, float(np_err[k].max()))
+    vmax = vmax if vmax > 0 else 1.0
+
+    fig, axes = plt.subplots(
+        n_rows, n_cols,
+        figsize=(1.4 * n_cols + 0.8, 1.55 * n_rows + 0.3),
+        layout="constrained",
+        squeeze=False,
+    )
+    labels = list(row_labels) if row_labels is not None else [None] * n_rows
+    text_pe = [pe.withStroke(linewidth=1.6, foreground="black")]
+    im = None
+
+    for r in range(n_rows):
+        ax = axes[r, 0]
+        ax.imshow(images_np[r])
+        _bare(ax)
+        if r == 0:
+            ax.set_title("Original", fontsize=_LABEL_FS)
+        if labels[r] is not None:
+            _row_label(ax, labels[r])
+
+        for bi, k in enumerate(blocks):
+            ax_e = axes[r, 1 + bi]
+            e = np_err[k][r]
+            im = ax_e.imshow(e, cmap="viridis", vmin=0.0, vmax=vmax)
+            _bare(ax_e)
+            if r == 0:
+                ax_e.set_title(f"Err L{k}", fontsize=_LABEL_FS)
+            ax_e.text(
+                0.5, 0.04, f"{float(e.mean()):.3f}",
+                transform=ax_e.transAxes, ha="center", va="bottom",
+                fontsize=8.0, color="white", path_effects=text_pe,
+            )
+
+    if im is not None:
+        cbar = fig.colorbar(
+            im, ax=axes[:, 1:].ravel().tolist(),
+            location="right", shrink=0.85, pad=0.015, aspect=30,
+        )
+        cbar.set_label("mean_m |x − f̂^m|  (mean over RGB)",
+                       fontsize=_LABEL_FS)
+        cbar.ax.tick_params(labelsize=_TICK_FS)
+
+    if title:
+        fig.suptitle(title, fontsize=_TITLE_FS)
+    fig.savefig(save_path, dpi=150, bbox_inches="tight")
+    plt.close(fig)
+
+
+def plot_min_error_maps(
+    images: torch.Tensor,
+    error_maps: dict,
+    save_path: str | Path,
+    *,
+    row_labels: Iterable[str] | None = None,
+    title: str | None = None,
+) -> None:
+    """Per-block ensemble per-pixel *minimum* absolute error heatmaps.
+
+    ``error_maps`` is ``{k: (B, H, W)}`` — the per-pixel minimum over the
+    ``M`` models of ``|x − f̂^m_k|`` (see ``lrad.ensemble.min_error_maps``),
+    already sliced to the displayed samples. For every sample one row is
+    drawn::
+
+        Original | Err L0 | Err L1 | ... | Err Ln
+
+    Unlike ``plot_mean_error_maps`` (average of the per-model error maps),
+    each pixel keeps the error of the *best* member, so a tile stays bright
+    only where no model in the ensemble reconstructs well. All tiles share
+    one colour scale + colour bar; each is annotated with its mean.
+    """
+    import matplotlib.patheffects as pe
+
+    images_np = _to_image_grid(images)
+    n_rows = images_np.shape[0]
+    blocks = sorted(error_maps.keys())
+    n_blocks = len(blocks)
+    n_cols = 1 + n_blocks
+
+    np_err = {k: _stat_np(error_maps[k]) for k in blocks}
+    vmax = 0.0
+    for k in blocks:
+        vmax = max(vmax, float(np_err[k].max()))
+    vmax = vmax if vmax > 0 else 1.0
+
+    fig, axes = plt.subplots(
+        n_rows, n_cols,
+        figsize=(1.4 * n_cols + 0.8, 1.55 * n_rows + 0.3),
+        layout="constrained",
+        squeeze=False,
+    )
+    labels = list(row_labels) if row_labels is not None else [None] * n_rows
+    text_pe = [pe.withStroke(linewidth=1.6, foreground="black")]
+    im = None
+
+    for r in range(n_rows):
+        ax = axes[r, 0]
+        ax.imshow(images_np[r])
+        _bare(ax)
+        if r == 0:
+            ax.set_title("Original", fontsize=_LABEL_FS)
+        if labels[r] is not None:
+            _row_label(ax, labels[r])
+
+        for bi, k in enumerate(blocks):
+            ax_e = axes[r, 1 + bi]
+            e = np_err[k][r]
+            im = ax_e.imshow(e, cmap="viridis", vmin=0.0, vmax=vmax)
+            _bare(ax_e)
+            if r == 0:
+                ax_e.set_title(f"Err L{k}", fontsize=_LABEL_FS)
+            ax_e.text(
+                0.5, 0.04, f"{float(e.mean()):.3f}",
+                transform=ax_e.transAxes, ha="center", va="bottom",
+                fontsize=8.0, color="white", path_effects=text_pe,
+            )
+
+    if im is not None:
+        cbar = fig.colorbar(
+            im, ax=axes[:, 1:].ravel().tolist(),
+            location="right", shrink=0.85, pad=0.015, aspect=30,
+        )
+        cbar.set_label("min_m |x − f̂^m|  (mean over RGB)",
+                       fontsize=_LABEL_FS)
+        cbar.ax.tick_params(labelsize=_TICK_FS)
+
+    if title:
+        fig.suptitle(title, fontsize=_TITLE_FS)
+    fig.savefig(save_path, dpi=150, bbox_inches="tight")
+    plt.close(fig)
+
+
 def plot_variance_heatmaps(
     images: torch.Tensor,
     maps: dict,
