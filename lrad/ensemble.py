@@ -99,6 +99,100 @@ def decomposition_maps(
     return out
 
 
+@torch.no_grad()
+def mean_error_maps(
+    images: torch.Tensor,
+    recons_per_model: Sequence[Sequence[torch.Tensor]],
+) -> dict[int, torch.Tensor]:
+    """Per-block ensemble-averaged absolute error ``mean_m |x − f̂^m_k|``.
+
+    ``recons_per_model`` is indexed ``[model][block]`` (each entry a
+    ``(B, 3, H, W)`` reconstruction). Returns ``{k: (B, H, W)}`` where each
+    pixel is the mean over the ``M`` models of the RGB-mean absolute
+    reconstruction error.
+
+    This is the L1 analogue of the ``Risk`` term: the *average of the
+    per-model error maps*, as opposed to the ``Bias`` term ``|x − f̄|``
+    which is the error of the *averaged* reconstruction.
+    """
+    n_models = len(recons_per_model)
+    if n_models == 0:
+        raise ValueError("need at least one model in the ensemble")
+    n_blocks = len(recons_per_model[0])
+    out: dict[int, torch.Tensor] = {}
+    for k in range(n_blocks):
+        recons = torch.stack(
+            [recons_per_model[m][k] for m in range(n_models)], dim=0,
+        )  # (M, B, 3, H, W)
+        # Per-model absolute error, averaged over RGB -> (M, B, H, W),
+        # then averaged over the M models -> (B, H, W).
+        ae = (images.unsqueeze(0) - recons).abs().mean(dim=2)
+        out[k] = ae.mean(dim=0)
+    return out
+
+
+@torch.no_grad()
+def sample_mean_error_maps(
+    models: Sequence[FacialCNN],
+    decoders_list: Sequence[nn.ModuleList],
+    images: torch.Tensor,
+    device: torch.device,
+) -> dict[int, torch.Tensor]:
+    """Ensemble-averaged absolute error maps for a small set of samples."""
+    images = images.to(device, non_blocking=True)
+    recons_per_model = [
+        block_reconstructions(models[m], decoders_list[m], images)
+        for m in range(len(models))
+    ]
+    return mean_error_maps(images, recons_per_model)
+
+
+@torch.no_grad()
+def min_error_maps(
+    images: torch.Tensor,
+    recons_per_model: Sequence[Sequence[torch.Tensor]],
+) -> dict[int, torch.Tensor]:
+    """Per-block ensemble *minimum* absolute error ``min_m |x − f̂^m_k|``.
+
+    Same inputs/shape contract as :func:`mean_error_maps`, but at every
+    pixel it keeps the *smallest* per-model error instead of the average.
+    This answers "how well does the **best** member reconstruct this pixel":
+    a region stays bright only if *no* model in the ensemble can reconstruct
+    it (a stronger OOD signal than the mean, which a single bad member can
+    inflate).
+    """
+    n_models = len(recons_per_model)
+    if n_models == 0:
+        raise ValueError("need at least one model in the ensemble")
+    n_blocks = len(recons_per_model[0])
+    out: dict[int, torch.Tensor] = {}
+    for k in range(n_blocks):
+        recons = torch.stack(
+            [recons_per_model[m][k] for m in range(n_models)], dim=0,
+        )  # (M, B, 3, H, W)
+        # Per-model absolute error, averaged over RGB -> (M, B, H, W),
+        # then the per-pixel minimum over the M models -> (B, H, W).
+        ae = (images.unsqueeze(0) - recons).abs().mean(dim=2)
+        out[k] = ae.min(dim=0).values
+    return out
+
+
+@torch.no_grad()
+def sample_min_error_maps(
+    models: Sequence[FacialCNN],
+    decoders_list: Sequence[nn.ModuleList],
+    images: torch.Tensor,
+    device: torch.device,
+) -> dict[int, torch.Tensor]:
+    """Ensemble per-pixel *minimum* absolute error maps for a few samples."""
+    images = images.to(device, non_blocking=True)
+    recons_per_model = [
+        block_reconstructions(models[m], decoders_list[m], images)
+        for m in range(len(models))
+    ]
+    return min_error_maps(images, recons_per_model)
+
+
 def identity_residual(maps: dict[int, dict[str, torch.Tensor]]) -> float:
     """Largest absolute deviation from ``Risk = Bias + Variance``.
 
