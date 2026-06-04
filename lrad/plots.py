@@ -4,8 +4,8 @@ Two figures are produced for a small set of sample images, mixing
 in-distribution and OOD samples with row labels:
 
   * ``plot_per_block_breakdown`` — for every conv block ``k``, three
-    columns side by side: the original image, the absolute
-    reconstruction error ``|x − recon_k|`` (viridis), and the
+    columns side by side: the original image, the squared
+    reconstruction error ``(x − recon_k)²`` (viridis), and the
     reconstruction itself. Layout::
 
         Original  Err L0  Recon L0  Err L1  Recon L1  ...  Err Ln  Recon Ln
@@ -20,8 +20,8 @@ decomposition** (see ``lrad.ensemble``). The OOD anomaly is the *bias*
 term itself — ``bias = risk − variance = (x − f̄)²`` per pixel — computed
 directly from the ensemble, with **no sigma and no division**:
 
-  * ``plot_mean_abs_bias`` — per-block ``|x − f̄_k|`` heatmaps for each
-    sample (the latent error layers of the ensemble-mean reconstruction).
+  * ``plot_mean_abs_bias`` — per-block ``(x − f̄_k)²`` heatmaps for each
+    sample (the bias term — squared error of the ensemble-mean recon).
   * ``plot_variance_heatmaps`` — per-block model-disagreement (variance)
     heatmaps, used to show the epistemic signal on OOD inputs.
   * ``plot_bias_variance_vs_block`` — how the mean bias and variance
@@ -124,9 +124,14 @@ def _to_image_grid(t: torch.Tensor) -> np.ndarray:
     return t.detach().cpu().clamp(0.0, 1.0).permute(0, 2, 3, 1).numpy()
 
 
-def _abs_error(orig: np.ndarray, recon: np.ndarray) -> np.ndarray:
-    """(H, W) mean absolute error across RGB channels."""
-    return np.abs(orig - recon).mean(axis=-1)
+def _sq_error(orig: np.ndarray, recon: np.ndarray) -> np.ndarray:
+    """(H, W) mean squared error across RGB channels.
+
+    Squared (not absolute) so every error tile is on the same L2 footing as
+    the ensemble bias/variance decomposition, where ``Risk = Bias + Variance``
+    only holds for squared error.
+    """
+    return ((orig - recon) ** 2).mean(axis=-1)
 
 
 def _bare(ax: plt.Axes) -> None:
@@ -152,9 +157,11 @@ def plot_per_block_breakdown(
 ) -> None:
     """Side-by-side (Original | Err Lk | Recon Lk) for every conv block.
 
-    Error tiles share a single global colour scale and a colour bar is
-    drawn on the right of the figure. Each error tile is annotated with
-    its mean absolute error score (white text with a black outline).
+    Error tiles use the fixed ``[0, 1]`` colour scale (images live in
+    ``[0, 1]`` so the squared error does too), never a per-figure max, so
+    error tiles are directly comparable across different figures. A single
+    colour bar is drawn on the right. Each error tile is annotated with its
+    mean squared error score (white text with a black outline).
     """
     import matplotlib.patheffects as pe
 
@@ -164,18 +171,14 @@ def plot_per_block_breakdown(
     n_blocks = len(recons_np)
     n_cols = 1 + 2 * n_blocks
 
-    # Pre-compute every error map and a shared global vmax so the colour
-    # bar is meaningful across the whole figure.
+    # Pre-compute every error map. The colour scale is fixed to [0, 1]
+    # (no data-dependent normalization) so any two figures are comparable.
     err_maps: list[list[np.ndarray]] = []
-    global_max = 0.0
     for r in range(n_rows):
-        row = []
-        for k in range(n_blocks):
-            err = _abs_error(images_np[r], recons_np[k][r])
-            row.append(err)
-            global_max = max(global_max, float(err.max()))
+        row = [_sq_error(images_np[r], recons_np[k][r])
+               for k in range(n_blocks)]
         err_maps.append(row)
-    vmax = global_max if global_max > 0 else 1.0
+    vmax = 1.0
 
     fig, axes = plt.subplots(
         n_rows, n_cols,
@@ -225,7 +228,7 @@ def plot_per_block_breakdown(
             err_im, ax=axes[:, 1::2].ravel().tolist(),
             location="right", shrink=0.85, pad=0.015, aspect=30,
         )
-        cbar.set_label("|x − recon|  (mean over RGB)", fontsize=_LABEL_FS)
+        cbar.set_label("(x − recon)²  (mean over RGB)", fontsize=_LABEL_FS)
         cbar.ax.tick_params(labelsize=_TICK_FS)
 
     if title:
@@ -324,14 +327,15 @@ def plot_fusion_overlay(
 
         Original  Err L0  Err L1  ...  Err Ln  Fused (max)  Overlay
 
-    where ``err_map_k = |x − recon_k|`` averaged over RGB, the fused map
+    where ``err_map_k = (x − recon_k)²`` averaged over RGB, the fused map
     is the per-pixel max across all blocks, and the overlay renders the
     fused heatmap on top of the original image. The scalar anomaly score
     annotated under each fused tile is ``fused.max()`` — the most
     surprising pixel for that sample.
 
-    Error tiles, the fused tile, and the overlay all share a single
-    global colour scale and a single colour bar on the right.
+    Error tiles, the fused tile, and the overlay all share the fixed
+    ``[0, 1]`` colour scale (no data-dependent normalization) and a single
+    colour bar on the right, so figures stay comparable to one another.
     """
     import matplotlib.patheffects as pe
 
@@ -345,19 +349,14 @@ def plot_fusion_overlay(
     err_maps: list[list[np.ndarray]] = []
     fused_maps: list[np.ndarray] = []
     anomaly_scores: list[float] = []
-    global_max = 0.0
     for r in range(n_rows):
-        row = []
-        for k in range(n_blocks):
-            err = _abs_error(images_np[r], recons_np[k][r])
-            row.append(err)
-            global_max = max(global_max, float(err.max()))
+        row = [_sq_error(images_np[r], recons_np[k][r])
+               for k in range(n_blocks)]
         err_maps.append(row)
         fused = np.maximum.reduce(row)  # per-pixel max across blocks
         fused_maps.append(fused)
         anomaly_scores.append(float(fused.max()))
-        global_max = max(global_max, float(fused.max()))
-    vmax = global_max if global_max > 0 else 1.0
+    vmax = 1.0
 
     fig, axes = plt.subplots(
         n_rows, n_cols,
@@ -431,7 +430,7 @@ def plot_fusion_overlay(
             err_im, ax=heat_axes,
             location="right", shrink=0.85, pad=0.015, aspect=30,
         )
-        cbar.set_label("|x − recon|  (mean over RGB)", fontsize=_LABEL_FS)
+        cbar.set_label("(x − recon)²  (mean over RGB)", fontsize=_LABEL_FS)
         cbar.ax.tick_params(labelsize=_TICK_FS)
 
     if title:
@@ -577,18 +576,18 @@ def plot_mean_abs_bias(
     row_labels: Iterable[str] | None = None,
     title: str | None = None,
 ) -> None:
-    """Per-block ``|x − f̄_k|`` heatmaps of the ensemble-mean reconstruction.
+    """Per-block ``(x − f̄_k)²`` heatmaps of the ensemble-mean reconstruction.
 
     ``mean_recons`` is the list of per-block ensemble-mean reconstructions
     ``f̄_k`` (each ``(B, 3, H, W)``). For every sample one row is drawn::
 
-        Original | |x − f̄_L0| | |x − f̄_L1| | ... | |x − f̄_Ln|
+        Original | (x − f̄_L0)² | (x − f̄_L1)² | ... | (x − f̄_Ln)²
 
-    This is the L1 "latent error layer" view of the consensus model — the
-    bias term in absolute (rather than squared) units. All error tiles
-    share one colour scale and a single colour bar; each tile is annotated
-    with its mean. ID rows should be dim everywhere while OOD rows light up
-    on the anomaly (e.g. eyeglasses).
+    This is the Bias term of the decomposition — the squared error of the
+    consensus model. The colour scale is fixed to ``[0, 1]`` (no per-figure
+    normalization) so figures are comparable, with a single colour bar; each
+    tile is annotated with its mean. ID rows should be dim everywhere while
+    OOD rows light up on the anomaly (e.g. eyeglasses).
     """
     import matplotlib.patheffects as pe
 
@@ -599,15 +598,11 @@ def plot_mean_abs_bias(
     n_cols = 1 + n_blocks
 
     err_maps: list[list[np.ndarray]] = []
-    vmax = 0.0
     for r in range(n_rows):
-        row = []
-        for j in range(n_blocks):
-            e = _abs_error(images_np[r], recons_np[j][r])
-            row.append(e)
-            vmax = max(vmax, float(e.max()))
+        row = [_sq_error(images_np[r], recons_np[j][r])
+               for j in range(n_blocks)]
         err_maps.append(row)
-    vmax = vmax if vmax > 0 else 1.0
+    vmax = 1.0
 
     fig, axes = plt.subplots(
         n_rows, n_cols,
@@ -634,7 +629,7 @@ def plot_mean_abs_bias(
             im = ax_e.imshow(e, cmap="viridis", vmin=0.0, vmax=vmax)
             _bare(ax_e)
             if r == 0:
-                ax_e.set_title(f"|x − f̄| L{j}", fontsize=_LABEL_FS)
+                ax_e.set_title(f"(x − f̄)² L{j}", fontsize=_LABEL_FS)
             ax_e.text(
                 0.5, 0.04, f"{float(e.mean()):.3f}",
                 transform=ax_e.transAxes, ha="center", va="bottom",
@@ -646,7 +641,7 @@ def plot_mean_abs_bias(
             im, ax=axes[:, 1:].ravel().tolist(),
             location="right", shrink=0.85, pad=0.015, aspect=30,
         )
-        cbar.set_label("|x − f̄|  (mean over RGB)", fontsize=_LABEL_FS)
+        cbar.set_label("(x − f̄)²  (mean over RGB)", fontsize=_LABEL_FS)
         cbar.ax.tick_params(labelsize=_TICK_FS)
 
     if title:
@@ -663,18 +658,20 @@ def plot_mean_error_maps(
     row_labels: Iterable[str] | None = None,
     title: str | None = None,
 ) -> None:
-    """Per-block ensemble-averaged absolute error heatmaps.
+    """Per-block ensemble-averaged squared error heatmaps.
 
     ``error_maps`` is ``{k: (B, H, W)}`` — the per-pixel mean over the
-    ``M`` models of ``|x − f̂^m_k|`` (see ``lrad.ensemble.mean_error_maps``),
+    ``M`` models of ``(x − f̂^m_k)²`` (see ``lrad.ensemble.mean_error_maps``),
     already sliced to the displayed samples. For every sample one row is
     drawn::
 
         Original | Err L0 | Err L1 | ... | Err Ln
 
-    This is the average of the per-model error maps (the L1 analogue of the
-    Risk term), not the error of the averaged reconstruction. All tiles
-    share one colour scale + colour bar; each is annotated with its mean.
+    This is the average of the per-model error maps, i.e. exactly the Risk
+    term of the decomposition — not the error of the averaged
+    reconstruction. The colour scale is fixed to ``[0, 1]`` (no per-figure
+    normalization) so figures are comparable, with a single colour bar; each
+    tile is annotated with its mean.
     """
     import matplotlib.patheffects as pe
 
@@ -685,10 +682,7 @@ def plot_mean_error_maps(
     n_cols = 1 + n_blocks
 
     np_err = {k: _stat_np(error_maps[k]) for k in blocks}
-    vmax = 0.0
-    for k in blocks:
-        vmax = max(vmax, float(np_err[k].max()))
-    vmax = vmax if vmax > 0 else 1.0
+    vmax = 1.0
 
     fig, axes = plt.subplots(
         n_rows, n_cols,
@@ -727,7 +721,7 @@ def plot_mean_error_maps(
             im, ax=axes[:, 1:].ravel().tolist(),
             location="right", shrink=0.85, pad=0.015, aspect=30,
         )
-        cbar.set_label("mean_m |x − f̂^m|  (mean over RGB)",
+        cbar.set_label("mean_m (x − f̂^m)²  (mean over RGB)",
                        fontsize=_LABEL_FS)
         cbar.ax.tick_params(labelsize=_TICK_FS)
 
@@ -745,10 +739,10 @@ def plot_min_error_maps(
     row_labels: Iterable[str] | None = None,
     title: str | None = None,
 ) -> None:
-    """Per-block ensemble per-pixel *minimum* absolute error heatmaps.
+    """Per-block ensemble per-pixel *minimum* squared error heatmaps.
 
     ``error_maps`` is ``{k: (B, H, W)}`` — the per-pixel minimum over the
-    ``M`` models of ``|x − f̂^m_k|`` (see ``lrad.ensemble.min_error_maps``),
+    ``M`` models of ``(x − f̂^m_k)²`` (see ``lrad.ensemble.min_error_maps``),
     already sliced to the displayed samples. For every sample one row is
     drawn::
 
@@ -756,8 +750,9 @@ def plot_min_error_maps(
 
     Unlike ``plot_mean_error_maps`` (average of the per-model error maps),
     each pixel keeps the error of the *best* member, so a tile stays bright
-    only where no model in the ensemble reconstructs well. All tiles share
-    one colour scale + colour bar; each is annotated with its mean.
+    only where no model in the ensemble reconstructs well. The colour scale
+    is fixed to ``[0, 1]`` (no per-figure normalization) so figures are
+    comparable, with a single colour bar; each is annotated with its mean.
     """
     import matplotlib.patheffects as pe
 
@@ -768,10 +763,7 @@ def plot_min_error_maps(
     n_cols = 1 + n_blocks
 
     np_err = {k: _stat_np(error_maps[k]) for k in blocks}
-    vmax = 0.0
-    for k in blocks:
-        vmax = max(vmax, float(np_err[k].max()))
-    vmax = vmax if vmax > 0 else 1.0
+    vmax = 1.0
 
     fig, axes = plt.subplots(
         n_rows, n_cols,
@@ -810,7 +802,7 @@ def plot_min_error_maps(
             im, ax=axes[:, 1:].ravel().tolist(),
             location="right", shrink=0.85, pad=0.015, aspect=30,
         )
-        cbar.set_label("min_m |x − f̂^m|  (mean over RGB)",
+        cbar.set_label("min_m (x − f̂^m)²  (mean over RGB)",
                        fontsize=_LABEL_FS)
         cbar.ax.tick_params(labelsize=_TICK_FS)
 
@@ -838,8 +830,11 @@ def plot_variance_heatmaps(
 
     Variance is the epistemic-uncertainty signal: on OOD inputs the
     ensemble members extrapolate differently, so they disagree more and
-    the maps brighten. All tiles share one colour scale + colour bar; each
-    is annotated with its mean.
+    the maps brighten. The colour scale is fixed to ``[0, 1]`` (no
+    per-figure normalization) so figures are comparable, with a single
+    colour bar; each is annotated with its mean. Variance is bounded above
+    by the risk so it shares the ``[0, 1]`` image-error scale, though in
+    practice it stays small.
     """
     import matplotlib.patheffects as pe
 
@@ -850,10 +845,7 @@ def plot_variance_heatmaps(
     n_cols = 1 + n_blocks
 
     np_var = {k: _stat_np(maps[k]["variance"]) for k in blocks}
-    vmax = 0.0
-    for k in blocks:
-        vmax = max(vmax, float(np_var[k].max()))
-    vmax = vmax if vmax > 0 else 1.0
+    vmax = 1.0
 
     fig, axes = plt.subplots(
         n_rows, n_cols,
@@ -1050,11 +1042,10 @@ def plot_ensemble_decomposition(
         k: {t: maps[k][t].detach().cpu().numpy() for t in term_order}
         for k in blocks
     }
-    global_max = 0.0
-    for k in blocks:
-        for t in term_order:
-            global_max = max(global_max, float(np_maps[k][t].max()))
-    vmax = global_max if global_max > 0 else 1.0
+    # Fixed [0, 1] colour scale (images live in [0, 1] so the squared-error
+    # terms do too): no data-dependent normalization, so any two figures are
+    # directly comparable.
+    vmax = 1.0
 
     fig, axes = plt.subplots(
         n_rows, n_cols,
