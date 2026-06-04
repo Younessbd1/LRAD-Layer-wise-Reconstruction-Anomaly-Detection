@@ -6,13 +6,15 @@
 #
 # This trains `ensemble.size` models sequentially in a single job (each is
 # a full classifier + per-block decoders), then runs the bias/variance
-# decomposition. The current config does 10 models (was 5) on a 6-block
-# trunk (was 5), with 25 classifier epochs + 50 decoder epochs per model
-# and no validation pass. Empirical per-model wall-time on gratouille is
-# ~1h–1h15 on the new 6-block trunk, so a 10-model ensemble is ~11–13h;
-# the 14h reservation below leaves enough head-room for the final
-# decomposition + plots. Never under-size: an OAR reservation is cut at
-# its walltime even mid-epoch and this pipeline does not checkpoint.
+# decomposition + every plot — including mean_error_maps.png and
+# min_error_maps.png — in that one run (there is no separate eval/plot job
+# any more). The current config does 10 models on a 6-block trunk with
+# only 2 classifier epochs + 2 decoder epochs per model: the short
+# schedule is deliberate (it keeps the ensemble members diverse so the
+# variance term does not collapse), and it also makes each model fast.
+# The 4h reservation below leaves ample head-room. Never under-size: an
+# OAR reservation is cut at its walltime even mid-epoch and this pipeline
+# does not checkpoint.
 #
 # We run as an ADVANCE RESERVATION (oarsub -r), NOT besteffort: a
 # reservation books the GPU for a fixed future window and is guaranteed —
@@ -38,7 +40,7 @@
 
 #OAR -n celeba-ood-ensemble-gratouille
 #OAR -p cluster='gratouille'
-#OAR -l gpu=1,walltime=14:00:00
+#OAR -l gpu=1,walltime=4:00:00
 #OAR -O outputs/celeba_ood/_oar/oar.%jobid%.stdout
 #OAR -E outputs/celeba_ood/_oar/oar.%jobid%.stderr
 
