@@ -294,13 +294,13 @@ def main() -> None:
         )
 
         # Item 5 of the note: results on the ensemble-mean reconstruction.
-        # |x - E_D[f_hat]| is exactly the Bias view of the error.
+        # (x - E_D[f_hat])² is exactly the Bias view of the error.
         mean_recons = [maps[k]["mean_recon"] for k in blocks]
         plot_per_block_breakdown(
             all_images, mean_recons, plot_dir / "mean_recon_breakdown.png",
             row_labels=row_labels,
             title="Ensemble-mean reconstruction — Original | Err Lk | Recon Lk "
-                  "(error = Bias term)",
+                  "(error = Bias term, (x − f̄)²)",
         )
         plot_recons_only(
             all_images, mean_recons, plot_dir / "mean_recons_only.png",
@@ -309,11 +309,11 @@ def main() -> None:
         )
 
         # --- New plots requested by the user ---------------------------
-        # |x − f̂| per block (L1 bias-only view).
+        # (x − f̄)² per block (bias-only view).
         plot_mean_abs_bias(
             all_images, mean_recons, plot_dir / "mean_abs_bias.png",
             row_labels=row_labels,
-            title="Ensemble bias  |x − f̂|  per conv block  "
+            title="Ensemble bias  (x − f̄)²  per conv block  "
                   f"({size}-model ensemble)",
         )
         # Variance heatmaps on OOD (and ID for reference), overlaid.
@@ -332,28 +332,28 @@ def main() -> None:
             title="Ensemble variance heatmap — ID + OOD samples",
         )
 
-        # Per-block mean over models of the absolute error map
-        # (mean_m |x − f̂^m|): the average of the per-model error maps,
-        # pixel by pixel, displayed per block as usual.
+        # Per-block mean over models of the squared error map
+        # (mean_m (x − f̂^m)²): the average of the per-model error maps,
+        # pixel by pixel — exactly the Risk term, displayed per block.
         err_maps = sample_mean_error_maps(
             models, decoders_list, all_images, device,
         )
         plot_mean_error_maps(
             all_images, err_maps, plot_dir / "mean_error_maps.png",
             row_labels=row_labels,
-            title="Ensemble-averaged error  mean_m |x − f̂^m|  per conv block  "
+            title="Ensemble-averaged error  mean_m (x − f̂^m)²  per conv block  "
                   f"({size}-model ensemble)",
         )
 
         # Same view but the per-pixel *minimum* over models
-        # (min_m |x − f̂^m|): error of the best member, pixel by pixel.
+        # (min_m (x − f̂^m)²): error of the best member, pixel by pixel.
         min_err_maps = sample_min_error_maps(
             models, decoders_list, all_images, device,
         )
         plot_min_error_maps(
             all_images, min_err_maps, plot_dir / "min_error_maps.png",
             row_labels=row_labels,
-            title="Ensemble best-member error  min_m |x − f̂^m|  per conv block  "
+            title="Ensemble best-member error  min_m (x − f̂^m)²  per conv block  "
                   f"({size}-model ensemble)",
         )
 
