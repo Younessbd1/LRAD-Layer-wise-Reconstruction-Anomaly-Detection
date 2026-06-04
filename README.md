@@ -181,10 +181,9 @@ lrad/
 ├── configs/
 │   └── celeba_ood.yaml         # config unique — utilisée par les deux runners
 ├── scripts/
-│   ├── run_celeba.py           # orchestrateur mono-modèle
+│   ├── run_celeba.py           # orchestrateur mono-modèle (importé par run_ensemble.py)
 │   ├── run_ensemble.py         # orchestrateur ensemble + décomposition
-│   ├── oar_run_celeba.sh       # wrapper Grid'5000 / OAR (mono-modèle)
-│   └── oar_run_ensemble.sh     # wrapper Grid'5000 / OAR (ensemble)
+│   └── oar_run_ensemble.sh     # wrapper Grid'5000 / OAR (ensemble — train + plots, un seul run)
 ├── tests/                      # pytest : score anomalie, ensemble, entraînement sans val
 ├── docs/                       # notes et explications
 ├── requirements.txt            # dépendances épinglées (CUDA 11.8) pour Grid'5000
