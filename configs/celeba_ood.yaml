@@ -57,11 +57,13 @@ model:
 # Single .backward() per step. With val_ratio=0 there is no validation
 # loop — every model runs the full `epochs` schedule.
 training:
-  # 25 epochs (was 20) because there is no val-loop early stop any more —
-  # every model now runs the full fixed schedule, so a few extra epochs
-  # are essentially free and the deeper (6-block) trunk benefits from
-  # them. Train loss flattens well before epoch 25 on this dataset.
-  epochs: 25
+  # 2 epochs on purpose. This is a deep ensemble: its whole value is the
+  # *diversity* between members (it feeds the bias/variance decomposition).
+  # Training longer drives every model toward the same decision boundary,
+  # collapsing the variance term — exactly what we do NOT want. The batch
+  # accuracy curve flattens within the first ~2 epochs on this dataset, so
+  # 2 epochs keep the classifier usable while preserving member spread.
+  epochs: 2
   lr: 0.0003
   weight_decay: 0.001
   attr_loss_weight: 2.0
@@ -74,13 +76,13 @@ training:
   # only feed the per_block_breakdown.png and recons_only.png plots.
   # Set this section to ~null~ to skip decoder training entirely.
   #
-  # 50 epochs (was 80) is plenty: the per-block decoders are tiny
-  # ConvTranspose stacks whose MSE converges well before that, and we
-  # now have 6 blocks instead of 5, so a single decoder epoch is ~20 %
-  # heavier. Cutting epochs offsets that and trims total wall-time per
-  # ensemble model.
+  # 2 epochs, same reasoning as the classifier above: the decoders only
+  # exist to visualize per-block reconstructions, and keeping them lightly
+  # trained preserves the disagreement between ensemble members that the
+  # variance term measures. Their MSE already drops most of the way within
+  # the first couple of epochs.
   decoders:
-    epochs: 50
+    epochs: 2
     lr: 0.001
     weight_decay: 0.00001
     log_every: 1
