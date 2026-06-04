@@ -104,16 +104,19 @@ def mean_error_maps(
     images: torch.Tensor,
     recons_per_model: Sequence[Sequence[torch.Tensor]],
 ) -> dict[int, torch.Tensor]:
-    """Per-block ensemble-averaged absolute error ``mean_m |x − f̂^m_k|``.
+    """Per-block ensemble-averaged squared error ``mean_m (x − f̂^m_k)²``.
 
     ``recons_per_model`` is indexed ``[model][block]`` (each entry a
     ``(B, 3, H, W)`` reconstruction). Returns ``{k: (B, H, W)}`` where each
-    pixel is the mean over the ``M`` models of the RGB-mean absolute
+    pixel is the mean over the ``M`` models of the RGB-mean squared
     reconstruction error.
 
-    This is the L1 analogue of the ``Risk`` term: the *average of the
-    per-model error maps*, as opposed to the ``Bias`` term ``|x − f̄|``
-    which is the error of the *averaged* reconstruction.
+    This is exactly the ``Risk`` term of the decomposition: the *average of
+    the per-model error maps*, as opposed to the ``Bias`` term ``(x − f̄)²``
+    which is the error of the *averaged* reconstruction. The squared error
+    (rather than the absolute error) is what makes ``Risk = Bias + Variance``
+    hold pixel by pixel, so the gap between this map and the bias map is the
+    variance — the model disagreement.
     """
     n_models = len(recons_per_model)
     if n_models == 0:
@@ -124,10 +127,10 @@ def mean_error_maps(
         recons = torch.stack(
             [recons_per_model[m][k] for m in range(n_models)], dim=0,
         )  # (M, B, 3, H, W)
-        # Per-model absolute error, averaged over RGB -> (M, B, H, W),
+        # Per-model squared error, averaged over RGB -> (M, B, H, W),
         # then averaged over the M models -> (B, H, W).
-        ae = (images.unsqueeze(0) - recons).abs().mean(dim=2)
-        out[k] = ae.mean(dim=0)
+        se = ((images.unsqueeze(0) - recons) ** 2).mean(dim=2)
+        out[k] = se.mean(dim=0)
     return out
 
 
@@ -138,7 +141,7 @@ def sample_mean_error_maps(
     images: torch.Tensor,
     device: torch.device,
 ) -> dict[int, torch.Tensor]:
-    """Ensemble-averaged absolute error maps for a small set of samples."""
+    """Ensemble-averaged squared error maps for a small set of samples."""
     images = images.to(device, non_blocking=True)
     recons_per_model = [
         block_reconstructions(models[m], decoders_list[m], images)
@@ -152,7 +155,7 @@ def min_error_maps(
     images: torch.Tensor,
     recons_per_model: Sequence[Sequence[torch.Tensor]],
 ) -> dict[int, torch.Tensor]:
-    """Per-block ensemble *minimum* absolute error ``min_m |x − f̂^m_k|``.
+    """Per-block ensemble *minimum* squared error ``min_m (x − f̂^m_k)²``.
 
     Same inputs/shape contract as :func:`mean_error_maps`, but at every
     pixel it keeps the *smallest* per-model error instead of the average.
@@ -170,10 +173,10 @@ def min_error_maps(
         recons = torch.stack(
             [recons_per_model[m][k] for m in range(n_models)], dim=0,
         )  # (M, B, 3, H, W)
-        # Per-model absolute error, averaged over RGB -> (M, B, H, W),
+        # Per-model squared error, averaged over RGB -> (M, B, H, W),
         # then the per-pixel minimum over the M models -> (B, H, W).
-        ae = (images.unsqueeze(0) - recons).abs().mean(dim=2)
-        out[k] = ae.min(dim=0).values
+        se = ((images.unsqueeze(0) - recons) ** 2).mean(dim=2)
+        out[k] = se.min(dim=0).values
     return out
 
 
@@ -184,7 +187,7 @@ def sample_min_error_maps(
     images: torch.Tensor,
     device: torch.device,
 ) -> dict[int, torch.Tensor]:
-    """Ensemble per-pixel *minimum* absolute error maps for a few samples."""
+    """Ensemble per-pixel *minimum* squared error maps for a few samples."""
     images = images.to(device, non_blocking=True)
     recons_per_model = [
         block_reconstructions(models[m], decoders_list[m], images)
