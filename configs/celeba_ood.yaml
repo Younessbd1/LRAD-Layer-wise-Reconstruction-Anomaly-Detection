@@ -69,18 +69,18 @@ training:
   attr_loss_weight: 2.0
   log_every: 1
 
-  # --- Per-block decoders (visualization only) ---------------------------
+  # --- Per-block decoders -----------------------------------------------
   # After classifier training, freeze the classifier and train one small
   # decoder per conv block to reconstruct the input from that block's
-  # activations. These decoders are NEVER used for OOD scoring — they
-  # only feed the per_block_breakdown.png and recons_only.png plots.
-  # Set this section to ~null~ to skip decoder training entirely.
+  # activations. These reconstructions are what the anomaly score is built
+  # on: across the ensemble they drive the bias/variance decomposition
+  # (run_ensemble.py), and per model they feed the per-block plots + fused
+  # error score. Set this section to ~null~ to skip decoder training.
   #
-  # 2 epochs, same reasoning as the classifier above: the decoders only
-  # exist to visualize per-block reconstructions, and keeping them lightly
-  # trained preserves the disagreement between ensemble members that the
-  # variance term measures. Their MSE already drops most of the way within
-  # the first couple of epochs.
+  # 2 epochs, same reasoning as the classifier above: keeping the decoders
+  # lightly trained preserves the disagreement between ensemble members that
+  # the variance term measures. Their MSE already drops most of the way
+  # within the first couple of epochs.
   decoders:
     epochs: 2
     lr: 0.001
