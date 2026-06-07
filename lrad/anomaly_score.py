@@ -16,8 +16,9 @@ This module no longer performs any sigma-whitening. It provides the two
 low-level pieces still shared across the codebase:
 
   * ``_per_pixel_errors`` — the raw per-pixel reconstruction error
-    ``(x − decoder_k(activation_k))²`` of a single model, upsampled to the
-    input resolution. Used for the per-model "latent error layer" plots.
+    ``sum_RGB (x − decoder_k(activation_k))²`` of a single model (summed,
+    not averaged, over the 3 channels), upsampled to the input resolution.
+    Used for the per-model "latent error layer" plots.
   * ``_reduce_over_pixels`` / ``aggregate_anomaly_score`` — collapse a
     per-pixel map ``(B, H, W)`` to a per-image scalar ``(B,)`` and combine
     the per-block scalars into one anomaly score. Used by the ensemble
@@ -46,11 +47,12 @@ def _per_pixel_errors(
 ) -> dict[int, torch.Tensor]:
     """Raw per-pixel reconstruction error for every conv block.
 
-    ``error_k = mean_RGB (x - decoder_k(activation_k))²`` upsampled to the
+    ``error_k = sum_RGB (x - decoder_k(activation_k))²`` upsampled to the
     input resolution. Returns ``{k: (B, H, W)}`` where ``H, W`` is the
-    *image* size (64x64), not the activation size. Squared (rather than
-    absolute) error keeps every map on the same L2 footing as the ensemble
-    bias/variance decomposition.
+    *image* size (64x64), not the activation size. The L2 squared error is
+    summed (not averaged) over the 3 channels — no mean, no sqrt — so a
+    pixel lives in ``[0, 3]``, matching the ensemble bias/variance
+    decomposition.
     """
     model.eval()
     decoders.eval()
@@ -58,7 +60,7 @@ def _per_pixel_errors(
     errs: dict[int, torch.Tensor] = {}
     for k, dec in enumerate(decoders):
         recon = dec(acts[k])
-        errs[k] = ((images - recon) ** 2).mean(dim=1)  # (B, H, W)
+        errs[k] = ((images - recon) ** 2).sum(dim=1)  # (B, H, W)
     return errs
 
 
