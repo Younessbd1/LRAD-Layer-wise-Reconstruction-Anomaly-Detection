@@ -329,7 +329,7 @@ def plot_fusion_overlay(
 
         Original  Err L0  Err L1  ...  Err Ln  Fused (max)  Overlay
 
-    where ``err_map_k = (x − recon_k)²`` averaged over RGB, the fused map
+    where ``err_map_k = (x − recon_k)²`` summed over RGB, the fused map
     is the per-pixel max across all blocks, and the overlay renders the
     fused heatmap on top of the original image. The scalar anomaly score
     annotated under each fused tile is ``fused.max()`` — the most
@@ -570,40 +570,34 @@ def _stat_np(t) -> np.ndarray:
     return np.asarray(t, dtype=np.float32)
 
 
-def plot_mean_abs_bias(
+def _block_heatmap_grid(
     images: torch.Tensor,
-    mean_recons: Sequence[torch.Tensor],
+    block_maps: Sequence,
     save_path: str | Path,
     *,
+    col_titles: Sequence[str],
+    cbar_label: str,
+    cmap: str = "viridis",
+    annot_fmt: str = "{:.3f}",
     row_labels: Iterable[str] | None = None,
     title: str | None = None,
 ) -> None:
-    """Per-block ``(x − f̄_k)²`` heatmaps of the ensemble-mean reconstruction.
+    """Original image + one per-block heatmap column, one row per sample.
 
-    ``mean_recons`` is the list of per-block ensemble-mean reconstructions
-    ``f̄_k`` (each ``(B, 3, H, W)``). For every sample one row is drawn::
-
-        Original | (x − f̄_L0)² | (x − f̄_L1)² | ... | (x − f̄_Ln)²
-
-    This is the Bias term of the decomposition — the squared error of the
-    consensus model. The colour scale is fixed to ``[0, 3]`` (no per-figure
-    normalization) so figures are comparable, with a single colour bar; each
-    tile is annotated with its mean. ID rows should be dim everywhere while
-    OOD rows light up on the anomaly (e.g. eyeglasses).
+    ``block_maps`` is one ``(B, H, W)`` map per displayed block (already
+    sliced to the sample rows). Every tile shares the fixed ``[0, 3]`` error
+    scale — images live in ``[0, 1]`` so the RGB-summed squared error lives
+    in ``[0, 3]`` — so any two figures are comparable; one colour bar sits on
+    the right and each tile is annotated with its mean. Shared backend for
+    the bias / mean-error / min-error / variance heatmap figures.
     """
     import matplotlib.patheffects as pe
 
     images_np = _to_image_grid(images)
-    recons_np = [_to_image_grid(r) for r in mean_recons]
     n_rows = images_np.shape[0]
-    n_blocks = len(recons_np)
+    n_blocks = len(block_maps)
     n_cols = 1 + n_blocks
-
-    err_maps: list[list[np.ndarray]] = []
-    for r in range(n_rows):
-        row = [_sq_error(images_np[r], recons_np[j][r])
-               for j in range(n_blocks)]
-        err_maps.append(row)
+    maps_np = [_stat_np(m) for m in block_maps]
     vmax = 3.0
 
     fig, axes = plt.subplots(
@@ -625,15 +619,15 @@ def plot_mean_abs_bias(
         if labels[r] is not None:
             _row_label(ax, labels[r])
 
-        for j in range(n_blocks):
-            ax_e = axes[r, 1 + j]
-            e = err_maps[r][j]
-            im = ax_e.imshow(e, cmap="viridis", vmin=0.0, vmax=vmax)
+        for bi in range(n_blocks):
+            ax_e = axes[r, 1 + bi]
+            e = maps_np[bi][r]
+            im = ax_e.imshow(e, cmap=cmap, vmin=0.0, vmax=vmax)
             _bare(ax_e)
             if r == 0:
-                ax_e.set_title(f"(x − f̄)² L{j}", fontsize=_LABEL_FS)
+                ax_e.set_title(col_titles[bi], fontsize=_LABEL_FS)
             ax_e.text(
-                0.5, 0.04, f"{float(e.mean()):.3f}",
+                0.5, 0.04, annot_fmt.format(float(e.mean())),
                 transform=ax_e.transAxes, ha="center", va="bottom",
                 fontsize=8.0, color="white", path_effects=text_pe,
             )
@@ -643,13 +637,47 @@ def plot_mean_abs_bias(
             im, ax=axes[:, 1:].ravel().tolist(),
             location="right", shrink=0.85, pad=0.015, aspect=30,
         )
-        cbar.set_label("(x − f̄)²  (sum over RGB)", fontsize=_LABEL_FS)
+        cbar.set_label(cbar_label, fontsize=_LABEL_FS)
         cbar.ax.tick_params(labelsize=_TICK_FS)
 
     if title:
         fig.suptitle(title, fontsize=_TITLE_FS)
     fig.savefig(save_path, dpi=150, bbox_inches="tight")
     plt.close(fig)
+
+
+def plot_mean_abs_bias(
+    images: torch.Tensor,
+    mean_recons: Sequence[torch.Tensor],
+    save_path: str | Path,
+    *,
+    row_labels: Iterable[str] | None = None,
+    title: str | None = None,
+) -> None:
+    """Per-block ``(x − f̄_k)²`` heatmaps of the ensemble-mean reconstruction.
+
+    ``mean_recons`` is the list of per-block ensemble-mean reconstructions
+    ``f̄_k`` (each ``(B, 3, H, W)``). For every sample one row is drawn::
+
+        Original | (x − f̄_L0)² | (x − f̄_L1)² | ... | (x − f̄_Ln)²
+
+    This is the Bias term of the decomposition — the squared error of the
+    consensus model. The colour scale is fixed to ``[0, 3]`` (no per-figure
+    normalization) so figures are comparable, with a single colour bar; each
+    tile is annotated with its mean. ID rows should be dim everywhere while
+    OOD rows light up on the anomaly (e.g. eyeglasses).
+    """
+    images_np = _to_image_grid(images)
+    recons_np = [_to_image_grid(r) for r in mean_recons]
+    # bias term per block: squared error of the ensemble-mean recon
+    block_maps = [_sq_error(images_np, recons_np[j])
+                  for j in range(len(recons_np))]
+    _block_heatmap_grid(
+        images, block_maps, save_path,
+        col_titles=[f"(x − f̄)² L{j}" for j in range(len(recons_np))],
+        cbar_label="(x − f̄)²  (sum over RGB)",
+        row_labels=row_labels, title=title,
+    )
 
 
 def plot_mean_error_maps(
@@ -675,62 +703,13 @@ def plot_mean_error_maps(
     normalization) so figures are comparable, with a single colour bar; each
     tile is annotated with its mean.
     """
-    import matplotlib.patheffects as pe
-
-    images_np = _to_image_grid(images)
-    n_rows = images_np.shape[0]
     blocks = sorted(error_maps.keys())
-    n_blocks = len(blocks)
-    n_cols = 1 + n_blocks
-
-    np_err = {k: _stat_np(error_maps[k]) for k in blocks}
-    vmax = 3.0
-
-    fig, axes = plt.subplots(
-        n_rows, n_cols,
-        figsize=(1.4 * n_cols + 0.8, 1.55 * n_rows + 0.3),
-        layout="constrained",
-        squeeze=False,
+    _block_heatmap_grid(
+        images, [error_maps[k] for k in blocks], save_path,
+        col_titles=[f"Err L{k}" for k in blocks],
+        cbar_label="mean_m (x − f̂^m)²  (sum over RGB)",
+        row_labels=row_labels, title=title,
     )
-    labels = list(row_labels) if row_labels is not None else [None] * n_rows
-    text_pe = [pe.withStroke(linewidth=1.6, foreground="black")]
-    im = None
-
-    for r in range(n_rows):
-        ax = axes[r, 0]
-        ax.imshow(images_np[r])
-        _bare(ax)
-        if r == 0:
-            ax.set_title("Original", fontsize=_LABEL_FS)
-        if labels[r] is not None:
-            _row_label(ax, labels[r])
-
-        for bi, k in enumerate(blocks):
-            ax_e = axes[r, 1 + bi]
-            e = np_err[k][r]
-            im = ax_e.imshow(e, cmap="viridis", vmin=0.0, vmax=vmax)
-            _bare(ax_e)
-            if r == 0:
-                ax_e.set_title(f"Err L{k}", fontsize=_LABEL_FS)
-            ax_e.text(
-                0.5, 0.04, f"{float(e.mean()):.3f}",
-                transform=ax_e.transAxes, ha="center", va="bottom",
-                fontsize=8.0, color="white", path_effects=text_pe,
-            )
-
-    if im is not None:
-        cbar = fig.colorbar(
-            im, ax=axes[:, 1:].ravel().tolist(),
-            location="right", shrink=0.85, pad=0.015, aspect=30,
-        )
-        cbar.set_label("mean_m (x − f̂^m)²  (sum over RGB)",
-                       fontsize=_LABEL_FS)
-        cbar.ax.tick_params(labelsize=_TICK_FS)
-
-    if title:
-        fig.suptitle(title, fontsize=_TITLE_FS)
-    fig.savefig(save_path, dpi=150, bbox_inches="tight")
-    plt.close(fig)
 
 
 def plot_min_error_maps(
@@ -756,62 +735,13 @@ def plot_min_error_maps(
     is fixed to ``[0, 3]`` (no per-figure normalization) so figures are
     comparable, with a single colour bar; each is annotated with its mean.
     """
-    import matplotlib.patheffects as pe
-
-    images_np = _to_image_grid(images)
-    n_rows = images_np.shape[0]
     blocks = sorted(error_maps.keys())
-    n_blocks = len(blocks)
-    n_cols = 1 + n_blocks
-
-    np_err = {k: _stat_np(error_maps[k]) for k in blocks}
-    vmax = 3.0
-
-    fig, axes = plt.subplots(
-        n_rows, n_cols,
-        figsize=(1.4 * n_cols + 0.8, 1.55 * n_rows + 0.3),
-        layout="constrained",
-        squeeze=False,
+    _block_heatmap_grid(
+        images, [error_maps[k] for k in blocks], save_path,
+        col_titles=[f"Err L{k}" for k in blocks],
+        cbar_label="min_m (x − f̂^m)²  (sum over RGB)",
+        row_labels=row_labels, title=title,
     )
-    labels = list(row_labels) if row_labels is not None else [None] * n_rows
-    text_pe = [pe.withStroke(linewidth=1.6, foreground="black")]
-    im = None
-
-    for r in range(n_rows):
-        ax = axes[r, 0]
-        ax.imshow(images_np[r])
-        _bare(ax)
-        if r == 0:
-            ax.set_title("Original", fontsize=_LABEL_FS)
-        if labels[r] is not None:
-            _row_label(ax, labels[r])
-
-        for bi, k in enumerate(blocks):
-            ax_e = axes[r, 1 + bi]
-            e = np_err[k][r]
-            im = ax_e.imshow(e, cmap="viridis", vmin=0.0, vmax=vmax)
-            _bare(ax_e)
-            if r == 0:
-                ax_e.set_title(f"Err L{k}", fontsize=_LABEL_FS)
-            ax_e.text(
-                0.5, 0.04, f"{float(e.mean()):.3f}",
-                transform=ax_e.transAxes, ha="center", va="bottom",
-                fontsize=8.0, color="white", path_effects=text_pe,
-            )
-
-    if im is not None:
-        cbar = fig.colorbar(
-            im, ax=axes[:, 1:].ravel().tolist(),
-            location="right", shrink=0.85, pad=0.015, aspect=30,
-        )
-        cbar.set_label("min_m (x − f̂^m)²  (sum over RGB)",
-                       fontsize=_LABEL_FS)
-        cbar.ax.tick_params(labelsize=_TICK_FS)
-
-    if title:
-        fig.suptitle(title, fontsize=_TITLE_FS)
-    fig.savefig(save_path, dpi=150, bbox_inches="tight")
-    plt.close(fig)
 
 
 def plot_variance_heatmaps(
@@ -838,62 +768,14 @@ def plot_variance_heatmaps(
     by the risk so it shares the ``[0, 3]`` image-error scale, though in
     practice it stays small.
     """
-    import matplotlib.patheffects as pe
-
-    images_np = _to_image_grid(images)
-    n_rows = images_np.shape[0]
     blocks = sorted(maps.keys())
-    n_blocks = len(blocks)
-    n_cols = 1 + n_blocks
-
-    np_var = {k: _stat_np(maps[k]["variance"]) for k in blocks}
-    vmax = 3.0
-
-    fig, axes = plt.subplots(
-        n_rows, n_cols,
-        figsize=(1.4 * n_cols + 0.8, 1.55 * n_rows + 0.3),
-        layout="constrained",
-        squeeze=False,
+    _block_heatmap_grid(
+        images, [maps[k]["variance"] for k in blocks], save_path,
+        col_titles=[f"Var L{k}" for k in blocks],
+        cbar_label="ensemble variance  (sum over RGB)",
+        cmap="magma", annot_fmt="{:.4f}",
+        row_labels=row_labels, title=title,
     )
-    labels = list(row_labels) if row_labels is not None else [None] * n_rows
-    text_pe = [pe.withStroke(linewidth=1.6, foreground="black")]
-    im = None
-
-    for r in range(n_rows):
-        ax = axes[r, 0]
-        ax.imshow(images_np[r])
-        _bare(ax)
-        if r == 0:
-            ax.set_title("Original", fontsize=_LABEL_FS)
-        if labels[r] is not None:
-            _row_label(ax, labels[r])
-
-        for bi, k in enumerate(blocks):
-            ax_v = axes[r, 1 + bi]
-            v = np_var[k][r]
-            im = ax_v.imshow(v, cmap="magma", vmin=0.0, vmax=vmax)
-            _bare(ax_v)
-            if r == 0:
-                ax_v.set_title(f"Var L{k}", fontsize=_LABEL_FS)
-            ax_v.text(
-                0.5, 0.04, f"{float(v.mean()):.4f}",
-                transform=ax_v.transAxes, ha="center", va="bottom",
-                fontsize=8.0, color="white", path_effects=text_pe,
-            )
-
-    if im is not None:
-        cbar = fig.colorbar(
-            im, ax=axes[:, 1:].ravel().tolist(),
-            location="right", shrink=0.85, pad=0.015, aspect=30,
-        )
-        cbar.set_label("ensemble variance  (sum over RGB)",
-                       fontsize=_LABEL_FS)
-        cbar.ax.tick_params(labelsize=_TICK_FS)
-
-    if title:
-        fig.suptitle(title, fontsize=_TITLE_FS)
-    fig.savefig(save_path, dpi=150, bbox_inches="tight")
-    plt.close(fig)
 
 
 def _mean_std_over_blocks(
