@@ -3,11 +3,12 @@
 Two stages live here:
 
 1. ``train_model`` — supervised training of the multi-head classifier
-   on combined CE(gender) + BCE(attrs) loss. This is the OOD detector.
-2. ``train_decoders`` — pure-visualization stage. Freezes the classifier
-   and trains one ``BlockDecoder`` per conv block to reconstruct the
-   input from that block's activations (MSE loss). The decoders are
-   never used for OOD scoring; they only feed the per-block plots.
+   on combined CE(gender) + BCE(attrs) loss.
+2. ``train_decoders`` — freezes the classifier and trains one
+   ``BlockDecoder`` per conv block to reconstruct the input from that
+   block's activations (MSE loss). The reconstructions drive the ensemble
+   bias/variance decomposition (the project's anomaly score) and the
+   per-block plots.
 """
 
 from __future__ import annotations
@@ -249,7 +250,7 @@ def train_model(
 
 
 # ---------------------------------------------------------------------------
-# Decoder training (visualization only)
+# Decoder training (per-block reconstruction)
 # ---------------------------------------------------------------------------
 
 @torch.no_grad()
