@@ -169,9 +169,9 @@ def _compute_fusion_scores(model, decoders, loader, device) -> np.ndarray:
         img = batch[0].to(device, non_blocking=True)
         _, acts = model.forward_features(img)
         recons = [d(acts[k]) for k, d in enumerate(decoders)]
-        # Per-block pixel squared error, mean over RGB → (B, H, W)
+        # Per-block pixel squared error, summed over RGB → (B, H, W)
         errs = torch.stack(
-            [((img - r) ** 2).mean(dim=1) for r in recons], dim=0,
+            [((img - r) ** 2).sum(dim=1) for r in recons], dim=0,
         )  # (n_blocks, B, H, W)
         fused, _ = errs.max(dim=0)        # (B, H, W) — per-pixel max
         s = fused.flatten(1).max(dim=1).values  # (B,) — most surprising pixel
