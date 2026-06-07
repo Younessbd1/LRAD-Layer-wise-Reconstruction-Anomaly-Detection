@@ -272,6 +272,7 @@ ensemble/summary.json AUROCs par modèle + décomposition, résidu d'identité,
 ensemble/plots/       ensemble_decomposition · decomposition_auroc
                       ensemble_score_hists · mean_recon_breakdown
                       mean_recons_only · mean_abs_bias
+                      mean_error_maps · min_error_maps
                       variance_heatmaps_{ood,all}
                       bias_variance_vs_{block,percentile}
 logs/ · config.resolved.yaml
