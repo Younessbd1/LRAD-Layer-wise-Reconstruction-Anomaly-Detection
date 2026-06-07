@@ -18,7 +18,7 @@ low-level pieces still shared across the codebase:
   * ``_per_pixel_errors`` — the raw per-pixel reconstruction error
     ``sum_RGB (x − decoder_k(activation_k))²`` of a single model (summed,
     not averaged, over the 3 channels), upsampled to the input resolution.
-    Used for the per-model "latent error layer" plots.
+    Backs the single-model fused error score in ``scripts/run_celeba.py``.
   * ``_reduce_over_pixels`` / ``aggregate_anomaly_score`` — collapse a
     per-pixel map ``(B, H, W)`` to a per-image scalar ``(B,)`` and combine
     the per-block scalars into one anomaly score. Used by the ensemble
