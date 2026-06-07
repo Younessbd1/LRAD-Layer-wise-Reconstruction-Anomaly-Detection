@@ -47,6 +47,7 @@ _ROOT = Path(__file__).resolve().parent.parent
 if str(_ROOT) not in sys.path:
     sys.path.insert(0, str(_ROOT))
 
+from lrad.anomaly_score import _per_pixel_errors
 from lrad.dataset import get_celeba_loaders
 from lrad.decoder import build_decoders
 from lrad.evaluate import evaluate
@@ -162,18 +163,14 @@ def _plot_score_distribution(
 def _compute_fusion_scores(model, decoders, loader, device) -> np.ndarray:
     """Per-image fused anomaly score = max of per-pixel max over per-block
     error maps. Returns shape (N,) over the full loader."""
-    model.eval()
-    decoders.eval()
     scores: list[np.ndarray] = []
     for batch in loader:
         img = batch[0].to(device, non_blocking=True)
-        _, acts = model.forward_features(img)
-        recons = [d(acts[k]) for k, d in enumerate(decoders)]
-        # Per-block pixel squared error, summed over RGB → (B, H, W)
+        errs_by_block = _per_pixel_errors(model, decoders, img)  # {k: (B,H,W)}
         errs = torch.stack(
-            [((img - r) ** 2).sum(dim=1) for r in recons], dim=0,
+            [errs_by_block[k] for k in sorted(errs_by_block)], dim=0,
         )  # (n_blocks, B, H, W)
-        fused, _ = errs.max(dim=0)        # (B, H, W) — per-pixel max
+        fused = errs.max(dim=0).values          # (B, H, W) — per-pixel max
         s = fused.flatten(1).max(dim=1).values  # (B,) — most surprising pixel
         scores.append(s.cpu().numpy())
     return np.concatenate(scores) if scores else np.zeros(0)
@@ -328,7 +325,7 @@ def build_and_run(
         with open(output_dir / "history.json", "w") as f:
             json.dump(_to_jsonable(history), f, indent=2)
 
-    # --- Decoders (visualization only) ---
+    # --- Per-block decoders ---
     image_size = cfg.get("dataset", {}).get("image_size", 64)
     decoders = build_decoders(model, image_size=image_size).to(device)
     dec_history: dict | None = None
@@ -348,7 +345,7 @@ def build_and_run(
             decoders = None  # type: ignore[assignment]
     elif dec_cfg:
         logger.info("=" * 70)
-        logger.info("PHASE 2 — training per-block decoders (visualization)")
+        logger.info("PHASE 2 — training per-block reconstruction decoders")
         logger.info("=" * 70)
         for k, d in enumerate(decoders):
             logger.info(
@@ -382,11 +379,11 @@ def build_and_run(
     logger.info("=" * 70)
     results = evaluate(model, loaders, device)
 
-    # The bias/variance anomaly score is an *ensemble* quantity (it needs
-    # the spread across independently trained models) and lives in
-    # ``scripts/run_ensemble.py``. A single model here only reports the
-    # classifier OOD scores (msp / entropy) plus the raw per-block
-    # reconstruction-error plots below.
+    # The headline bias/variance anomaly score needs the spread across
+    # independently trained models, so it lives in run_ensemble.py. A single
+    # model here reports the classifier OOD scores (msp / entropy) plus a
+    # fused per-block reconstruction-error score (computed with the plots
+    # below).
 
     # --- Plots ---
     if not no_plots:
@@ -406,7 +403,7 @@ def build_and_run(
             )
         _plot_roc(results["auroc"], plot_dir / "roc_ood.png")
 
-        # --- Per-block reconstruction plots (visualization only) ----------
+        # --- Per-block reconstruction plots + fused error score -----------
         if decoders is not None:
             ecfg = cfg.get("evaluation", {})
             n_viz_in = int(ecfg.get(
