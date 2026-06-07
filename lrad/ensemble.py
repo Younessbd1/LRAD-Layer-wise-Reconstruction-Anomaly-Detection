@@ -8,8 +8,10 @@ full classifier + per-block decoders, so each yields its own
 reconstruction ``f_hat^m`` of the input image.
 
 For a conv block ``k``, an image ``x`` and a pixel ``i`` (the per-pixel
-value is the RGB mean), with the ``M`` reconstructions ``f_hat^m`` and
-their ensemble mean ``f_bar = (1/M) * sum_m f_hat^m``::
+error is the L2 squared error summed over the RGB channels,
+``sum_c ( x_c - f_c )^2`` — no mean, no sqrt, so a pixel lives in
+``[0, 3]``), with the ``M`` reconstructions ``f_hat^m`` and their ensemble
+mean ``f_bar = (1/M) * sum_m f_hat^m``::
 
     Risk_k(x)[i]      = (1/M) * sum_m ( x[i] - f_hat^m(x)[i] )^2
     Bias_k(x)[i]      = ( x[i] - f_bar(x)[i] )^2
@@ -69,7 +71,7 @@ def decomposition_maps(
     ``recons_per_model`` is indexed ``[model][block]`` and every entry is
     a ``(B, 3, H, W)`` reconstruction. Returns ``{k: {...}}`` where each
     block ``k`` holds the ``risk``, ``bias`` and ``variance`` maps of
-    shape ``(B, H, W)`` (averaged over RGB) plus the ensemble-mean
+    shape ``(B, H, W)`` (summed over RGB) plus the ensemble-mean
     reconstruction ``mean_recon`` ``(B, 3, H, W)``. The three maps
     satisfy ``risk == bias + variance`` per pixel up to float error.
     """
@@ -83,12 +85,16 @@ def decomposition_maps(
             [recons_per_model[m][k] for m in range(n_models)], dim=0,
         )  # (M, B, 3, H, W)
         mean_recon = recons.mean(dim=0)  # (B, 3, H, W)
-        # Per-model squared error, averaged over RGB -> (M, B, H, W).
-        se_per_model = ((images.unsqueeze(0) - recons) ** 2).mean(dim=2)
+        # Per-model squared error, summed over RGB -> (M, B, H, W). The L2
+        # squared error per pixel is sum_c (x_c - f_c)^2 (no mean, no sqrt),
+        # so a pixel lives in [0, 3] for 3 channels. Summing (not averaging)
+        # over RGB keeps the exact Risk = Bias + Variance identity, which
+        # holds channel by channel and therefore survives the channel sum.
+        se_per_model = ((images.unsqueeze(0) - recons) ** 2).sum(dim=2)
         risk = se_per_model.mean(dim=0)  # (B, H, W)
-        bias = ((images - mean_recon) ** 2).mean(dim=1)  # (B, H, W)
+        bias = ((images - mean_recon) ** 2).sum(dim=1)  # (B, H, W)
         variance = (
-            ((recons - mean_recon.unsqueeze(0)) ** 2).mean(dim=2).mean(dim=0)
+            ((recons - mean_recon.unsqueeze(0)) ** 2).sum(dim=2).mean(dim=0)
         )  # (B, H, W)
         out[k] = {
             "risk": risk,
@@ -108,8 +114,9 @@ def mean_error_maps(
 
     ``recons_per_model`` is indexed ``[model][block]`` (each entry a
     ``(B, 3, H, W)`` reconstruction). Returns ``{k: (B, H, W)}`` where each
-    pixel is the mean over the ``M`` models of the RGB-mean squared
-    reconstruction error.
+    pixel is the mean over the ``M`` models of the RGB-summed squared
+    reconstruction error ``sum_c ( x_c − f̂^m_c )²`` (a pixel lives in
+    ``[0, 3]``).
 
     This is exactly the ``Risk`` term of the decomposition: the *average of
     the per-model error maps*, as opposed to the ``Bias`` term ``(x − f̄)²``
@@ -127,9 +134,9 @@ def mean_error_maps(
         recons = torch.stack(
             [recons_per_model[m][k] for m in range(n_models)], dim=0,
         )  # (M, B, 3, H, W)
-        # Per-model squared error, averaged over RGB -> (M, B, H, W),
+        # Per-model squared error, summed over RGB -> (M, B, H, W),
         # then averaged over the M models -> (B, H, W).
-        se = ((images.unsqueeze(0) - recons) ** 2).mean(dim=2)
+        se = ((images.unsqueeze(0) - recons) ** 2).sum(dim=2)
         out[k] = se.mean(dim=0)
     return out
 
@@ -173,9 +180,9 @@ def min_error_maps(
         recons = torch.stack(
             [recons_per_model[m][k] for m in range(n_models)], dim=0,
         )  # (M, B, 3, H, W)
-        # Per-model squared error, averaged over RGB -> (M, B, H, W),
+        # Per-model squared error, summed over RGB -> (M, B, H, W),
         # then the per-pixel minimum over the M models -> (B, H, W).
-        se = ((images.unsqueeze(0) - recons) ** 2).mean(dim=2)
+        se = ((images.unsqueeze(0) - recons) ** 2).sum(dim=2)
         out[k] = se.min(dim=0).values
     return out
 
