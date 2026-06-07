@@ -1,6 +1,7 @@
 """From-scratch CNN with two task heads for CelebA OOD detection.
 
-Architecture (5 conv blocks, no pretrained weights)::
+Trunk depth follows ``channels``; the default 5-block layout is shown
+below (no pretrained weights)::
 
     Input (B, 3, 64, 64)
       Block1: Conv3x3(3 -> 32)  + BN + ReLU + MaxPool2x2  -> (32, 32, 32)
