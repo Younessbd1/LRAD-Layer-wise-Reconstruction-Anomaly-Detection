@@ -1,0 +1,229 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg id="diagram" class="diagram theme-light" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1060 1010" role="img" aria-label="Architecture des décodeurs par bloc — 6 BlockDecoders reconstruisant des images 3x64x64 depuis les activations gelées d'un classifieur FacialCNN." data-om-id="27644449:26" xmlns:xlink="http://www.w3.org/1999/xlink" width="1060" height="1010">
+        <style>
+          @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&amp;family=IBM+Plex+Sans:wght@400;500;600;700&amp;display=swap');
+          /* ---------- THEME TOKENS ---------- */
+          .diagram{
+            --paper:#FBFCFE; --card:#FFFFFF; --surface-2:#F3F5FA;
+            --ink-900:#101726; --ink-700:#37425A; --ink-600:#4B566E;
+            --ink-500:#65718B; --ink-400:#98A2B5; --line:#E5EAF2;
+            --indigo:#4F46E5; --indigo-600:#4338CA; --indigo-deep:#312E81; --indigo-tint:#EEEFFE;
+            --violet:#6D28D9; --violet-ink:#6D28D9;
+            --amber:#C46A0E; --amber-ink:#8C4A07; --amber-tint:#FCF3E5;
+            --emerald:#0E9F6E; --emerald-ink:#067A53; --emerald-tint:#E7F7F0;
+            --on-dark:#F4F7FC; --on-dark-dim:#AAB5C9;
+            --on-indigo-dim:#C9CDF7; --on-violet-dim:#DDD2F6;
+            --shadow:#0B1220;
+          }
+          .diagram.theme-dark{
+            --paper:#0A0F1E; --card:#131B2D; --surface-2:#172034;
+            --ink-900:#EAF0FB; --ink-700:#C5CEDE; --ink-600:#AEB8CA;
+            --ink-500:#8893A8; --ink-400:#5F6B82; --line:#27314B;
+            --indigo:#6366F1; --indigo-600:#4F46E5; --indigo-deep:#1E1B4B; --indigo-tint:#1C2342;
+            --violet:#8B5CF6; --violet-ink:#B79BF2;
+            --amber:#E0903F; --amber-ink:#E8AA61; --amber-tint:#2A2113;
+            --emerald:#10B981; --emerald-ink:#5FD7A8; --emerald-tint:#0F2A22;
+            --on-dark:#F4F7FC; --on-dark-dim:#9AA6BC;
+            --on-indigo-dim:#CDD0FB; --on-violet-dim:#E2D8FA;
+            --shadow:#000000;
+          }
+          /* ---------- TYPE ---------- */
+          text{font-family:'IBM Plex Sans',system-ui,sans-serif;}
+          .mono{font-family:'IBM Plex Mono',ui-monospace,monospace;}
+          .t-kicker{font-family:'IBM Plex Mono',monospace;font-size:12px;font-weight:600;fill:var(--indigo);letter-spacing:.22em;}
+          .t-title{font-size:25px;font-weight:600;fill:var(--ink-900);letter-spacing:-.012em;}
+          .t-sub{font-size:13px;fill:var(--ink-500);}
+          .t-clf{font-size:14px;font-weight:600;fill:var(--on-dark);}
+          .t-clf-sub{font-size:11.5px;fill:var(--on-dark-dim);}
+          .t-act{font-size:10px;font-weight:500;fill:var(--ink-500);}
+          .t-dec{font-size:12.5px;font-weight:600;fill:#fff;letter-spacing:-.005em;}
+          .t-n{font-size:9px;font-weight:600;fill:#fff;letter-spacing:.04em;}
+          .t-in{font-size:10.5px;font-weight:600;fill:var(--amber-ink);}
+          .t-main{font-size:10px;font-weight:500;fill:var(--ink-900);}
+          .t-chain{font-size:9px;fill:var(--ink-600);}
+          .t-dim{font-size:8.5px;fill:var(--ink-400);}
+          .t-out{font-size:10px;font-weight:600;fill:var(--emerald-ink);}
+          .t-conv{font-size:10px;font-weight:600;fill:var(--violet-ink);}
+          .t-detail{font-size:14px;font-weight:600;fill:#fff;letter-spacing:-.005em;}
+          .t-step{font-size:11.5px;font-weight:600;fill:#fff;}
+          .t-step-sub{font-size:11px;fill:var(--on-indigo-dim);}
+          .t-final{font-size:12px;font-weight:600;fill:#fff;}
+          .t-final-sub{font-size:11px;fill:var(--on-violet-dim);}
+          .t-note-h{font-size:9px;font-weight:600;fill:var(--ink-400);letter-spacing:.16em;}
+          .t-note{font-size:10px;fill:var(--ink-700);}
+          .t-note-dim{font-size:9px;fill:var(--ink-500);}
+          .t-ladder{font-size:9px;fill:var(--ink-500);}
+          .t-legend{font-size:10.5px;fill:var(--ink-700);}
+          .t-foot{font-size:9.5px;fill:var(--ink-400);}
+          /* ---------- SHAPES ---------- */
+          .bg{fill:var(--paper);}
+          .rule-top{fill:url(#g-accent);}
+          .divider{stroke:var(--line);stroke-width:2;}
+          .hair{stroke:var(--line);stroke-width:1.5;}
+          .clf{fill:url(#g-clf);}
+          .lock{stroke:var(--on-dark-dim);stroke-width:1.5;fill:none;}
+          .lock-dot{fill:var(--on-dark-dim);}
+          .dec-card{fill:var(--card);stroke:var(--line);stroke-width:2;}
+          .dec-head{fill:url(#g-dec);}
+          .npill{fill:var(--indigo-deep);}
+          .in-pill{fill:var(--amber-tint);stroke:var(--amber);stroke-width:1.5;}
+          .sub-box{fill:var(--indigo-tint);}
+          .recon{fill:var(--emerald-tint);stroke:var(--emerald);stroke-width:1.5;}
+          .detail-card{fill:var(--card);stroke:var(--line);stroke-width:2;}
+          .detail-head{fill:url(#g-detail);}
+          .notes-panel{fill:var(--surface-2);stroke:var(--line);stroke-width:1.5;}
+          .input-detail{fill:var(--amber-tint);stroke:var(--amber);stroke-width:1.5;}
+          .step{fill:url(#g-step);}
+          .final{fill:url(#g-final);}
+          .ladder-sq{fill:var(--indigo);opacity:.16;stroke:var(--indigo);stroke-width:1.5;}
+          .legend-bar{fill:var(--surface-2);stroke:var(--line);stroke-width:1.5;}
+          .sw-indigo{fill:var(--indigo);} .sw-amber{fill:var(--amber);}
+          .sw-violet{fill:var(--violet);} .sw-emerald{fill:var(--emerald);}
+          .flow{stroke:var(--ink-400);stroke-width:2;fill:none;}
+          .arrow-head{fill:var(--ink-400);}
+          /* gradient stops */
+          .gs-acc0{stop-color:var(--indigo);} .gs-acc1{stop-color:var(--violet);}
+          .gs-clf0{stop-color:#1B2238;} .gs-clf1{stop-color:#0E1626;}
+          .gs-dec0{stop-color:var(--indigo);} .gs-dec1{stop-color:var(--indigo-600);}
+          .gs-det0{stop-color:var(--indigo-600);} .gs-det1{stop-color:var(--violet);}
+          .gs-step0{stop-color:var(--indigo);} .gs-step1{stop-color:var(--indigo-600);}
+          .gs-fin0{stop-color:var(--violet);} .gs-fin1{stop-color:#4C1D95;}
+        </style>
+
+        <defs data-om-id="27644449:27">
+          <linearGradient id="g-accent" x1="0" y1="0" x2="1" y2="0" data-om-id="27644449:28">
+            <stop offset="0%" class="gs-acc0" data-om-id="27644449:29"/><stop offset="100%" class="gs-acc1" data-om-id="27644449:30"/>
+          </linearGradient>
+          <linearGradient id="g-clf" x1="0" y1="0" x2="0" y2="1" data-om-id="27644449:31">
+            <stop offset="0%" class="gs-clf0" data-om-id="27644449:32"/><stop offset="100%" class="gs-clf1" data-om-id="27644449:33"/>
+          </linearGradient>
+          <linearGradient id="g-dec" x1="0" y1="0" x2="0" y2="1" data-om-id="27644449:34">
+            <stop offset="0%" class="gs-dec0" data-om-id="27644449:35"/><stop offset="100%" class="gs-dec1" data-om-id="27644449:36"/>
+          </linearGradient>
+          <linearGradient id="g-detail" x1="0" y1="0" x2="1" y2="0" data-om-id="27644449:37">
+            <stop offset="0%" class="gs-det0" data-om-id="27644449:38"/><stop offset="100%" class="gs-det1" data-om-id="27644449:39"/>
+          </linearGradient>
+          <linearGradient id="g-step" x1="0" y1="0" x2="1" y2="0" data-om-id="27644449:40">
+            <stop offset="0%" class="gs-step0" data-om-id="27644449:41"/><stop offset="100%" class="gs-step1" data-om-id="27644449:42"/>
+          </linearGradient>
+          <linearGradient id="g-final" x1="0" y1="0" x2="1" y2="0" data-om-id="27644449:43">
+            <stop offset="0%" class="gs-fin0" data-om-id="27644449:44"/><stop offset="100%" class="gs-fin1" data-om-id="27644449:45"/>
+          </linearGradient>
+          <filter id="shadow" x="-10%" y="-10%" width="120%" height="135%" data-om-id="27644449:46">
+            <feDropShadow dx="0" dy="3" stdDeviation="6" flood-color="var(--shadow)" flood-opacity="0.13" data-om-id="27644449:47"/>
+          </filter>
+          <filter id="shadow-sm" x="-12%" y="-12%" width="124%" height="140%" data-om-id="27644449:48">
+            <feDropShadow dx="0" dy="2" stdDeviation="4" flood-color="var(--shadow)" flood-opacity="0.12" data-om-id="27644449:49"/>
+          </filter>
+          <marker id="arr" markerWidth="9" markerHeight="9" refX="6.5" refY="3" orient="auto" data-om-id="27644449:50">
+            <path d="M0,0 L7,3 L0,6 Z" class="arrow-head" data-om-id="27644449:51"/>
+          </marker>
+        </defs>
+
+        <!-- ===== background ===== -->
+        <rect class="bg" x="0" y="0" width="1060" height="1010" data-om-id="27644449:52"/>
+        <rect class="rule-top" x="0" y="0" width="1060" height="6" data-om-id="27644449:53"/>
+
+        <!-- ===== header ===== -->
+        <g id="header" data-om-id="27644449:54">
+          <text class="t-kicker" x="530" y="38" text-anchor="middle" data-om-id="27644449:55">LRAD · BLOCKDECODER</text>
+          <text class="t-title" x="530" y="68" text-anchor="middle" data-om-id="27644449:56">Architecture des Décodeurs par Bloc</text>
+          <text class="t-sub" x="530" y="91" text-anchor="middle" data-om-id="27644449:57">6 BlockDecoders — reconstruction depuis les activations gelées du classifieur · 2×2→64×64 et 32×32→64×64</text>
+          <line class="hair" x1="32" y1="108" x2="1028" y2="108" data-om-id="27644449:58"/>
+        </g>
+
+        <!-- ===== classifier source ===== -->
+        <g id="classifier" data-om-id="27644449:59">
+          <rect class="clf" x="32" y="124" width="996" height="56" rx="12" filter="url(#shadow)" data-om-id="27644449:60"/>
+          <g data-om-id="27644449:61">
+            <rect class="lock" x="58" y="150" width="18" height="13" rx="2.5" data-om-id="27644449:62"/>
+            <path class="lock" d="M61 150 Q61 143 67 143 Q73 143 73 150" data-om-id="27644449:63"/>
+            <circle class="lock-dot" cx="67" cy="157" r="2" data-om-id="27644449:64"/>
+          </g>
+          <text class="t-clf" x="530" y="148" text-anchor="middle" data-om-id="27644449:65">Classifieur FacialCNN — 6 blocs · poids gelés</text>
+          <text class="t-clf-sub" x="530" y="167" text-anchor="middle" data-om-id="27644449:66">Activations Act₁ … Act₆ extraites en inférence (torch.no_grad)</text>
+        </g>
+
+        <!-- ===== activation arrows ===== -->
+        <g id="activations" data-om-id="27644449:67">
+          <!-- built by script-free static markup below -->
+          <g data-om-id="27644449:68">
+            <line class="flow" x1="111" y1="182" x2="111" y2="206" marker-end="url(#arr)" data-om-id="27644449:69"/>
+            <rect x="95" y="188" width="32" height="14" rx="7" fill="var(--paper)" stroke="var(--line)" stroke-width="1.5" data-om-id="27644449:70"/>
+            <text class="t-act mono" x="111" y="198" text-anchor="middle" data-om-id="27644449:71">Act₁</text>
+          </g>
+          <g data-om-id="27644449:72">
+            <line class="flow" x1="277" y1="182" x2="277" y2="206" marker-end="url(#arr)" data-om-id="27644449:73"/>
+            <rect x="261" y="188" width="32" height="14" rx="7" fill="var(--paper)" stroke="var(--line)" stroke-width="1.5" data-om-id="27644449:74"/>
+            <text class="t-act mono" x="277" y="198" text-anchor="middle" data-om-id="27644449:75">Act₂</text>
+          </g>
+          <g data-om-id="27644449:76">
+            <line class="flow" x1="443" y1="182" x2="443" y2="206" marker-end="url(#arr)" data-om-id="27644449:77"/>
+            <rect x="427" y="188" width="32" height="14" rx="7" fill="var(--paper)" stroke="var(--line)" stroke-width="1.5" data-om-id="27644449:78"/>
+            <text class="t-act mono" x="443" y="198" text-anchor="middle" data-om-id="27644449:79">Act₃</text>
+          </g>
+          <g data-om-id="27644449:80">
+            <line class="flow" x1="609" y1="182" x2="609" y2="206" marker-end="url(#arr)" data-om-id="27644449:81"/>
+            <rect x="593" y="188" width="32" height="14" rx="7" fill="var(--paper)" stroke="var(--line)" stroke-width="1.5" data-om-id="27644449:82"/>
+            <text class="t-act mono" x="609" y="198" text-anchor="middle" data-om-id="27644449:83">Act₄</text>
+          </g>
+          <g data-om-id="27644449:84">
+            <line class="flow" x1="775" y1="182" x2="775" y2="206" marker-end="url(#arr)" data-om-id="27644449:85"/>
+            <rect x="759" y="188" width="32" height="14" rx="7" fill="var(--paper)" stroke="var(--line)" stroke-width="1.5" data-om-id="27644449:86"/>
+            <text class="t-act mono" x="775" y="198" text-anchor="middle" data-om-id="27644449:87">Act₅</text>
+          </g>
+          <g data-om-id="27644449:88">
+            <line class="flow" x1="941" y1="182" x2="941" y2="206" marker-end="url(#arr)" data-om-id="27644449:89"/>
+            <rect x="925" y="188" width="32" height="14" rx="7" fill="var(--paper)" stroke="var(--line)" stroke-width="1.5" data-om-id="27644449:90"/>
+            <text class="t-act mono" x="941" y="198" text-anchor="middle" data-om-id="27644449:91">Act₆</text>
+          </g>
+        </g>
+
+        <!-- ===== decoder cards ===== -->
+        <g id="decoders" data-om-id="27644449:92"><g><rect class="dec-card" x="36" y="210" width="150" height="208" rx="14" filter="url(#shadow)"/><path class="dec-head" d="M36 224 a14 14 0 0 1 14 -14 h122 a14 14 0 0 1 14 14 v16 h-150 z"/><text class="t-dec" x="50" y="230">Décodeur 1</text><rect class="npill" x="144" y="216" width="30" height="15" rx="7.5"/><text class="t-n mono" x="159" y="227" text-anchor="middle">N=1</text><rect class="in-pill" x="50" y="248" width="122" height="22" rx="11"/><text class="t-in mono" x="111" y="263" text-anchor="middle">(32, 32, 32)</text><rect class="sub-box" x="50" y="278" width="122" height="64" rx="8"/><text class="t-main" x="111" y="294" text-anchor="middle">1 × ConvTranspose2d</text><text class="t-chain mono" x="111" y="308" text-anchor="middle">32→16 · k4 s2 p1</text><text class="t-dim" x="111" y="322" text-anchor="middle">BN + ReLU</text><text class="t-dim mono" x="111" y="335" text-anchor="middle">→ (16, 64, 64)</text><rect class="sub-box" x="50" y="350" width="122" height="38" rx="8"/><text class="t-main" x="111" y="366" text-anchor="middle">Conv1×1 (16 → 3)</text><text class="t-conv" x="111" y="380" text-anchor="middle">+ Sigmoid</text><text class="t-out mono" x="111" y="408" text-anchor="middle">→ (3, 64, 64)</text></g><line class="flow" x1="111" y1="418" x2="111" y2="436" marker-end="url(#arr)"/><g><rect class="dec-card" x="202" y="210" width="150" height="208" rx="14" filter="url(#shadow)"/><path class="dec-head" d="M202 224 a14 14 0 0 1 14 -14 h122 a14 14 0 0 1 14 14 v16 h-150 z"/><text class="t-dec" x="216" y="230">Décodeur 2</text><rect class="npill" x="310" y="216" width="30" height="15" rx="7.5"/><text class="t-n mono" x="325" y="227" text-anchor="middle">N=2</text><rect class="in-pill" x="216" y="248" width="122" height="22" rx="11"/><text class="t-in mono" x="277" y="263" text-anchor="middle">(64, 16, 16)</text><rect class="sub-box" x="216" y="278" width="122" height="64" rx="8"/><text class="t-main" x="277" y="294" text-anchor="middle">2 × ConvTranspose2d</text><text class="t-chain mono" x="277" y="308" text-anchor="middle">64→32→16 · k4 s2</text><text class="t-dim" x="277" y="322" text-anchor="middle">BN + ReLU ×2</text><text class="t-dim mono" x="277" y="335" text-anchor="middle">→ (16, 64, 64)</text><rect class="sub-box" x="216" y="350" width="122" height="38" rx="8"/><text class="t-main" x="277" y="366" text-anchor="middle">Conv1×1 (16 → 3)</text><text class="t-conv" x="277" y="380" text-anchor="middle">+ Sigmoid</text><text class="t-out mono" x="277" y="408" text-anchor="middle">→ (3, 64, 64)</text></g><line class="flow" x1="277" y1="418" x2="277" y2="436" marker-end="url(#arr)"/><g><rect class="dec-card" x="368" y="210" width="150" height="208" rx="14" filter="url(#shadow)"/><path class="dec-head" d="M368 224 a14 14 0 0 1 14 -14 h122 a14 14 0 0 1 14 14 v16 h-150 z"/><text class="t-dec" x="382" y="230">Décodeur 3</text><rect class="npill" x="476" y="216" width="30" height="15" rx="7.5"/><text class="t-n mono" x="491" y="227" text-anchor="middle">N=3</text><rect class="in-pill" x="382" y="248" width="122" height="22" rx="11"/><text class="t-in mono" x="443" y="263" text-anchor="middle">(128, 8, 8)</text><rect class="sub-box" x="382" y="278" width="122" height="64" rx="8"/><text class="t-main" x="443" y="294" text-anchor="middle">3 × ConvTranspose2d</text><text class="t-chain mono" x="443" y="308" text-anchor="middle">128→64→32→16</text><text class="t-dim" x="443" y="322" text-anchor="middle">BN + ReLU ×3</text><text class="t-dim mono" x="443" y="335" text-anchor="middle">→ (16, 64, 64)</text><rect class="sub-box" x="382" y="350" width="122" height="38" rx="8"/><text class="t-main" x="443" y="366" text-anchor="middle">Conv1×1 (16 → 3)</text><text class="t-conv" x="443" y="380" text-anchor="middle">+ Sigmoid</text><text class="t-out mono" x="443" y="408" text-anchor="middle">→ (3, 64, 64)</text></g><line class="flow" x1="443" y1="418" x2="443" y2="436" marker-end="url(#arr)"/><g><rect class="dec-card" x="534" y="210" width="150" height="208" rx="14" filter="url(#shadow)"/><path class="dec-head" d="M534 224 a14 14 0 0 1 14 -14 h122 a14 14 0 0 1 14 14 v16 h-150 z"/><text class="t-dec" x="548" y="230">Décodeur 4</text><rect class="npill" x="642" y="216" width="30" height="15" rx="7.5"/><text class="t-n mono" x="657" y="227" text-anchor="middle">N=4</text><rect class="in-pill" x="548" y="248" width="122" height="22" rx="11"/><text class="t-in mono" x="609" y="263" text-anchor="middle">(256, 4, 4)</text><rect class="sub-box" x="548" y="278" width="122" height="64" rx="8"/><text class="t-main" x="609" y="294" text-anchor="middle">4 × ConvTranspose2d</text><text class="t-chain mono" x="609" y="308" text-anchor="middle">256→128→64→32→16</text><text class="t-dim" x="609" y="322" text-anchor="middle">BN + ReLU ×4</text><text class="t-dim mono" x="609" y="335" text-anchor="middle">→ (16, 64, 64)</text><rect class="sub-box" x="548" y="350" width="122" height="38" rx="8"/><text class="t-main" x="609" y="366" text-anchor="middle">Conv1×1 (16 → 3)</text><text class="t-conv" x="609" y="380" text-anchor="middle">+ Sigmoid</text><text class="t-out mono" x="609" y="408" text-anchor="middle">→ (3, 64, 64)</text></g><line class="flow" x1="609" y1="418" x2="609" y2="436" marker-end="url(#arr)"/><g><rect class="dec-card" x="700" y="210" width="150" height="208" rx="14" filter="url(#shadow)"/><path class="dec-head" d="M700 224 a14 14 0 0 1 14 -14 h122 a14 14 0 0 1 14 14 v16 h-150 z"/><text class="t-dec" x="714" y="230">Décodeur 5</text><rect class="npill" x="808" y="216" width="30" height="15" rx="7.5"/><text class="t-n mono" x="823" y="227" text-anchor="middle">N=5</text><rect class="in-pill" x="714" y="248" width="122" height="22" rx="11"/><text class="t-in mono" x="775" y="263" text-anchor="middle">(256, 2, 2)</text><rect class="sub-box" x="714" y="278" width="122" height="64" rx="8"/><text class="t-main" x="775" y="294" text-anchor="middle">5 × ConvTranspose2d</text><text class="t-chain mono" x="775" y="308" text-anchor="middle">256→128→…→16→16</text><text class="t-dim" x="775" y="322" text-anchor="middle">BN + ReLU ×5</text><text class="t-dim mono" x="775" y="335" text-anchor="middle">→ (16, 64, 64)</text><rect class="sub-box" x="714" y="350" width="122" height="38" rx="8"/><text class="t-main" x="775" y="366" text-anchor="middle">Conv1×1 (16 → 3)</text><text class="t-conv" x="775" y="380" text-anchor="middle">+ Sigmoid</text><text class="t-out mono" x="775" y="408" text-anchor="middle">→ (3, 64, 64)</text></g><line class="flow" x1="775" y1="418" x2="775" y2="436" marker-end="url(#arr)"/><g><rect class="dec-card" x="866" y="210" width="150" height="208" rx="14" filter="url(#shadow)"/><path class="dec-head" d="M866 224 a14 14 0 0 1 14 -14 h122 a14 14 0 0 1 14 14 v16 h-150 z"/><text class="t-dec" x="880" y="230">Décodeur 6</text><rect class="npill" x="974" y="216" width="30" height="15" rx="7.5"/><text class="t-n mono" x="989" y="227" text-anchor="middle">N=5</text><rect class="in-pill" x="880" y="248" width="122" height="22" rx="11"/><text class="t-in mono" x="941" y="263" text-anchor="middle">(256, 2, 2)</text><rect class="sub-box" x="880" y="278" width="122" height="64" rx="8"/><text class="t-main" x="941" y="294" text-anchor="middle">5 × ConvTranspose2d</text><text class="t-chain mono" x="941" y="308" text-anchor="middle">256→128→…→16→16</text><text class="t-dim" x="941" y="322" text-anchor="middle">BN + ReLU ×5</text><text class="t-dim mono" x="941" y="335" text-anchor="middle">→ (16, 64, 64)</text><rect class="sub-box" x="880" y="350" width="122" height="38" rx="8"/><text class="t-main" x="941" y="366" text-anchor="middle">Conv1×1 (16 → 3)</text><text class="t-conv" x="941" y="380" text-anchor="middle">+ Sigmoid</text><text class="t-out mono" x="941" y="408" text-anchor="middle">→ (3, 64, 64)</text></g><line class="flow" x1="941" y1="418" x2="941" y2="436" marker-end="url(#arr)"/></g>
+
+        <!-- ===== reconstruction chips ===== -->
+        <g id="reconstructions" data-om-id="27644449:93"><g><rect class="recon" x="36" y="438" width="150" height="40" rx="12"/><text class="t-out" x="111" y="456" text-anchor="middle" style="font-size:11px">Recon₁</text><text class="t-out mono" x="111" y="470" text-anchor="middle" style="font-size:9px;font-weight:400">(3, 64, 64)</text></g><g><rect class="recon" x="202" y="438" width="150" height="40" rx="12"/><text class="t-out" x="277" y="456" text-anchor="middle" style="font-size:11px">Recon₂</text><text class="t-out mono" x="277" y="470" text-anchor="middle" style="font-size:9px;font-weight:400">(3, 64, 64)</text></g><g><rect class="recon" x="368" y="438" width="150" height="40" rx="12"/><text class="t-out" x="443" y="456" text-anchor="middle" style="font-size:11px">Recon₃</text><text class="t-out mono" x="443" y="470" text-anchor="middle" style="font-size:9px;font-weight:400">(3, 64, 64)</text></g><g><rect class="recon" x="534" y="438" width="150" height="40" rx="12"/><text class="t-out" x="609" y="456" text-anchor="middle" style="font-size:11px">Recon₄</text><text class="t-out mono" x="609" y="470" text-anchor="middle" style="font-size:9px;font-weight:400">(3, 64, 64)</text></g><g><rect class="recon" x="700" y="438" width="150" height="40" rx="12"/><text class="t-out" x="775" y="456" text-anchor="middle" style="font-size:11px">Recon₅</text><text class="t-out mono" x="775" y="470" text-anchor="middle" style="font-size:9px;font-weight:400">(3, 64, 64)</text></g><g><rect class="recon" x="866" y="438" width="150" height="40" rx="12"/><text class="t-out" x="941" y="456" text-anchor="middle" style="font-size:11px">Recon₆</text><text class="t-out mono" x="941" y="470" text-anchor="middle" style="font-size:9px;font-weight:400">(3, 64, 64)</text></g></g>
+
+        <!-- ===== detail panel ===== -->
+        <g id="detail" data-om-id="27644449:94">
+          <rect class="detail-card" x="32" y="496" width="996" height="428" rx="16" filter="url(#shadow)" data-om-id="27644449:95"/>
+          <path class="detail-head" d="M32 512 a16 16 0 0 1 16 -16 h964 a16 16 0 0 1 16 16 v24 h-996 z" data-om-id="27644449:96"/>
+          <text class="t-detail" x="530" y="521" text-anchor="middle" data-om-id="27644449:97">Détail interne — BlockDecoder 5 / 6 · 5 étapes ConvTranspose2d · (256, 2, 2) → (3, 64, 64)</text>
+
+          <!-- left notes -->
+          <rect class="notes-panel" x="52" y="556" width="190" height="300" rx="12" data-om-id="27644449:98"/>
+          <text class="t-note-h" x="68" y="578" data-om-id="27644449:99">PARAMÈTRES</text>
+          <text class="t-note mono" x="68" y="598" data-om-id="27644449:100">N_ups = log₂(64÷2) = 5</text>
+          <text class="t-note mono" x="68" y="615" data-om-id="27644449:101">ch_min = 16</text>
+          <text class="t-note mono" x="68" y="632" data-om-id="27644449:102">new_ch = max(16, ch÷2)</text>
+          <line class="hair" x1="68" y1="650" x2="226" y2="650" data-om-id="27644449:103"/>
+          <text class="t-note-h" x="68" y="672" data-om-id="27644449:104">PROGRESSION CANAUX</text>
+          <text class="t-note-dim mono" x="68" y="692" data-om-id="27644449:105">256 → 128   max(16,128)=128</text>
+          <text class="t-note-dim mono" x="68" y="709" data-om-id="27644449:106">128 → 64    max(16,64)=64</text>
+          <text class="t-note-dim mono" x="68" y="726" data-om-id="27644449:107">64 → 32     max(16,32)=32</text>
+          <text class="t-note-dim mono" x="68" y="743" data-om-id="27644449:108">32 → 16     max(16,16)=16</text>
+          <text class="t-note-dim mono" x="68" y="760" data-om-id="27644449:109">16 → 16     max(16,8)=16</text>
+
+          <!-- resolution ladder -->
+          <g id="ladder" data-om-id="27644449:110"><text class="t-note-h" x="880" y="578">SORTIE</text><rect class="ladder-sq" x="880" y="619" width="12" height="12" rx="3"/><text class="t-ladder mono" x="930" y="628.5">4×4</text><rect class="ladder-sq" x="880" y="667" width="16" height="16" rx="3"/><text class="t-ladder mono" x="930" y="678.5">8×8</text><rect class="ladder-sq" x="880" y="714" width="22" height="22" rx="3"/><text class="t-ladder mono" x="930" y="728.5">16×16</text><rect class="ladder-sq" x="880" y="760" width="30" height="30" rx="3"/><text class="t-ladder mono" x="930" y="778.5">32×32</text><rect class="ladder-sq" x="880" y="805" width="40" height="40" rx="3"/><text class="t-ladder mono" x="930" y="828.5">64×64</text></g>
+
+          <!-- flow -->
+          <g id="flow" data-om-id="27644449:111"><rect class="input-detail" x="410" y="556" width="300" height="38" rx="10" filter="url(#shadow-sm)"/><text class="t-in" x="560" y="573" text-anchor="middle" style="font-size:11px">Act₅ / Act₆ — entrée du décodeur</text><text class="t-in mono" x="560" y="587" text-anchor="middle" style="font-size:10.5px;font-weight:400">(B, 256, 2, 2)</text><line class="flow" x1="560" y1="594" x2="560" y2="604" marker-end="url(#arr)"/><rect class="step" x="300" y="606" width="520" height="38" rx="10" filter="url(#shadow-sm)"/><text class="t-step" x="560" y="622" text-anchor="middle">ConvTranspose2d  256 → 128  ·  k=4, s=2, p=1</text><text class="t-step-sub mono" x="560" y="636" text-anchor="middle">+ BatchNorm2d + ReLU        →        (B, 128, 4, 4)</text><line class="flow" x1="560" y1="650" x2="560" y2="660" marker-end="url(#arr)"/><rect class="step" x="300" y="656" width="520" height="38" rx="10" filter="url(#shadow-sm)"/><text class="t-step" x="560" y="672" text-anchor="middle">ConvTranspose2d  128 → 64  ·  k=4, s=2, p=1</text><text class="t-step-sub mono" x="560" y="686" text-anchor="middle">+ BatchNorm2d + ReLU        →        (B, 64, 8, 8)</text><line class="flow" x1="560" y1="700" x2="560" y2="710" marker-end="url(#arr)"/><rect class="step" x="300" y="706" width="520" height="38" rx="10" filter="url(#shadow-sm)"/><text class="t-step" x="560" y="722" text-anchor="middle">ConvTranspose2d  64 → 32  ·  k=4, s=2, p=1</text><text class="t-step-sub mono" x="560" y="736" text-anchor="middle">+ BatchNorm2d + ReLU        →        (B, 32, 16, 16)</text><line class="flow" x1="560" y1="750" x2="560" y2="760" marker-end="url(#arr)"/><rect class="step" x="300" y="756" width="520" height="38" rx="10" filter="url(#shadow-sm)"/><text class="t-step" x="560" y="772" text-anchor="middle">ConvTranspose2d  32 → 16  ·  k=4, s=2, p=1</text><text class="t-step-sub mono" x="560" y="786" text-anchor="middle">+ BatchNorm2d + ReLU        →        (B, 16, 32, 32)</text><line class="flow" x1="560" y1="800" x2="560" y2="810" marker-end="url(#arr)"/><rect class="step" x="300" y="806" width="520" height="38" rx="10" filter="url(#shadow-sm)"/><text class="t-step" x="560" y="822" text-anchor="middle">ConvTranspose2d  16 → 16  ·  ch_min = 16 atteint</text><text class="t-step-sub mono" x="560" y="836" text-anchor="middle">+ BatchNorm2d + ReLU        →        (B, 16, 64, 64)</text><line class="flow" x1="560" y1="850" x2="560" y2="860" marker-end="url(#arr)"/><rect class="final" x="340" y="856" width="440" height="38" rx="10" filter="url(#shadow-sm)"/><text class="t-final" x="560" y="873" text-anchor="middle">Conv2d 1×1 (16 → 3)  +  Sigmoid</text><text class="t-final-sub mono" x="560" y="887" text-anchor="middle">→ (B, 3, 64, 64)  ·  image reconstruite ✓</text></g>
+        </g>
+
+        <!-- ===== legend ===== -->
+        <g id="legend" data-om-id="27644449:112">
+          <rect class="legend-bar" x="32" y="940" width="996" height="28" rx="8" data-om-id="27644449:113"/>
+          <rect class="sw-indigo" x="56" y="948" width="12" height="12" rx="3" data-om-id="27644449:114"/>
+          <text class="t-legend" x="76" y="958" data-om-id="27644449:115">Décodeur · ConvTranspose2d + BN + ReLU</text>
+          <rect class="sw-amber" x="362" y="948" width="12" height="12" rx="3" data-om-id="27644449:116"/>
+          <text class="t-legend" x="382" y="958" data-om-id="27644449:117">Activation d'entrée (poids gelés)</text>
+          <rect class="sw-violet" x="612" y="948" width="12" height="12" rx="3" data-om-id="27644449:118"/>
+          <text class="t-legend" x="632" y="958" data-om-id="27644449:119">Conv1×1 + Sigmoid (RGB)</text>
+          <rect class="sw-emerald" x="822" y="948" width="12" height="12" rx="3" data-om-id="27644449:120"/>
+          <text class="t-legend" x="842" y="958" data-om-id="27644449:121">Image reconstruite (3, 64, 64)</text>
+        </g>
+
+        <text class="t-foot mono" x="530" y="990" text-anchor="middle" data-om-id="27644449:122">LRAD · BlockDecoder · 6 décodeurs (N_ups : 1, 2, 3, 4, 5, 5) · Perte MSE · Classifieur gelé · Visualisation uniquement — non utilisé pour le score OOD</text>
+      </svg>
