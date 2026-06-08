@@ -1,39 +1,41 @@
-# Clarifications — Décomposition Biais / Variance
+# Clarifications — Bias / Variance decomposition
+
+Loose ends and things that confused me while building the decomposition,
+written down so they stay answered.
 
 ---
 
-## 1. Différence entre Risk et erreur de reconstruction
+## 1. Reconstruction error vs Risk
 
-L'**erreur de reconstruction** d'un seul modèle `m` pour un pixel `i` est :
+The **reconstruction error** of a single model `m` at pixel `i` is:
 
 ```text
 err_m(x)[i] = ( x[i] − f̂ᵐ(x)[i] )²
 ```
 
-C'est le nombre qu'on obtient en lançant un seul modèle sur une image. Chaque
-modèle donne une valeur différente — cette erreur est donc aléatoire selon
-lequel des M modèles on choisit.
+That's the number you get from running one model on one image. Each model gives a
+different value, so this error is random in *which* of the M models you happened
+to pick.
 
-Le **Risk** est la moyenne de ces erreurs sur tous les M modèles :
+The **Risk** is the mean of those errors over all M models:
 
 ```text
 Risk(x)[i] = (1/M) Σₘ ( x[i] − f̂ᵐ(x)[i] )²
 ```
 
-Le Risk, c'est la moyenne des erreurs individuelles — ce qu'on espère obtenir si
-on déploie un seul modèle tiré au hasard dans l'ensemble.
+So Risk is the average of the individual errors — what you'd expect from
+deploying a single model drawn at random from the ensemble.
 
-Analogie concrète : si 3 archers tirent chacun une fois sur une cible, l'erreur
-de reconstruction c'est la distance d'un archer particulier ; le Risk, c'est
-la distance moyenne des 3 tirs.
+A concrete analogy: if 3 archers each take one shot at a target, the
+reconstruction error is one archer's distance; the Risk is the average distance
+of the 3 shots.
 
 ---
 
-## 2. Pourquoi le Risk est le « coût attendu si on tire un modèle au hasard »
+## 2. Why Risk is the "expected cost of a random model"
 
-Tirer un modèle au hasard dans un ensemble de M modèles, c'est tirer `m`
-uniformément dans `{1, 2, …, M}` avec probabilité `1/M` chacun. L'espérance
-du coût est :
+Drawing a model at random from M models means drawing `m` uniformly from
+`{1, 2, …, M}`, each with probability `1/M`. The expected cost is:
 
 ```text
 E_m[ (x[i] − f̂ᵐ(x)[i])² ]
@@ -43,313 +45,304 @@ E_m[ (x[i] − f̂ᵐ(x)[i])² ]
   = Risk(x)[i]
 ```
 
-C'est exactement la formule du Risk. Pas d'approximation : Risk = espérance
-empirique de l'erreur au carré sur l'ensemble.
+That's exactly the Risk formula — no approximation: Risk is the empirical mean of
+the squared error over the ensemble.
 
-### Exemple chiffré
+### Worked example
 
-Supposons M = 3 modèles sur un pixel dont la vraie valeur est `x[i] = 0.8` :
+Take M = 3 models on a pixel whose true value is `x[i] = 0.8`:
 
-| Modèle | Prédiction | Erreur au carré |
-|--------|-----------|-----------------|
-| m = 1  | 0.60      | (0.8 − 0.60)² = 0.0400 |
-| m = 2  | 0.80      | (0.8 − 0.80)² = 0.0000 |
-| m = 3  | 1.00      | (0.8 − 1.00)² = 0.0400 |
+| Model | Prediction | Squared error |
+|-------|-----------|-----------------|
+| m = 1 | 0.60      | (0.8 − 0.60)² = 0.0400 |
+| m = 2 | 0.80      | (0.8 − 0.80)² = 0.0000 |
+| m = 3 | 1.00      | (0.8 − 1.00)² = 0.0400 |
 
 ```text
 Risk = (0.0400 + 0.0000 + 0.0400) / 3 = 0.0267
 ```
 
-Si on déploie un seul modèle tiré au hasard, son erreur attendue est `0.0267`.
-Le modèle 2 ferait `0.0000`, les modèles 1 et 3 feraient `0.0400` — le Risk
-résume tout ça en une seule valeur.
+Deploy a single random model and its expected error is `0.0267`. Model 2 would
+score `0.0000`, models 1 and 3 would score `0.0400` — Risk folds all of that into
+one number.
 
 ---
 
-## 3. Le modèle consensuel et le modèle fictif
+## 3. The consensus model (the "fictional" model)
 
-### Le modèle consensuel = modèle fictif = f̄
+### Consensus model = fictional model = f̄
 
 ```text
 f̄(x)[i] = (1/M) Σₘ f̂ᵐ(x)[i]
 ```
 
-Ce « modèle » n'existe pas en mémoire comme réseau de neurones entraîné. C'est
-une **abstraction** : si on pouvait créer un seul réseau dont les prédictions
-seraient exactement la moyenne des M réseaux, ce serait le modèle consensuel.
-On l'appelle « fictif » parce qu'il n'est jamais entraîné — il émerge
-mécaniquement comme la moyenne des sorties.
+This "model" doesn't exist in memory as a trained network. It's an
+**abstraction**: if you could build one network whose predictions were exactly
+the mean of the M networks, that would be the consensus model. I call it
+"fictional" because it's never trained — it falls out mechanically as the average
+of the outputs.
 
-### Exemple
+### Example
 
-Même pixel `x[i] = 0.8`, M = 3 modèles, prédictions : 0.60, 0.80, 1.00.
+Same pixel `x[i] = 0.8`, M = 3 models, predictions 0.60, 0.80, 1.00.
 
 ```text
 f̄(x)[i] = (0.60 + 0.80 + 1.00) / 3 = 0.800
 ```
 
-Le modèle fictif prédit exactement `0.800`. Le Biais de ce pixel est :
+The fictional model predicts exactly `0.800`. The Bias at this pixel is:
 
 ```text
-Biais = (0.8 − 0.800)² = 0.0000
+Bias = (0.8 − 0.800)² = 0.0000
 ```
 
-Les modèles individuels se trompaient (erreurs de ±0.2), mais leur moyenne est
-parfaite. → Biais nul, la diversité des modèles a compensé leurs erreurs.
+The individual models were off (errors of ±0.2), but their mean is spot on.
+→ zero Bias: model diversity cancelled the errors.
 
-### Contre-exemple : cas OOD (lunettes)
+### Counter-example: OOD (glasses)
 
-Sur un pixel qui appartient à une monture de lunettes, les 3 modèles
-reconstruisent tous un morceau de peau — ils ne savent pas reconstruire les
-lunettes. Prédictions : 0.75, 0.78, 0.72 ; vraie valeur : `x[i] = 0.20`
-(lunette sombre).
+On a pixel that sits on an eyeglass frame, all 3 models reconstruct a patch of
+skin — none of them knows how to draw the glasses. Predictions: 0.75, 0.78, 0.72;
+true value `x[i] = 0.20` (dark frame).
 
 ```text
 f̄(x)[i] = (0.75 + 0.78 + 0.72) / 3 = 0.750
-Biais    = (0.20 − 0.750)² = 0.3025
+Bias    = (0.20 − 0.750)² = 0.3025
 ```
 
-Le modèle consensuel se trompe massivement. Ce n'est pas de la diversité qui
-manque — c'est que l'ensemble entier ne connaît tout simplement pas les lunettes.
+The consensus model is badly wrong. This isn't missing diversity — the whole
+ensemble simply has no concept of glasses.
 
 ---
 
-## 4. Biais = erreur irréductible : mais est-ce vraiment nul sur ID ?
+## 4. Bias = irreducible error: but is it really zero on ID?
 
-### Ce que dit la formule
-
-```text
-Biais(x)[i] = ( x[i] − f̄(x)[i] )²
-```
-
-Cette erreur est « irréductible » dans le sens suivant : peu importe combien de
-modèles on ajoute à l'ensemble, la moyenne `f̄` tend vers `E[f̂(x)[i]]` —
-l'espérance sur les initialisations aléatoires. Si cette espérance ne vaut pas
-`x[i]`, le Biais reste positif même avec M → ∞.
-
-### Sur ID, le Biais n'est pas exactement zéro
-
-Quand on dit « Biais ≈ 0 sur ID », c'est une simplification pédagogique.
-En pratique, même sur des images normales, le Biais est petit mais non nul pour
-plusieurs raisons :
-
-**a) Bords et contours fins**
-
-Un ConvTranspose2D ne peut pas reconstruire parfaitement les transitions nettes
-entre zones de couleur. La résolution spatiale perdue lors de l'encodage (Max
-Pooling) n'est pas entièrement récupérée. Ces erreurs de bord sont systématiques
-— elles persistent même en moyennant infiniment de modèles.
-
-**b) Artefacts du ConvTranspose2D (checkerboard artifacts)**
-
-Le `ConvTranspose2D` produit des artefacts en damier sur certains pixels à cause
-du recouvrement irrégulier des noyaux. Ces artefacts sont architecturalement
-imposés — ils dépendent du stride et de la taille du kernel, pas de
-l'initialisation. Ils contribuent donc au Biais, pas à la Variance.
+### What the formula says
 
 ```text
-x[i]  = 0.52  (pixel de bord, image ID normale)
-f̄[i]  = 0.58  (artefact de recouvrement du ConvTranspose2D)
-Biais = (0.52 − 0.58)² = 0.0036   ← petit mais non nul
+Bias(x)[i] = ( x[i] − f̄(x)[i] )²
 ```
 
-**c) Capacité limitée de l'architecture**
+This error is "irreducible" in a specific sense: however many models you add, the
+mean `f̄` converges to `E[f̂(x)[i]]` — the expectation over random initializations.
+If that expectation isn't `x[i]`, the Bias stays positive even as M → ∞.
 
-L'encodeur compresse l'image via des couches convolutives — des détails fins
-(textures de cheveux, pores de peau) ne peuvent pas être stockés dans l'espace
-latent. La décompression ne peut pas les recréer. Cette perte est fondamentale :
-même le modèle consensuel `f̄` ne peut pas reconstruire ce qui n'est plus dans
-la représentation.
+### On ID, the Bias is not exactly zero
 
-### Où est ce terme dans la formule ?
+"Bias ≈ 0 on ID" is a teaching simplification. In practice, even on normal images
+the Bias is small but nonzero, for a few reasons:
 
-Il n'y a pas de terme séparé — tout ça est contenu dans `( x[i] − f̄(x)[i] )²`.
-C'est pour ça qu'on dit « irréductible » : ce n'est pas une erreur aléatoire
-entre modèles (qui disparaîtrait en moyennant) mais une erreur systématique de
-ce que l'ensemble peut représenter.
+**a) Edges and fine contours**
 
-Sur ID : ces erreurs irréductibles sont faibles → Biais faible.
-Sur OOD : une erreur systématique supplémentaire s'y ajoute (la zone inconnue)
-→ Biais fort.
+A ConvTranspose2D can't perfectly reconstruct sharp transitions between colour
+regions. The spatial resolution lost in encoding (max pooling) isn't fully
+recovered. These edge errors are systematic — they persist no matter how many
+models you average.
+
+**b) ConvTranspose2D checkerboard artifacts**
+
+ConvTranspose2D produces checkerboard artifacts on some pixels from the uneven
+overlap of its kernels. These are baked into the architecture — they depend on
+stride and kernel size, not on initialization — so they feed the Bias, not the
+Variance.
+
+```text
+x[i]  = 0.52  (edge pixel, normal ID image)
+f̄[i]  = 0.58  (ConvTranspose2D overlap artifact)
+Bias  = (0.52 − 0.58)² = 0.0036   ← small but nonzero
+```
+
+**c) Limited architecture capacity**
+
+The encoder compresses the image through conv layers; fine detail (hair texture,
+skin pores) can't fit in the latent space, and decompression can't invent it
+back. That loss is fundamental — even the consensus `f̄` can't reconstruct what
+the representation no longer holds.
+
+### Where does this sit in the formula?
+
+There's no separate term — it's all inside `( x[i] − f̄(x)[i] )²`. That's why we
+call it "irreducible": it isn't random model-to-model error (which averages away),
+it's a systematic limit of what the ensemble can represent.
+
+On ID: these irreducible errors are small → small Bias.
+On OOD: an extra systematic error stacks on top (the unknown region) → large Bias.
 
 ---
 
-## 5. Risk élevé sur ID si les modèles sont mauvais individuellement mais se compensent
+## 5. High Risk on ID when models are individually bad but cancel out
 
-C'est un cas où les modèles ont des erreurs **opposées** qui s'annulent en
-moyenne — et ça m'a posé des questions au début.
+This is the case where the models have **opposing** errors that average to zero —
+and it threw me at first.
 
-### Exemple numérique
+### Numerical example
 
-Pixel `x[i] = 0.50`, 4 modèles :
+Pixel `x[i] = 0.50`, 4 models:
 
-| Modèle | Prédiction | Erreur (x − f̂ᵐ) |
-|--------|-----------|-------------------|
-| m = 1  | 0.20      | +0.30 |
-| m = 2  | 0.80      | −0.30 |
-| m = 3  | 0.15      | +0.35 |
-| m = 4  | 0.85      | −0.35 |
+| Model | Prediction | Error (x − f̂ᵐ) |
+|-------|-----------|-------------------|
+| m = 1 | 0.20      | +0.30 |
+| m = 2 | 0.80      | −0.30 |
+| m = 3 | 0.15      | +0.35 |
+| m = 4 | 0.85      | −0.35 |
 
-Chaque modèle se trompe énormément. Pourtant :
+Every model is way off. And yet:
 
 ```text
 f̄ = (0.20 + 0.80 + 0.15 + 0.85) / 4 = 2.00 / 4 = 0.50
 
-Biais    = (0.50 − 0.50)² = 0.0000   ← parfait !
+Bias     = (0.50 − 0.50)² = 0.0000   ← perfect!
 Variance = (1/4) × [(0.20−0.50)² + (0.80−0.50)² + (0.15−0.50)² + (0.85−0.50)²]
          = (1/4) × [0.0900 + 0.0900 + 0.1225 + 0.1225]
          = (1/4) × 0.4250
          = 0.1063
 
-Risk = Biais + Variance = 0.0000 + 0.1063 = 0.1063
+Risk = Bias + Variance = 0.0000 + 0.1063 = 0.1063
 ```
 
-Le Risk est très élevé (0.1063) même si c'est une image ID normale ! Ça arrive
-parce que chaque modèle se trompe beaucoup, mais leurs erreurs sont exactement
-opposées.
+The Risk is high (0.1063) on a perfectly normal ID image — because each model is
+far off, but their errors are exactly opposed.
 
-Si on déployait un seul modèle au hasard, on aurait en moyenne une erreur de
-`0.1063`. Mais si on prend la moyenne de l'ensemble, l'erreur est 0.
+A single random model would average an error of `0.1063`. The ensemble mean has
+error 0.
 
-→ Voilà pourquoi le Risk est un mauvais signal de détection OOD sur ID : il peut
-être élevé même sur des images normales, à cause de la dispersion des modèles,
-pas d'une vraie anomalie.
+→ This is why Risk is a poor OOD signal: it can be high even on normal images,
+driven by model scatter rather than a real anomaly.
 
 ---
 
-## 6. Problème d'effondrement d'ensemble
+## 6. The ensemble-collapse problem
 
-### Pourquoi ça arrive même avec des seeds différentes
+### Why it happens even with different seeds
 
-Changer la seed change :
-- L'ordre des batches pendant l'entraînement
-- L'initialisation des poids
+Changing the seed changes:
+- the batch order during training,
+- the weight initialization.
 
-Mais ne change **pas** :
-- L'architecture (mêmes couches, même structure)
-- Les données d'entraînement (même distribution, mêmes patterns appris)
-- La loss (même fonction objectif)
-- Les biais inductifs (un ConvNet favorise les textures locales, les
-  invariances de translation, etc.)
+But it does **not** change:
+- the architecture (same layers, same structure),
+- the training data (same distribution, same learned patterns),
+- the loss (same objective),
+- the inductive biases (a ConvNet favours local textures, translation
+  invariance, and so on).
 
-Résultat : les M modèles ont des poids différents, mais ils ont convergé vers
-des **solutions similaires dans l'espace des fonctions**. Sur des inputs ID, ils
-donnent des réponses légèrement différentes (d'où la Variance > 0 mais faible).
-Sur des inputs OOD qui sortent de leur distribution commune, ils extrapolent tous
-vers la même mauvaise réponse — celle dictée par leur biais inductif commun.
+So the M models get different weights but converge to **similar solutions in
+function space**. On ID inputs they answer slightly differently (hence Variance >
+0 but small). On OOD inputs that leave their shared distribution, they all
+extrapolate to the same wrong answer — the one their common inductive bias
+dictates.
 
-### Exemple concret
+### Concrete example
 
-L'ensemble est entraîné uniquement sur des visages sans lunettes. Chaque modèle
-apprend que la zone autour des yeux = peau + sourcils. C'est encodé dans les
-filtres des 4 premières couches.
+The ensemble is trained only on glasses-free faces. Every model learns that the
+region around the eyes = skin + eyebrows, encoded in the filters of the first few
+layers.
 
-Quand une image avec lunettes arrive :
+When a glasses image arrives:
 
 ```text
-Modèle 1 (seed=42) :  "je vois quelque chose bizarre autour des yeux → je reconstruis de la peau"
-Modèle 2 (seed=7)  :  "je vois quelque chose bizarre autour des yeux → je reconstruis de la peau"
-Modèle 3 (seed=123):  "je vois quelque chose bizarre autour des yeux → je reconstruis de la peau"
+Model 1 (seed=42) :  "something odd around the eyes → reconstruct skin"
+Model 2 (seed=7)  :  "something odd around the eyes → reconstruct skin"
+Model 3 (seed=123):  "something odd around the eyes → reconstruct skin"
 
-f̄ ≈ peau   (consensus fort)
-Variance ≈ 0 (ils sont d'accord)
-Biais >> 0  (l'image réelle montre des lunettes, pas de la peau)
+f̄ ≈ skin   (strong consensus)
+Variance ≈ 0 (they agree)
+Bias >> 0  (the real image shows glasses, not skin)
 ```
 
-Ce n'est pas une question de seed — c'est que les 3 modèles ont appris le même
-concept "zone des yeux = peau". Des seeds différentes leur ont juste donné des
-poids légèrement différents pour arriver au même résultat fonctionnel.
+It's not a seed issue — all 3 models learned the same "eye region = skin"
+concept. Different seeds just gave them slightly different weights to reach the
+same functional result.
 
-### Ce qui augmenterait vraiment la diversité
+### What would actually add diversity
 
-- Architectures hétérogènes (ConvNet + ViT + ResNet)
-- Données d'entraînement différentes (sous-ensembles disjoints)
-- Loss functions différentes (MSE + perceptual + adversarial)
+- Heterogeneous architectures (ConvNet + ViT + ResNet)
+- Different training data (disjoint subsets)
+- Different losses (MSE + perceptual + adversarial)
 
-Avec nos M modèles de même architecture, même données, seeds différentes : la
-Variance reste un signal faible pour les OODs « systématiques » comme les
-lunettes. C'est précisément pourquoi le Biais est le meilleur signal.
+With M models that share architecture, data, and only differ by seed, the
+Variance stays a weak signal for **systematic** OODs like glasses. That's exactly
+why Bias is the better signal.
 
 ---
 
-## 7. Pourquoi on estime toujours avec la moyenne
+## 7. Why we estimate with the mean everywhere
 
-### La moyenne résume quoi ?
+### What does the mean summarize?
 
-La moyenne d'un ensemble de valeurs `{v₁, v₂, …, vₙ}` est :
+The mean of `{v₁, v₂, …, vₙ}` is:
 
 ```text
 v̄ = (1/n) Σᵢ vᵢ
 ```
 
-Elle résume la **tendance centrale** de la distribution. C'est la valeur qui
-minimise l'erreur quadratique totale :
+It summarizes the **central tendency** of the distribution. It's the value that
+minimizes the total squared error:
 
 ```text
 v̄ = argmin_c Σᵢ (vᵢ − c)²
 ```
 
-Autrement dit : si on doit choisir un seul nombre pour représenter toute la
-distribution, la moyenne est le choix optimal au sens des moindres carrés.
+In other words: if you must pick one number to stand in for the whole
+distribution, the mean is optimal in the least-squares sense.
 
-### Pourquoi l'utiliser partout
+### Why use it everywhere
 
-**Cas 1 — Moyenne sur les M modèles pour obtenir f̄**
+**Case 1 — mean over the M models to get f̄**
 
-On a M prédictions `{f̂¹(x)[i], f̂²(x)[i], …, f̂ᴹ(x)[i]}`. On cherche la
-meilleure prédiction unique issue de l'ensemble. La moyenne est optimale au sens
-MSE : si les erreurs des modèles sont indépendantes et de biais nul, la moyenne
-réduit le bruit d'un facteur M.
-
-```text
-Variance de f̄ = Variance de f̂ᵐ / M   (si les erreurs sont indépendantes)
-```
-
-Plus M est grand, plus f̄ est proche de la vraie valeur.
-
-**Cas 2 — Moyenne spatiale des pixels pour obtenir un scalaire**
-
-On a une carte d'erreur `(H, W)`. On veut un seul nombre par image pour
-comparer des images entre elles. La moyenne spatiale résume l'intensité globale
-de l'anomalie sur toute l'image.
+We have M predictions `{f̂¹(x)[i], …, f̂ᴹ(x)[i]}` and want the best single estimate
+from the ensemble. The mean is MSE-optimal: if the model errors are independent
+and zero-mean, averaging cuts the noise by a factor of M.
 
 ```text
-Exemple image 2×2, carte d'erreur :
-  [ 0.0  0.0 ]   ← zone normale
-  [ 0.0  0.8 ]   ← pixel anomal (lunette)
-
-Moyenne = (0.0 + 0.0 + 0.0 + 0.8) / 4 = 0.200
+Variance of f̄ = Variance of f̂ᵐ / M   (if the errors are independent)
 ```
 
-La valeur `0.200` capture qu'il y a un problème quelque part, même si trois
-pixels sur quatre sont normaux.
+The larger M, the closer f̄ gets to the true value.
 
-**Cas 3 — Mean Abs Bias sous les tuiles**
+**Case 2 — spatial mean over pixels to get a scalar**
 
-Dans `mean_abs_bias.png`, le nombre affiché est `(1/HW) Σᵢⱼ |x − f̄|`. C'est
-la distance L1 moyenne sur tous les pixels. Cette valeur résume en un chiffre
-l'intensité globale de l'erreur de reconstruction pour cette image à ce bloc.
+We have an `(H, W)` error map and want one number per image to compare images.
+The spatial mean summarizes the overall anomaly intensity across the whole image.
 
-### La moyenne vs d'autres résumés
+```text
+2×2 image, error map:
+  [ 0.0  0.0 ]   ← normal region
+  [ 0.0  0.8 ]   ← anomalous pixel (glasses)
 
-| Résumé | Ce qu'il capture | Usage dans ce projet |
+mean = (0.0 + 0.0 + 0.0 + 0.8) / 4 = 0.200
+```
+
+The value `0.200` captures that something's wrong somewhere, even though three of
+four pixels are fine.
+
+**Case 3 — the number under each tile in `mean_abs_bias.png`**
+
+In `mean_abs_bias.png`, the number under a tile is `(1/HW) Σᵢⱼ (x − f̄)²` with the
+squared error summed over the 3 RGB channels. (The filename is historical — since
+the switch to L2 the map is the **squared** error, not the absolute value.) It
+boils the reconstruction-error intensity for that image at that block down to one
+number.
+
+### The mean vs other summaries
+
+| Summary | What it captures | Used in this project for |
 |--------|-----------------|----------------------|
-| Moyenne | Erreur globale, sensible à toute l'image | `mean_abs_bias`, Risk, Biais, Variance |
-| Maximum | Pixel le plus anomal (un seul suffit) | `agg="max"` dans `_reduce_over_pixels` |
-| Percentile 95 | Compromis — ignore les pixels isolés, sensible aux zones anomales | `agg="p95"` (défaut dans `aggregate_anomaly_score`) |
+| Mean | Global error, sensitive to the whole image | `mean_abs_bias`, Risk, Bias, Variance maps |
+| Maximum | The single most anomalous pixel | `agg="max"` in `_reduce_over_pixels` |
+| 95th percentile | A compromise — ignores lone hot pixels, fires on anomalous regions | `agg="p95"` (default in `aggregate_anomaly_score`) |
 
-On utilise le p95 comme défaut précisément parce que la moyenne est trop diluée
-sur 64×64 pixels : une petite paire de lunettes n'affecte qu'une fraction des
-pixels, et la moyenne dilue son signal. Le p95 garantit que si 5% des pixels
-sont très anormaux, le score global le reflète.
+We use p95 as the default precisely because the mean is too diluted over 64×64
+pixels: a small pair of glasses only touches a fraction of them, and the mean
+washes the signal out. The p95 guarantees that if 5% of pixels are strongly
+anomalous, the global score reflects it.
 
-### La moyenne n'est pas la distribution
+### The mean is not the distribution
 
-La moyenne est un **résumé**, pas la distribution complète. Deux images peuvent
-avoir la même moyenne d'erreur mais des distributions très différentes :
-- Image A : toute l'image légèrement floue → 64×64 pixels à erreur 0.010
-- Image B : paire de lunettes nette → quelques pixels à erreur 0.640, le reste à 0.000
+The mean is a **summary**, not the full distribution. Two images can share the
+same mean error with very different distributions:
+- Image A: slightly blurry everywhere → 64×64 pixels at error 0.010
+- Image B: a sharp pair of glasses → a few pixels at error 0.640, the rest at 0.000
 
-Même moyenne = 0.010, mais l'image B est OOD. C'est pour ça qu'on compare aussi
-le maximum et le p95 — et pourquoi les heatmaps restent complémentaires aux
-scalaires.
+Same mean = 0.010, but image B is OOD. That's why we also look at the max and the
+p95 — and why the heatmaps stay complementary to the scalars.
