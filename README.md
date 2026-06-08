@@ -39,9 +39,23 @@ heads: gender (2-way softmax, cross-entropy) and six binary facial attributes
 excluded so the trunk encodes identity/expression traits rather than features
 that would partially generalize to eyewear. No dropout.
 
+![FacialCNN classifier architecture](docs/diagrams/Classifier.svg)
+
+*The classifier forward path: input `(B, 3, 64, 64)` through six conv blocks
+(blocks 1–5 halve the spatial map with MaxPool, block 6 keeps `2×2`), then
+global average pooling into the gender and attribute heads. The six block
+activations `Act₁…Act₆` are exactly what the decoders invert downstream.*
+
 **Per-block decoders.** With the classifier frozen, one decoder per block is
 trained under MSE to invert that block's activations to a `(3, 64, 64)`
 reconstruction.
+
+![Per-block BlockDecoder architecture](docs/diagrams/Decoder.svg)
+
+*The six `BlockDecoder`s. Each takes one frozen activation `Actₖ` and upsamples
+it back to a `(3, 64, 64)` reconstruction through `N = log₂(64 / in_size)`
+`ConvTranspose2d → BN → ReLU` stages, closing with a `1×1` conv + sigmoid. The
+lower panel expands the deepest decoder's five upsampling steps.*
 
 **Decomposition.** For block `k`, image `x`, pixel `i`, with the `M`
 reconstructions `f̂ᵐ` and their consensus `f̄ = (1/M) Σ f̂ᵐ`:
