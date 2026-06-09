@@ -115,6 +115,7 @@ lrad/
 ├── scripts/
 │   ├── run_celeba.py     # single-model pipeline
 │   ├── run_ensemble.py   # ensemble + decomposition
+│   ├── epoch_variability_study.py  # σ(e) inter-model variability vs epochs
 │   └── oar_run_ensemble.sh   # Grid'5000 / OAR wrapper
 ├── tests/                # pytest: anomaly score, decomposition, no-val training
 └── docs/                 # notes and derivations

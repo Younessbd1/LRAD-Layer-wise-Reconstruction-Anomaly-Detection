@@ -57,13 +57,12 @@ model:
 # Single .backward() per step. With val_ratio=0 there is no validation
 # loop — every model runs the full `epochs` schedule.
 training:
-  # 2 epochs on purpose. This is a deep ensemble: its whole value is the
-  # *diversity* between members (it feeds the bias/variance decomposition).
-  # Training longer drives every model toward the same decision boundary,
-  # collapsing the variance term — exactly what we do NOT want. The batch
-  # accuracy curve flattens within the first ~2 epochs on this dataset, so
-  # 2 epochs keep the classifier usable while preserving member spread.
-  epochs: 2
+  # Long schedule. With save_every_epoch=true a checkpoint is written at
+  # the end of EVERY epoch (model_ep{e}.pt / decoders_ep{e}.pt) so that
+  # scripts/epoch_variability_study.py can trace the inter-model
+  # variability sigma(e) as a function of the number of training epochs.
+  epochs: 30
+  save_every_epoch: true
   lr: 0.0003
   weight_decay: 0.001
   attr_loss_weight: 2.0
@@ -77,12 +76,11 @@ training:
   # (run_ensemble.py), and per model they feed the per-block plots + fused
   # error score. Set this section to ~null~ to skip decoder training.
   #
-  # 2 epochs, same reasoning as the classifier above: keeping the decoders
-  # lightly trained preserves the disagreement between ensemble members that
-  # the variance term measures. Their MSE already drops most of the way
-  # within the first couple of epochs.
+  # Same long schedule as the classifier; per-epoch checkpoints
+  # (decoders_ep{e}.pt, controlled by save_every_epoch above) feed the
+  # sigma(e) epoch-variability study.
   decoders:
-    epochs: 2
+    epochs: 30
     lr: 0.001
     weight_decay: 0.00001
     log_every: 1
