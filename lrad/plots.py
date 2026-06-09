@@ -24,6 +24,9 @@ directly from the ensemble, with **no sigma and no division**:
     sample (the bias term — squared error of the ensemble-mean recon).
   * ``plot_variance_heatmaps`` — per-block model-disagreement (variance)
     heatmaps, used to show the epistemic signal on OOD inputs.
+  * ``plot_score_comparison`` — Bias / Risk / min / quantile-min error
+    maps side by side at a single block depth, each column with its own
+    colour scale.
   * ``plot_bias_variance_vs_block`` — how the mean bias and variance
     evolve with conv-block depth, ID vs OOD.
   * ``plot_bias_variance_vs_percentile`` — how the per-image bias and
@@ -742,6 +745,93 @@ def plot_min_error_maps(
         cbar_label="min_m (x − f̂^m)²  (sum over RGB)",
         row_labels=row_labels, title=title,
     )
+
+
+def plot_score_comparison(
+    images: torch.Tensor,
+    score_maps: Sequence[tuple[str, torch.Tensor]],
+    save_path: str | Path,
+    *,
+    row_labels: Iterable[str] | None = None,
+    title: str | None = None,
+) -> None:
+    """Side-by-side comparison of per-pixel score maps at ONE block depth.
+
+    ``score_maps`` is an ordered sequence of ``(column_title, (B, H, W))``
+    pairs, e.g. the Bias ``(x − f̄)²``, the Risk ``mean_m (x − f̂^m)²``,
+    the minimum ``min_m (x − f̂^m)²`` and the robust quantile-minimum
+    (k-th smallest error). Layout: one row per sample::
+
+        Original | map 1 | map 2 | ... | map n
+
+    IMPORTANT: the maps are deliberately NOT normalized across columns —
+    the scores are not identically distributed (the minimum lives on a far
+    smaller scale than the risk), so a shared vmin/vmax would crush the
+    small-magnitude columns. Each column gets its own colour scale
+    (``vmin=0``, ``vmax`` = that column's max) and its own colour bar
+    below the column. Each tile is annotated with its mean, like the
+    other heatmap figures.
+    """
+    import matplotlib.patheffects as pe
+
+    images_np = _to_image_grid(images)
+    n_rows = images_np.shape[0]
+    score_maps = list(score_maps)
+    n_score = len(score_maps)
+    n_cols = 1 + n_score
+    maps_np = [_stat_np(m) for _, m in score_maps]
+    col_titles = [name for name, _ in score_maps]
+    # Per-column scale: each score has its own dynamic range.
+    col_vmax = [max(float(m.max()), 1e-12) for m in maps_np]
+
+    fig, axes = plt.subplots(
+        n_rows, n_cols,
+        figsize=(1.4 * n_cols + 0.8, 1.55 * n_rows + 0.9),
+        layout="constrained",
+        squeeze=False,
+    )
+    labels = list(row_labels) if row_labels is not None else [None] * n_rows
+    text_pe = [pe.withStroke(linewidth=1.6, foreground="black")]
+    col_ims: list = [None] * n_score
+
+    for r in range(n_rows):
+        ax = axes[r, 0]
+        ax.imshow(images_np[r])
+        _bare(ax)
+        if r == 0:
+            ax.set_title("Original", fontsize=_LABEL_FS)
+        if labels[r] is not None:
+            _row_label(ax, labels[r])
+
+        for c in range(n_score):
+            ax_e = axes[r, 1 + c]
+            e = maps_np[c][r]
+            col_ims[c] = ax_e.imshow(
+                e, cmap="viridis", vmin=0.0, vmax=col_vmax[c],
+            )
+            _bare(ax_e)
+            if r == 0:
+                ax_e.set_title(col_titles[c], fontsize=_LABEL_FS)
+            ax_e.text(
+                0.5, 0.04, f"{float(e.mean()):.4f}",
+                transform=ax_e.transAxes, ha="center", va="bottom",
+                fontsize=8.0, color="white", path_effects=text_pe,
+            )
+
+    # One horizontal colour bar per score column, under that column only.
+    for c, im in enumerate(col_ims):
+        if im is None:
+            continue
+        cbar = fig.colorbar(
+            im, ax=axes[:, 1 + c].ravel().tolist(),
+            location="bottom", shrink=0.92, pad=0.015, aspect=12,
+        )
+        cbar.ax.tick_params(labelsize=8)
+
+    if title:
+        fig.suptitle(title, fontsize=_TITLE_FS)
+    fig.savefig(save_path, dpi=150, bbox_inches="tight")
+    plt.close(fig)
 
 
 def plot_variance_heatmaps(
