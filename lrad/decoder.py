@@ -9,7 +9,11 @@ plots and the fused reconstruction-error score.
 
 Each ``BlockDecoder`` takes a single block's activation map ``(C, H, W)``
 and upsamples it to ``(3, image_size, image_size)`` via a stack of
-ConvTranspose2d → BN → ReLU stages, ending with a 1×1 conv + Sigmoid.
+bilinear Upsample(×2) → Conv3×3 → BN → ReLU stages, ending with a 1×1
+conv + Sigmoid. Bilinear upsampling followed by a convolution is used
+instead of ConvTranspose2d because transposed convolutions can produce
+checkerboard artefacts that add noise to the reconstruction-error
+estimate; resize-then-conv yields smoother reconstructions.
 """
 
 from __future__ import annotations
@@ -47,8 +51,9 @@ class BlockDecoder(nn.Module):
         for _ in range(n_up):
             new_ch = max(min_channels, ch // 2)
             layers += [
-                nn.ConvTranspose2d(ch, new_ch, kernel_size=4,
-                                   stride=2, padding=1, bias=False),
+                nn.Upsample(scale_factor=2, mode="bilinear",
+                            align_corners=False),
+                nn.Conv2d(ch, new_ch, kernel_size=3, padding=1, bias=False),
                 nn.BatchNorm2d(new_ch),
                 nn.ReLU(inplace=True),
             ]
