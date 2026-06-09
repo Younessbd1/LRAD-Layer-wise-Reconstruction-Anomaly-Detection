@@ -54,8 +54,11 @@ reconstruction.
 
 *The six `BlockDecoder`s. Each takes one frozen activation `Actₖ` and upsamples
 it back to a `(3, 64, 64)` reconstruction through `N = log₂(64 / in_size)`
-`ConvTranspose2d → BN → ReLU` stages, closing with a `1×1` conv + sigmoid. The
-lower panel expands the deepest decoder's five upsampling steps.*
+`bilinear Upsample(×2) → Conv3×3 → BN → ReLU` stages, closing with a `1×1`
+conv + sigmoid. Bilinear-then-conv replaces the former `ConvTranspose2d`
+stages (still shown in the diagram above), which can produce checkerboard
+artefacts that add noise to the reconstruction-error estimate. The lower
+panel expands the deepest decoder's five upsampling steps.*
 
 **Decomposition.** For block `k`, image `x`, pixel `i`, with the `M`
 reconstructions `f̂ᵐ` and their consensus `f̄ = (1/M) Σ f̂ᵐ`:
