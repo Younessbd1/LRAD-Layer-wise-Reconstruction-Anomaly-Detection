@@ -12,6 +12,9 @@ from lrad.ensemble import (
     decomposition_maps,
     evaluate_ensemble_decomposition,
     identity_residual,
+    mean_error_maps,
+    min_error_maps,
+    quantile_min_error_maps,
 )
 from lrad.model import FacialCNN
 
@@ -98,6 +101,60 @@ def test_identical_models_have_zero_variance():
 def test_decomposition_maps_rejects_empty():
     with pytest.raises(ValueError):
         decomposition_maps(torch.rand(2, 3, IMG, IMG), [])
+
+
+def _recons(setup):
+    models, decoders_list, images, _ = setup
+    return images, [
+        block_reconstructions(models[i], decoders_list[i], images)
+        for i in range(N_MODELS)
+    ]
+
+
+def test_quantile_min_k1_equals_min(setup):
+    """k=1 must reproduce min_error_maps exactly (bit-for-bit)."""
+    images, recons = _recons(setup)
+    qmin = quantile_min_error_maps(images, recons, k=1)
+    mn = min_error_maps(images, recons)
+    assert set(qmin.keys()) == set(mn.keys())
+    for k in qmin:
+        assert torch.equal(qmin[k], mn[k])
+
+
+def test_quantile_min_is_monotone_in_k(setup):
+    """The k-th smallest error is non-decreasing in k, and bounded by
+    min (k=1) below and the per-pixel max (k=M) above."""
+    images, recons = _recons(setup)
+    prev = None
+    for k in range(1, N_MODELS + 1):
+        cur = quantile_min_error_maps(images, recons, k=k)
+        if prev is not None:
+            for b in cur:
+                assert (cur[b] >= prev[b]).all()
+        prev = cur
+
+
+def test_quantile_min_shapes_and_finiteness(setup):
+    images, recons = _recons(setup)
+    qmin = quantile_min_error_maps(images, recons, k=2)
+    mean = mean_error_maps(images, recons)
+    assert set(qmin.keys()) == set(range(N_BLOCKS))
+    for b in range(N_BLOCKS):
+        assert qmin[b].shape == (images.shape[0], IMG, IMG)
+        assert torch.isfinite(qmin[b]).all()
+        assert (qmin[b] >= 0).all()
+        # The k-th smallest of M values never exceeds M times their mean.
+        assert (qmin[b] <= mean[b] * N_MODELS + 1e-6).all()
+
+
+def test_quantile_min_rejects_bad_k(setup):
+    images, recons = _recons(setup)
+    with pytest.raises(ValueError):
+        quantile_min_error_maps(images, recons, k=0)
+    with pytest.raises(ValueError):
+        quantile_min_error_maps(images, recons, k=N_MODELS + 1)
+    with pytest.raises(ValueError):
+        quantile_min_error_maps(images, [], k=1)
 
 
 def test_evaluate_ensemble_decomposition(setup):

@@ -171,7 +171,8 @@ Everything under `outputs/` is gitignored. An ensemble run writes a full
 single-model result set per member (`model_<i>/`) plus the decomposition under
 `ensemble/`: per-image Risk/Bias/Variance AUROCs, the identity residual, and
 figures (`ensemble_decomposition`, `decomposition_auroc`, `mean_abs_bias`,
-`mean_error_maps`, `min_error_maps`, `variance_heatmaps_*`, `fusion_overlay`,
+`mean_error_maps`, `min_error_maps`, `score_comparison`,
+`variance_heatmaps_*`, `fusion_overlay`,
 `bias_variance_vs_{block,percentile}`).
 
 ## Tests
