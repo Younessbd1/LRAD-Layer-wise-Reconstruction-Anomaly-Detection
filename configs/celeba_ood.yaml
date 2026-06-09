@@ -64,7 +64,7 @@ training:
   epochs: 30
   save_every_epoch: true
   lr: 0.0003
-  weight_decay: 0.001
+  weight_decay: 0.0    # no weight decay (kept as a knob, neutralized)
   attr_loss_weight: 2.0
   log_every: 1
 
@@ -82,7 +82,7 @@ training:
   decoders:
     epochs: 30
     lr: 0.001
-    weight_decay: 0.00001
+    weight_decay: 0.0  # no weight decay (kept as a knob, neutralized)
     log_every: 1
 
 # ---- Evaluation ---------------------------------------------------------
