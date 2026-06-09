@@ -108,6 +108,35 @@ def test_train_decoders_without_val_reports_per_block_train():
     assert history["val_loss"] == []
 
 
+def test_train_model_saves_per_epoch_checkpoints(tmp_path):
+    """With checkpoint_dir set, model_ep{e}.pt is written at every epoch."""
+    epochs = 3
+    train_model(
+        _model(), _loader(16), None,
+        epochs=epochs, lr=1e-3, device=torch.device("cpu"), log_every=10,
+        checkpoint_dir=tmp_path,
+    )
+    for e in range(1, epochs + 1):
+        assert (tmp_path / f"model_ep{e}.pt").exists()
+
+
+def test_train_decoders_saves_per_epoch_checkpoints(tmp_path):
+    """With checkpoint_dir set, decoders_ep{e}.pt is written at every epoch
+    and loads back into a freshly built decoder stack."""
+    model = _model()
+    decoders = build_decoders(model, image_size=IMG)
+    epochs = 2
+    train_decoders(
+        model, decoders, _loader(16), None,
+        epochs=epochs, lr=1e-3, device=torch.device("cpu"), log_every=10,
+        checkpoint_dir=tmp_path,
+    )
+    for e in range(1, epochs + 1):
+        assert (tmp_path / f"decoders_ep{e}.pt").exists()
+    fresh = build_decoders(model, image_size=IMG)
+    fresh.load_state_dict(torch.load(tmp_path / f"decoders_ep{epochs}.pt"))
+
+
 def test_train_with_val_still_records_val_curve():
     """With a real val set the val history is populated (back-compat)."""
     history = train_model(

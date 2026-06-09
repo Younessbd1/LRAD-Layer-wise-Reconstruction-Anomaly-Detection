@@ -15,6 +15,7 @@ from __future__ import annotations
 
 import logging
 import time
+from pathlib import Path
 from typing import Optional
 
 import torch
@@ -105,11 +106,18 @@ def train_model(
     early_stop_patience: int = 8,
     early_stop_min_delta: float = 1e-4,
     early_stop_min_epochs: int = 5,
+    checkpoint_dir: Optional[Path] = None,
 ) -> dict:
     """Train the multi-head classifier with combined CE + BCE loss.
 
     Returns a history dict with per-epoch train (and, when a validation set
     is given, val) loss, gender accuracy, and per-attribute accuracy.
+
+    When ``checkpoint_dir`` is given (config flag
+    ``training.save_every_epoch``), the model state is saved at the end of
+    EVERY epoch as ``model_ep{e}.pt`` — these per-epoch checkpoints feed
+    ``scripts/epoch_variability_study.py`` (inter-model variability
+    ``sigma(e)`` as a function of training epochs).
 
     When ``val_loader`` is ``None`` or empty (e.g. ``val_ratio=0``), there is
     no validation loop and no early stopping: the model runs the full
@@ -205,6 +213,12 @@ def train_model(
             history["val_gender_acc"].append(val_metrics["gender_acc"])
             history["val_attr_acc"].append(val_metrics["attr_acc"])
 
+        if checkpoint_dir is not None:
+            torch.save(
+                model.state_dict(),
+                Path(checkpoint_dir) / f"model_ep{epoch}.pt",
+            )
+
         if epoch == 1 or epoch % log_every == 0 or epoch == epochs:
             # With a val set, report val metrics; without one, report the
             # train metrics (and drop the redundant duplicate train_loss).
@@ -290,6 +304,7 @@ def train_decoders(
     weight_decay: float = 1e-5,
     device: torch.device,
     log_every: int = 1,
+    checkpoint_dir: Optional[Path] = None,
 ) -> dict:
     """Train per-block decoders to reconstruct the input from frozen
     classifier activations. Sum-of-MSE objective across all blocks.
@@ -298,6 +313,11 @@ def train_decoders(
     is given; with ``val_loader=None`` or empty (``val_ratio=0``) the
     per-block loss is reported on the training set instead, so the log stays
     meaningful and never collapses to a constant 0.
+
+    When ``checkpoint_dir`` is given (config flag
+    ``training.save_every_epoch``), the decoder states are saved at the end
+    of EVERY epoch as ``decoders_ep{e}.pt`` — the per-epoch checkpoints
+    used by ``scripts/epoch_variability_study.py``.
     """
     model.eval()
     for p in model.parameters():
@@ -349,6 +369,12 @@ def train_decoders(
         train_per_block = [s / max(n, 1) for s in per_block_sum]
         history["train_loss"].append(train_loss)
         history["train_loss_per_block"].append(train_per_block)
+
+        if checkpoint_dir is not None:
+            torch.save(
+                decoders.state_dict(),
+                Path(checkpoint_dir) / f"decoders_ep{epoch}.pt",
+            )
 
         if has_val:
             val_loss, val_per_block = _decoder_eval(
