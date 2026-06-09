@@ -60,6 +60,7 @@ from lrad.ensemble import (  # noqa: E402
     sample_decomposition,
     sample_mean_error_maps,
     sample_min_error_maps,
+    sample_quantile_min_error_maps,
 )
 from lrad.plots import (  # noqa: E402
     plot_bias_variance_vs_block,
@@ -72,6 +73,7 @@ from lrad.plots import (  # noqa: E402
     plot_min_error_maps,
     plot_per_block_breakdown,
     plot_recons_only,
+    plot_score_comparison,
     plot_variance_heatmaps,
 )
 from lrad.utils import get_device, seed_everything, setup_logging  # noqa: E402
@@ -357,6 +359,31 @@ def main() -> None:
                   f"({size}-model ensemble)",
         )
 
+        # Comparative score maps at ONE reconstruction depth (the deepest
+        # block by default; evaluation.score_comparison_block overrides):
+        # Bias (error of the mean prediction) | Risk (mean of the errors) |
+        # min of the errors | robust quantile-min (k-th smallest error,
+        # k = evaluation.score_comparison_k, default 3). Columns keep their
+        # OWN colour scales — the scores are not identically distributed.
+        cmp_block = int(ecfg_v.get("score_comparison_block", blocks[-1]))
+        cmp_k = int(ecfg_v.get("score_comparison_k", 3))
+        qmin_err_maps = sample_quantile_min_error_maps(
+            models, decoders_list, all_images, device, k=cmp_k,
+        )
+        plot_score_comparison(
+            all_images,
+            [
+                ("Bias  (x − f̄)²", maps[cmp_block]["bias"]),
+                ("Risk  mean_m", maps[cmp_block]["risk"]),
+                ("min_m", min_err_maps[cmp_block]),
+                (f"{cmp_k}-th smallest", qmin_err_maps[cmp_block]),
+            ],
+            plot_dir / "score_comparison.png",
+            row_labels=row_labels,
+            title=f"Score comparison at block {cmp_block}  "
+                  f"(per-column colour scales, {size}-model ensemble)",
+        )
+
         # Bias/Variance evolution curves (full test loaders).
         plot_bias_variance_vs_block(
             deb["scores_in"]["per_block"],
@@ -376,7 +403,7 @@ def main() -> None:
             "mean_recon_breakdown.png, mean_recons_only.png, "
             "mean_abs_bias.png, variance_heatmaps_ood.png, "
             "variance_heatmaps_all.png, mean_error_maps.png, "
-            "min_error_maps.png, "
+            "min_error_maps.png, score_comparison.png, "
             "bias_variance_vs_block.png, bias_variance_vs_percentile.png"
         )
     else:

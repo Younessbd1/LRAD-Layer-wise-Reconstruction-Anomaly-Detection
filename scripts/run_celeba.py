@@ -305,6 +305,7 @@ def build_and_run(
         logger.info("TRAINING — combined CE(gender) + BCE(attrs) loss")
         logger.info("=" * 70)
         tcfg = cfg["training"]
+        save_every_epoch = bool(tcfg.get("save_every_epoch", False))
         t0 = time.time()
         history = train_model(
             model,
@@ -312,13 +313,15 @@ def build_and_run(
             loaders.get("val"),
             epochs=tcfg.get("epochs", 30),
             lr=tcfg.get("lr", 1e-3),
-            weight_decay=tcfg.get("weight_decay", 1e-4),
+            weight_decay=tcfg.get("weight_decay", 0.0),
             attr_loss_weight=tcfg.get("attr_loss_weight", 1.0),
             device=device,
             log_every=tcfg.get("log_every", 1),
             early_stop_patience=tcfg.get("early_stop_patience", 6),
             early_stop_min_delta=tcfg.get("early_stop_min_delta", 1e-4),
             early_stop_min_epochs=tcfg.get("early_stop_min_epochs", 5),
+            checkpoint_dir=(output_dir / "weights") if save_every_epoch
+                           else None,
         )
         logger.info(f"Training done in {time.time() - t0:.1f}s")
         torch.save(model.state_dict(), weights_path)
@@ -354,6 +357,9 @@ def build_and_run(
                 f"out=(3, {image_size}, {image_size})  "
                 f"params={sum(p.numel() for p in d.parameters()):,}"
             )
+        save_every_epoch = bool(
+            cfg.get("training", {}).get("save_every_epoch", False),
+        )
         t0 = time.time()
         dec_history = train_decoders(
             model,
@@ -362,9 +368,11 @@ def build_and_run(
             loaders.get("val"),
             epochs=dec_cfg.get("epochs", 20),
             lr=dec_cfg.get("lr", 1e-3),
-            weight_decay=dec_cfg.get("weight_decay", 1e-5),
+            weight_decay=dec_cfg.get("weight_decay", 0.0),
             device=device,
             log_every=dec_cfg.get("log_every", 1),
+            checkpoint_dir=(output_dir / "weights") if save_every_epoch
+                           else None,
         )
         logger.info(f"Decoder training done in {time.time() - t0:.1f}s")
         torch.save(decoders.state_dict(), decoders_path)
