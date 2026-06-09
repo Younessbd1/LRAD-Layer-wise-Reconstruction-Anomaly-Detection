@@ -106,6 +106,44 @@ def decomposition_maps(
 
 
 @torch.no_grad()
+def _per_model_error_stack(
+    images: torch.Tensor,
+    recons_per_model: Sequence[Sequence[torch.Tensor]],
+    k: int,
+) -> torch.Tensor:
+    """Per-model squared error stack ``(M, B, H, W)`` for block ``k``.
+
+    The per-pixel error is the RGB-summed squared error
+    ``sum_c (x_c − f̂^m_c)²`` (no mean, no sqrt — a pixel lives in
+    ``[0, 3]``), consistent with :func:`decomposition_maps`. Shared
+    backend for the mean / min / quantile-min error maps.
+    """
+    n_models = len(recons_per_model)
+    if n_models == 0:
+        raise ValueError("need at least one model in the ensemble")
+    recons = torch.stack(
+        [recons_per_model[m][k] for m in range(n_models)], dim=0,
+    )  # (M, B, 3, H, W)
+    return ((images.unsqueeze(0) - recons) ** 2).sum(dim=2)
+
+
+@torch.no_grad()
+def _ensemble_recons(
+    models: Sequence[FacialCNN],
+    decoders_list: Sequence[nn.ModuleList],
+    images: torch.Tensor,
+    device: torch.device,
+) -> tuple[torch.Tensor, list[list[torch.Tensor]]]:
+    """Move ``images`` to ``device`` and reconstruct with every model."""
+    images = images.to(device, non_blocking=True)
+    recons_per_model = [
+        block_reconstructions(models[m], decoders_list[m], images)
+        for m in range(len(models))
+    ]
+    return images, recons_per_model
+
+
+@torch.no_grad()
 def mean_error_maps(
     images: torch.Tensor,
     recons_per_model: Sequence[Sequence[torch.Tensor]],
@@ -129,16 +167,12 @@ def mean_error_maps(
     if n_models == 0:
         raise ValueError("need at least one model in the ensemble")
     n_blocks = len(recons_per_model[0])
-    out: dict[int, torch.Tensor] = {}
-    for k in range(n_blocks):
-        recons = torch.stack(
-            [recons_per_model[m][k] for m in range(n_models)], dim=0,
-        )  # (M, B, 3, H, W)
+    return {
         # Per-model squared error, summed over RGB -> (M, B, H, W),
         # then averaged over the M models -> (B, H, W).
-        se = ((images.unsqueeze(0) - recons) ** 2).sum(dim=2)
-        out[k] = se.mean(dim=0)
-    return out
+        k: _per_model_error_stack(images, recons_per_model, k).mean(dim=0)
+        for k in range(n_blocks)
+    }
 
 
 @torch.no_grad()
@@ -149,11 +183,9 @@ def sample_mean_error_maps(
     device: torch.device,
 ) -> dict[int, torch.Tensor]:
     """Ensemble-averaged squared error maps for a small set of samples."""
-    images = images.to(device, non_blocking=True)
-    recons_per_model = [
-        block_reconstructions(models[m], decoders_list[m], images)
-        for m in range(len(models))
-    ]
+    images, recons_per_model = _ensemble_recons(
+        models, decoders_list, images, device,
+    )
     return mean_error_maps(images, recons_per_model)
 
 
@@ -175,16 +207,13 @@ def min_error_maps(
     if n_models == 0:
         raise ValueError("need at least one model in the ensemble")
     n_blocks = len(recons_per_model[0])
-    out: dict[int, torch.Tensor] = {}
-    for k in range(n_blocks):
-        recons = torch.stack(
-            [recons_per_model[m][k] for m in range(n_models)], dim=0,
-        )  # (M, B, 3, H, W)
+    return {
         # Per-model squared error, summed over RGB -> (M, B, H, W),
         # then the per-pixel minimum over the M models -> (B, H, W).
-        se = ((images.unsqueeze(0) - recons) ** 2).sum(dim=2)
-        out[k] = se.min(dim=0).values
-    return out
+        k: _per_model_error_stack(images, recons_per_model, k)
+        .min(dim=0).values
+        for k in range(n_blocks)
+    }
 
 
 @torch.no_grad()
@@ -195,12 +224,55 @@ def sample_min_error_maps(
     device: torch.device,
 ) -> dict[int, torch.Tensor]:
     """Ensemble per-pixel *minimum* squared error maps for a few samples."""
-    images = images.to(device, non_blocking=True)
-    recons_per_model = [
-        block_reconstructions(models[m], decoders_list[m], images)
-        for m in range(len(models))
-    ]
+    images, recons_per_model = _ensemble_recons(
+        models, decoders_list, images, device,
+    )
     return min_error_maps(images, recons_per_model)
+
+
+@torch.no_grad()
+def quantile_min_error_maps(
+    images: torch.Tensor,
+    recons_per_model: Sequence[Sequence[torch.Tensor]],
+    k: int = 3,
+) -> dict[int, torch.Tensor]:
+    """Per-block *robust minimum*: the ``k``-th smallest per-model error.
+
+    Same inputs/shape contract as :func:`min_error_maps`, but at every
+    pixel the ``M`` per-model squared errors are sorted in increasing
+    order and the ``k``-th smallest is kept (``torch.kthvalue``).
+    ``k=1`` reproduces :func:`min_error_maps` exactly; ``k>1`` makes the
+    minimum robust to a few lucky members — a pixel only stays dark if at
+    least ``k`` models reconstruct it well.
+    """
+    n_models = len(recons_per_model)
+    if n_models == 0:
+        raise ValueError("need at least one model in the ensemble")
+    if not 1 <= k <= n_models:
+        raise ValueError(
+            f"k must be in [1, {n_models}] (ensemble size), got {k}"
+        )
+    n_blocks = len(recons_per_model[0])
+    return {
+        b: _per_model_error_stack(images, recons_per_model, b)
+        .kthvalue(k, dim=0).values
+        for b in range(n_blocks)
+    }
+
+
+@torch.no_grad()
+def sample_quantile_min_error_maps(
+    models: Sequence[FacialCNN],
+    decoders_list: Sequence[nn.ModuleList],
+    images: torch.Tensor,
+    device: torch.device,
+    k: int = 3,
+) -> dict[int, torch.Tensor]:
+    """Robust-minimum (k-th smallest) error maps for a few samples."""
+    images, recons_per_model = _ensemble_recons(
+        models, decoders_list, images, device,
+    )
+    return quantile_min_error_maps(images, recons_per_model, k=k)
 
 
 def identity_residual(maps: dict[int, dict[str, torch.Tensor]]) -> float:
@@ -224,11 +296,9 @@ def sample_decomposition(
     device: torch.device,
 ) -> dict[int, dict[str, torch.Tensor]]:
     """Decomposition maps for a small set of sample images (for plots)."""
-    images = images.to(device, non_blocking=True)
-    recons_per_model = [
-        block_reconstructions(models[m], decoders_list[m], images)
-        for m in range(len(models))
-    ]
+    images, recons_per_model = _ensemble_recons(
+        models, decoders_list, images, device,
+    )
     return decomposition_maps(images, recons_per_model)
 
 
