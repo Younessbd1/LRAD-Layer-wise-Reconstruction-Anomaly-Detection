@@ -302,6 +302,7 @@ def train_decoders(
     epochs: int = 20,
     lr: float = 1e-3,
     weight_decay: float = 0.0,
+    anchor_lambda: float = 0.0,
     device: torch.device,
     log_every: int = 1,
     checkpoint_dir: Optional[Path] = None,
@@ -313,6 +314,24 @@ def train_decoders(
     is given; with ``val_loader=None`` or empty (``val_ratio=0``) the
     per-block loss is reported on the training set instead, so the log stays
     meaningful and never collapses to a constant 0.
+
+    **Anchored ensembling.** With ``anchor_lambda > 0`` the objective gains
+    a per-member L2-to-anchor penalty
+    ``0.5 * anchor_lambda * sum_j (theta_j - theta_0_j)^2`` — ordinary L2
+    weight decay, but toward the anchor instead of zero (per-parameter
+    gradient ``anchor_lambda * (theta_j - theta_0_j)``) — where the anchor
+    ``theta_0`` is this member's *own random initialization*, snapshotted
+    before training. Because each ensemble member is seeded differently, the
+    anchors differ from member to member while the architecture stays
+    byte-identical. The anchor is a draw from the weight prior, so the
+    penalty is the MAP regularizer of Pearce et al. (2020) — the L2-toward-
+    anchor playing the role of ``sigma_noise^2 / sigma_prior^2`` weight
+    decay: on in-distribution pixels the MSE term pins the decoders together
+    (low variance); off-manifold (OOD), where the data term is weak, each
+    decoder is held near its *distinct* random prior, so the members spread
+    out — turning the decomposition's Variance term into a calibrated
+    epistemic-uncertainty signal. ``anchor_lambda = 0`` recovers the plain
+    deep ensemble.
 
     When ``checkpoint_dir`` is given (config flag
     ``training.save_every_epoch``), the decoder states are saved at the end
@@ -327,6 +346,16 @@ def train_decoders(
     params = [p for d in decoders for p in d.parameters()]
     optimizer = torch.optim.Adam(params, lr=lr, weight_decay=weight_decay)
 
+    # Anchored ensembling: snapshot this member's random init as its anchor
+    # theta_0 (a sample from the weight prior). The penalty is
+    # 0.5 * anchor_lambda * sum_j (theta_j - theta_0_j)^2 — i.e. ordinary L2
+    # weight decay, but toward the random anchor instead of toward zero, so
+    # its per-parameter gradient is anchor_lambda * (theta_j - theta_0_j).
+    # anchor_lambda therefore sits on the same scale as a weight_decay
+    # coefficient and is applied in full at every step.
+    use_anchor = anchor_lambda > 0.0
+    anchors = [p.detach().clone() for p in params] if use_anchor else None
+
     has_val = _has_samples(val_loader)
 
     history = {
@@ -334,6 +363,7 @@ def train_decoders(
         "train_loss_per_block": [],
         "val_loss": [],
         "val_loss_per_block": [],
+        "anchor_penalty": [],
     }
 
     for epoch in range(1, epochs + 1):
@@ -343,6 +373,7 @@ def train_decoders(
 
         n = 0
         loss_sum = 0.0
+        anchor_sum = 0.0
         per_block_sum = [0.0 for _ in decoders]
         for img, _, _, _ in train_loader:
             img = img.to(device, non_blocking=True)
@@ -356,10 +387,21 @@ def train_decoders(
                 mse = F.mse_loss(d(acts[k]), img)
                 block_losses.append(mse)
                 total = total + mse
+
+            bs = img.size(0)
+            if use_anchor:
+                # 0.5 * lambda * sum_j (theta_j - theta_0_j)^2 -> gradient
+                # lambda * (theta_j - theta_0_j): L2 decay toward the anchor.
+                sq = sum(
+                    (p - a).pow(2).sum() for p, a in zip(params, anchors)
+                )
+                anchor_pen = 0.5 * anchor_lambda * sq
+                total = total + anchor_pen
+                anchor_sum += anchor_pen.item() * bs
+
             total.backward()
             optimizer.step()
 
-            bs = img.size(0)
             n += bs
             loss_sum += total.item() * bs
             for k, mse in enumerate(block_losses):
@@ -369,6 +411,7 @@ def train_decoders(
         train_per_block = [s / max(n, 1) for s in per_block_sum]
         history["train_loss"].append(train_loss)
         history["train_loss_per_block"].append(train_per_block)
+        history["anchor_penalty"].append(anchor_sum / max(n, 1))
 
         if checkpoint_dir is not None:
             torch.save(
