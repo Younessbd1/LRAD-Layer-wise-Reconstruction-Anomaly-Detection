@@ -106,6 +106,43 @@ def test_train_decoders_without_val_reports_per_block_train():
     assert len(history["train_loss_per_block"]) == epochs
     assert len(history["train_loss_per_block"][0]) == len(decoders)
     assert history["val_loss"] == []
+    # No anchoring by default: the penalty term is recorded as exactly 0.
+    assert history["anchor_penalty"] == [0.0] * epochs
+
+
+def test_anchored_ensembling_drives_members_apart():
+    """anchor_lambda>0 (L2 decay toward each member's own random init)
+    records a positive penalty and yields more inter-member reconstruction
+    disagreement than the plain deep ensemble, with the architecture left
+    byte-identical (same param shapes) across members."""
+    dev = torch.device("cpu")
+    imgs = torch.rand(16, 3, IMG, IMG)
+    loader = _loader(16)
+
+    def _two_members(anchor_lambda: float):
+        recons, penalties = [], []
+        for seed in (1, 2):
+            torch.manual_seed(seed)
+            model = _model()
+            decoders = build_decoders(model, image_size=IMG)
+            hist = train_decoders(
+                model, decoders, loader, None, epochs=4, lr=1e-3,
+                anchor_lambda=anchor_lambda, device=dev, log_every=10,
+            )
+            penalties.append(hist["anchor_penalty"][-1])
+            with torch.no_grad():
+                _, acts = model.forward_features(imgs)
+                k = len(decoders) - 1
+                recons.append(decoders[k](acts[k]))
+        disagreement = ((recons[0] - recons[1]) ** 2).mean().item()
+        return disagreement, penalties
+
+    anchored_disagree, anchored_pen = _two_members(0.05)
+    plain_disagree, plain_pen = _two_members(0.0)
+
+    assert plain_pen == [0.0, 0.0]
+    assert all(p > 0.0 for p in anchored_pen)
+    assert anchored_disagree >= plain_disagree
 
 
 def test_train_model_saves_per_epoch_checkpoints(tmp_path):
