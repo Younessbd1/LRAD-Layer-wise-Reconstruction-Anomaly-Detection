@@ -415,6 +415,11 @@ def main() -> None:
         "ensemble_size": size,
         "seeds": seeds,
         "agg": agg,
+        # Provenance: anchored-ensembling strength (0.0 = plain deep ensemble).
+        "anchor_lambda": float(
+            (cfg.get("training", {}).get("decoders") or {})
+            .get("anchor_lambda", 0.0)
+        ),
         "device": str(device),
         "identity_max_residual": residual,
         "per_model": per_model,
