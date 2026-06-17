@@ -183,7 +183,7 @@ def plot_per_block_breakdown(
         row = [_sq_error(images_np[r], recons_np[k][r])
                for k in range(n_blocks)]
         err_maps.append(row)
-    vmax = 3.0
+    vmax = 0.5
 
     fig, axes = plt.subplots(
         n_rows, n_cols,
@@ -361,7 +361,7 @@ def plot_fusion_overlay(
         fused = np.maximum.reduce(row)  # per-pixel max across blocks
         fused_maps.append(fused)
         anomaly_scores.append(float(fused.max()))
-    vmax = 3.0
+    vmax = 0.5
 
     fig, axes = plt.subplots(
         n_rows, n_cols,
@@ -601,7 +601,7 @@ def _block_heatmap_grid(
     n_blocks = len(block_maps)
     n_cols = 1 + n_blocks
     maps_np = [_stat_np(m) for m in block_maps]
-    vmax = 3.0
+    vmax = 0.5
 
     fig, axes = plt.subplots(
         n_rows, n_cols,
@@ -1019,7 +1019,7 @@ def plot_ensemble_decomposition(
     # Fixed [0, 3] colour scale (images live in [0, 1] so the RGB-summed
     # squared-error terms live in [0, 3]): no data-dependent normalization,
     # so any two figures are directly comparable.
-    vmax = 3.0
+    vmax = 0.5
 
     fig, axes = plt.subplots(
         n_rows, n_cols,
