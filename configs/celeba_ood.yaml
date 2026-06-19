@@ -94,7 +94,7 @@ training:
     # on the same scale as a weight_decay coefficient. 0.0 = plain deep
     # ensemble. Start ~1e-3 and tune up if ID variance stays near zero /
     # down if the bias (anomaly) AUROC drops.
-    anchor_lambda: 0.001
+    anchor_lambda: 0.9
     log_every: 1
 
 # ---- Evaluation ---------------------------------------------------------
