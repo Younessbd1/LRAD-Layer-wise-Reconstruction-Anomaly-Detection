@@ -42,10 +42,15 @@ import torch
 import torch.nn as nn
 
 from .anomaly_score import _reduce_over_pixels, aggregate_anomaly_score
-from .evaluate import _auroc_entry
+from .evaluate import _auroc_entry, collect_predictions
 from .model import FacialCNN
 
 TERMS: tuple[str, ...] = ("risk", "bias", "variance")
+
+# Predictive-uncertainty decomposition terms (classifier-head, not pixel).
+UNC_TERMS: tuple[str, ...] = ("total", "aleatoric", "epistemic")
+_UNC_HEADS: tuple[str, ...] = ("gender", "attrs", "combined")
+_PROB_EPS = 1e-12  # float64 entropy floor (numpy path, safe at this scale)
 
 
 @torch.no_grad()
@@ -417,5 +422,140 @@ def evaluate_ensemble_decomposition(
         "anomaly_auroc": {
             "aggregated": auroc["score_bias_aggregated"].get("auroc"),
             "per_block": list(per_block_auroc["bias"]),
+        },
+    }
+
+
+# ---------------------------------------------------------------------------
+# Predictive-uncertainty decomposition (classifier heads, not reconstruction)
+# ---------------------------------------------------------------------------
+#
+# The pixel-space Variance term is a weak OOD signal for an *occlusion* task:
+# when eyeglasses hide the face, every member fails to reconstruct the same
+# region, so the error is large but *correlated* — high Bias, low Variance
+# (model disagreement). The disagreement that actually grows out-of-
+# distribution lives in the classifier's *predictions*, not its pixels.
+#
+# For a deep ensemble the standard decomposition of predictive uncertainty is
+#
+#     Total       = H( mean_m p_m )                  (entropy of mean pred)
+#     Aleatoric   = mean_m H( p_m )                  (expected member entropy)
+#     Epistemic   = Total − Aleatoric  =  MI         (member disagreement)
+#
+# where the Epistemic term is the mutual information between the label and the
+# model parameters (BALD). It is exactly the *variance* of the ensemble's
+# predictive distribution, and — unlike pixel variance — it rises on OOD
+# inputs because off-manifold the independently-trained members extrapolate to
+# *different* predictions. This is the variance-based OOD score that works.
+
+
+def _categorical_entropy(p: np.ndarray) -> np.ndarray:
+    """Entropy (nats) over the last axis of a categorical pmf ``(..., C)``."""
+    p = np.clip(p, _PROB_EPS, 1.0)
+    return -(p * np.log(p)).sum(axis=-1)
+
+
+def _bernoulli_entropy_np(p: np.ndarray) -> np.ndarray:
+    """Per-element binary entropy (nats) for Bernoulli probabilities."""
+    p = np.clip(p, _PROB_EPS, 1.0 - _PROB_EPS)
+    return -(p * np.log(p) + (1.0 - p) * np.log1p(-p))
+
+
+def _uncertainty_scores(
+    gender_probs: np.ndarray,  # (M, N, C)
+    attr_probs: np.ndarray,    # (M, N, A)
+) -> dict[str, dict[str, np.ndarray]]:
+    """Total / aleatoric / epistemic uncertainty for each head + combined.
+
+    Inputs are per-member predictive probabilities stacked on axis 0. Returns
+    ``{head: {term: (N,)}}`` for ``head`` in ``gender / attrs / combined`` and
+    ``term`` in ``total / aleatoric / epistemic``. The combined head sums the
+    gender and (attr-averaged) terms, matching ``score_entropy_combined``.
+    """
+    out: dict[str, dict[str, np.ndarray]] = {}
+
+    # --- gender (categorical) ---
+    mean_g = gender_probs.mean(axis=0)                       # (N, C)
+    total_g = _categorical_entropy(mean_g)                   # (N,)
+    alea_g = _categorical_entropy(gender_probs).mean(axis=0)  # (N,)
+    out["gender"] = {
+        "total": total_g,
+        "aleatoric": alea_g,
+        "epistemic": total_g - alea_g,
+    }
+
+    # --- attributes (per-attr Bernoulli, averaged over attrs) ---
+    mean_a = attr_probs.mean(axis=0)                          # (N, A)
+    total_a = _bernoulli_entropy_np(mean_a).mean(axis=-1)     # (N,)
+    alea_a = _bernoulli_entropy_np(attr_probs).mean(axis=0).mean(axis=-1)
+    out["attrs"] = {
+        "total": total_a,
+        "aleatoric": alea_a,
+        "epistemic": total_a - alea_a,
+    }
+
+    # --- combined (gender + attrs), matching score_entropy_combined ---
+    out["combined"] = {
+        t: out["gender"][t] + out["attrs"][t] for t in UNC_TERMS
+    }
+    return out
+
+
+@torch.no_grad()
+def _collect_member_probs(
+    models: Sequence[FacialCNN],
+    loader,
+    device: torch.device,
+) -> tuple[np.ndarray, np.ndarray]:
+    """Stack every member's predictive probabilities over a loader.
+
+    Returns ``(gender_probs, attr_probs)`` with shapes ``(M, N, C)`` and
+    ``(M, N, A)``. Reuses :func:`collect_predictions` so the per-member
+    forward pass is identical to the single-model evaluation.
+    """
+    gender, attrs = [], []
+    for m in models:
+        preds = collect_predictions(m, loader, device)
+        gender.append(preds["gender_probs"])
+        attrs.append(preds["attr_probs"])
+    return np.stack(gender, axis=0), np.stack(attrs, axis=0)
+
+
+@torch.no_grad()
+def evaluate_ensemble_uncertainty(
+    models: Sequence[FacialCNN],
+    loaders: dict,
+    device: torch.device,
+) -> dict:
+    """OOD AUROC for the predictive total / aleatoric / epistemic uncertainty.
+
+    For every classifier head (``gender``, ``attrs``, ``combined``) and every
+    uncertainty term, scores ``test_in`` (label 0) vs ``test_ood`` (label 1).
+    The headline OOD signal is ``combined / epistemic`` — the ensemble's
+    predictive mutual information, i.e. the *variance* of its predictions —
+    surfaced under ``epistemic_auroc`` for callers.
+    """
+    g_in, a_in = _collect_member_probs(models, loaders["test_in"], device)
+    g_ood, a_ood = _collect_member_probs(models, loaders["test_ood"], device)
+
+    scores_in = _uncertainty_scores(g_in, a_in)
+    scores_ood = _uncertainty_scores(g_ood, a_ood)
+
+    auroc: dict[str, dict[str, dict]] = {}
+    for head in _UNC_HEADS:
+        auroc[head] = {
+            t: _auroc_entry(scores_in[head][t], scores_ood[head][t])
+            for t in UNC_TERMS
+        }
+
+    return {
+        "n_models": len(models),
+        "heads": list(_UNC_HEADS),
+        "terms": list(UNC_TERMS),
+        "auroc": auroc,
+        # Headline: epistemic (mutual information) = the predictive-variance
+        # OOD score. Combined head is the most informative.
+        "epistemic_auroc": {
+            head: auroc[head]["epistemic"].get("auroc") for head in _UNC_HEADS
         },
     }
