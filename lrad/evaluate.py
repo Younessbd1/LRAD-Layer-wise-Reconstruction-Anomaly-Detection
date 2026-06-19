@@ -33,13 +33,43 @@ from .model import FacialCNN
 
 logger = logging.getLogger("celeba_ood")
 
-_EPS = 1e-12
+# Clamp floor for probabilities. 1e-12 is *unsafe* in float32: 1.0 - 1e-12
+# rounds back to 1.0, so a saturated probability (p == 1.0, common once the
+# attribute heads train to high confidence) survives the clamp, making
+# (1 - p).log() == -inf and 0 * -inf == NaN — which is exactly what poisoned
+# score_entropy_combined. Keep this floor only for the legacy
+# probability-based helper; the entropy actually used now is computed from
+# logits, which is stable regardless of saturation.
+_EPS = 1e-7
 
 
 def _bernoulli_entropy(p: torch.Tensor) -> torch.Tensor:
-    """Per-element binary entropy in nats. Stable for p ∈ [0, 1]."""
+    """Per-element binary entropy in nats from probabilities.
+
+    Float32-safe: ``p`` is clamped to ``[_EPS, 1 - _EPS]`` with a floor large
+    enough that ``1 - _EPS`` stays distinct from ``1.0`` in float32, so a
+    saturated ``p == 1.0`` no longer produces a NaN. Prefer
+    :func:`_bernoulli_entropy_logits` when logits are available — it is exact
+    and needs no clamp.
+    """
     p = p.clamp(_EPS, 1.0 - _EPS)
     return -(p * p.log() + (1.0 - p) * (1.0 - p).log())
+
+
+def _bernoulli_entropy_logits(logits: torch.Tensor) -> torch.Tensor:
+    """Per-element binary entropy in nats, computed from logits.
+
+    For a Bernoulli with logit ``z`` and ``p = sigmoid(z)``::
+
+        H = p * softplus(-z) + (1 - p) * softplus(z)
+
+    using ``log p = -softplus(-z)`` and ``log(1 - p) = -softplus(z)``. This
+    is numerically stable for any ``z`` (no clamp, no NaN at saturation),
+    which is why it replaces the probability-based path for the combined
+    entropy OOD score.
+    """
+    p = torch.sigmoid(logits)
+    return p * F.softplus(-logits) + (1.0 - p) * F.softplus(logits)
 
 
 def _softmax_entropy(logits: torch.Tensor) -> torch.Tensor:
@@ -86,7 +116,9 @@ def collect_predictions(
     score_msp = (1.0 - msp).numpy()
 
     h_gender = _softmax_entropy(gender_logits)
-    h_attrs = _bernoulli_entropy(attr_probs).mean(dim=-1)
+    # Stable logit-based Bernoulli entropy — robust to saturated attribute
+    # heads (p == 1.0 in float32), which used to make this score all-NaN.
+    h_attrs = _bernoulli_entropy_logits(attr_logits).mean(dim=-1)
     score_entropy_combined = (h_gender + h_attrs).numpy()
     score_entropy_gender = h_gender.numpy()
     score_entropy_attrs = h_attrs.numpy()
