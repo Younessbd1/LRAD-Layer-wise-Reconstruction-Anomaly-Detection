@@ -56,6 +56,7 @@ from run_celeba import (  # noqa: E402  (path set up just above)
 from lrad.dataset import get_celeba_loaders  # noqa: E402
 from lrad.ensemble import (  # noqa: E402
     evaluate_ensemble_decomposition,
+    evaluate_ensemble_uncertainty,
     identity_residual,
     sample_decomposition,
     sample_mean_error_maps,
@@ -245,6 +246,24 @@ def main() -> None:
         )
         logger.info(f"  block {k}:  {row}")
 
+    # --- Predictive-uncertainty decomposition (classifier heads) ----------
+    # The variance-based OOD signal that actually works on this occlusion
+    # task: epistemic uncertainty = ensemble predictive mutual information.
+    logger.info("=" * 70)
+    logger.info("PREDICTIVE UNCERTAINTY — Total = Aleatoric + Epistemic (MI)")
+    logger.info("=" * 70)
+    unc = evaluate_ensemble_uncertainty(models, loaders, device)
+    for head in unc["heads"]:
+        row = "  ".join(
+            f"{t}={unc['auroc'][head][t].get('auroc', float('nan')):.4f}"
+            for t in unc["terms"]
+        )
+        logger.info(f"  {head:<9}: {row}")
+    logger.info(
+        "  -> OOD score = epistemic (combined predictive MI):  "
+        f"AUROC={unc['epistemic_auroc']['combined']:.4f}"
+    )
+
     # --- Plots ------------------------------------------------------------
     if not args.no_plots:
         plot_dir = ens_dir / "plots"
@@ -431,6 +450,19 @@ def main() -> None:
         },
         # Headline OOD score: the Bias term (bias = risk − variance).
         "anomaly_auroc": _to_jsonable(deb["anomaly_auroc"]),
+        # Predictive-uncertainty decomposition (classifier heads). The
+        # epistemic term is the ensemble's predictive variance (mutual
+        # information) — the OOD signal that works on this occlusion task.
+        "uncertainty_auroc": {
+            "epistemic": _to_jsonable(unc["epistemic_auroc"]),
+            "by_head": {
+                head: {
+                    t: unc["auroc"][head][t].get("auroc")
+                    for t in unc["terms"]
+                }
+                for head in unc["heads"]
+            },
+        },
     }
     with open(ens_dir / "summary.json", "w") as f:
         json.dump(_to_jsonable(summary), f, indent=2)
