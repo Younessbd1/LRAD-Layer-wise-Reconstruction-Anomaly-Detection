@@ -8,14 +8,17 @@ import torch
 
 from lrad.decoder import build_decoders
 from lrad.ensemble import (
+    UNC_TERMS,
     block_reconstructions,
     decomposition_maps,
     evaluate_ensemble_decomposition,
+    evaluate_ensemble_uncertainty,
     identity_residual,
     mean_error_maps,
     min_error_maps,
     quantile_min_error_maps,
 )
+from lrad.evaluate import _bernoulli_entropy, _bernoulli_entropy_logits
 from lrad.model import FacialCNN
 
 IMG = 16
@@ -180,3 +183,65 @@ def test_evaluate_ensemble_decomposition(setup):
         assert out["scores_in"]["aggregated"][t].shape == (10,)
         assert out["scores_ood"]["aggregated"][t].shape == (7,)
         assert np.isfinite(out["scores_in"]["aggregated"][t]).all()
+
+
+# ---------------------------------------------------------------------------
+# Predictive-uncertainty (epistemic = variance) OOD score
+# ---------------------------------------------------------------------------
+
+def test_bernoulli_entropy_no_nan_on_saturated_logits():
+    """Saturated attribute logits must not produce NaN entropy.
+
+    Regression for the float32 bug: sigmoid(large logit) == 1.0, and the old
+    clamp floor 1e-12 left it at 1.0, so (1-p).log() was -inf -> NaN. Both the
+    logit-based path and the float32-safe probability path must stay finite.
+    """
+    logits = torch.tensor([[30.0, 40.0, -50.0, 0.0, 2.0]], dtype=torch.float32)
+    h_logits = _bernoulli_entropy_logits(logits)
+    assert torch.isfinite(h_logits).all()
+    assert (h_logits >= 0).all()
+    h_probs = _bernoulli_entropy(torch.sigmoid(logits))
+    assert torch.isfinite(h_probs).all()
+
+
+def _labelled_loader(images: torch.Tensor, n_attrs: int):
+    """One-batch loader with the (img, gender, attrs, is_ood) tuple shape."""
+    b = images.size(0)
+    return [(
+        images,
+        torch.zeros(b, dtype=torch.long),
+        torch.zeros(b, n_attrs),
+        torch.zeros(b, dtype=torch.long),
+    )]
+
+
+def test_evaluate_ensemble_uncertainty(setup):
+    """Total = Aleatoric + Epistemic identity, AUROC keys, finite scores."""
+    models, _, _, _ = setup
+    device = torch.device("cpu")
+    n_attrs = models[0].n_attrs
+    loaders = {
+        "test_in": _labelled_loader(torch.rand(10, 3, IMG, IMG), n_attrs),
+        "test_ood": _labelled_loader(torch.rand(7, 3, IMG, IMG), n_attrs),
+    }
+    out = evaluate_ensemble_uncertainty(models, loaders, device)
+    for head in out["heads"]:
+        for t in UNC_TERMS:
+            assert t in out["auroc"][head]
+        assert out["epistemic_auroc"][head] == out["epistemic_auroc"][head]
+
+
+def test_epistemic_is_total_minus_aleatoric_and_nonneg():
+    """Epistemic uncertainty (MI) is non-negative and obeys the identity."""
+    from lrad.ensemble import _uncertainty_scores
+
+    rng = np.random.default_rng(0)
+    m, n, c, a = 5, 50, 2, 6
+    g = rng.dirichlet([1.0, 1.0], size=(m, n))
+    at = rng.uniform(0.0, 1.0, size=(m, n, a))
+    s = _uncertainty_scores(g, at)
+    for head in ("gender", "attrs", "combined"):
+        total = s[head]["total"]
+        recon = s[head]["aleatoric"] + s[head]["epistemic"]
+        assert np.allclose(total, recon, atol=1e-10)
+        assert (s[head]["epistemic"] >= -1e-9).all()
