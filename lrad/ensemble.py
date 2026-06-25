@@ -457,6 +457,7 @@ def _categorical_entropy(p: np.ndarray) -> np.ndarray:
 
 def _bernoulli_entropy_np(p: np.ndarray) -> np.ndarray:
     """Per-element binary entropy (nats) for Bernoulli probabilities."""
+    p = np.asarray(p, dtype=np.float64)
     p = np.clip(p, _PROB_EPS, 1.0 - _PROB_EPS)
     return -(p * np.log(p) + (1.0 - p) * np.log1p(-p))
 

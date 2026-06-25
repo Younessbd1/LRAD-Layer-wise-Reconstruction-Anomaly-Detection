@@ -176,13 +176,14 @@ def plot_per_block_breakdown(
     n_blocks = len(recons_np)
     n_cols = 1 + 2 * n_blocks
 
-    # Pre-compute every error map. The colour scale is fixed to [0, 3]
-    # (no data-dependent normalization) so any two figures are comparable.
     err_maps: list[list[np.ndarray]] = []
     for r in range(n_rows):
         row = [_sq_error(images_np[r], recons_np[k][r])
                for k in range(n_blocks)]
         err_maps.append(row)
+    # cap at 0.5 — errors live in [0, 3] (RGB-summed) but typical recon
+    # error is well below 1; 0.5 gives a readable colour range without
+    # washing out structure. fixed (not data-dependent) so figures compare.
     vmax = 0.5
 
     fig, axes = plt.subplots(
@@ -361,6 +362,7 @@ def plot_fusion_overlay(
         fused = np.maximum.reduce(row)  # per-pixel max across blocks
         fused_maps.append(fused)
         anomaly_scores.append(float(fused.max()))
+    # same fixed cap as plot_per_block_breakdown — see comment there
     vmax = 0.5
 
     fig, axes = plt.subplots(
@@ -588,9 +590,11 @@ def _block_heatmap_grid(
     """Original image + one per-block heatmap column, one row per sample.
 
     ``block_maps`` is one ``(B, H, W)`` map per displayed block (already
-    sliced to the sample rows). Every tile shares the fixed ``[0, 3]`` error
-    scale — images live in ``[0, 1]`` so the RGB-summed squared error lives
-    in ``[0, 3]`` — so any two figures are comparable; one colour bar sits on
+    sliced to the sample rows). Every tile uses a fixed display cap of
+    ``vmax=0.5`` — errors live in ``[0, 3]`` (RGB-summed, images in
+    ``[0, 1]``) but typical recon errors sit well below 1, so 0.5 gives a
+    readable range without washing out structure. The cap is fixed, not
+    data-dependent, so any two figures are comparable. One colour bar sits on
     the right and each tile is annotated with its mean. Shared backend for
     the bias / mean-error / min-error / variance heatmap figures.
     """

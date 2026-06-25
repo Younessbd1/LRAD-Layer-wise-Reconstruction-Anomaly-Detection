@@ -28,17 +28,6 @@ from .model import FacialCNN
 logger = logging.getLogger("celeba_ood")
 
 
-def _accuracy_gender(logits: torch.Tensor, target: torch.Tensor) -> float:
-    """Return the fraction of correctly classified Male/Female samples."""
-    return (logits.argmax(dim=1) == target).float().mean().item()
-
-
-def _accuracy_attrs(logits: torch.Tensor, target: torch.Tensor) -> torch.Tensor:
-    """Per-attribute binary accuracy (vector of length n_attrs)."""
-    pred = (torch.sigmoid(logits) >= 0.5).float()
-    return (pred == target).float().mean(dim=0)
-
-
 @torch.no_grad()
 def evaluate_one_epoch(
     model: FacialCNN,
@@ -180,18 +169,14 @@ def train_model(
             bs = img.size(0)
             n += bs
             loss_sum += loss.item() * bs
-            gender_correct += (
-                out["gender_logits"].argmax(dim=1) == gender
-            ).sum().item()
+            gender_match = out["gender_logits"].argmax(dim=1) == gender
+            gender_correct += gender_match.sum().item()
             attr_pred = (torch.sigmoid(out["attr_logits"]) >= 0.5).float()
-            attr_correct += (attr_pred == attrs).float().sum(dim=0)
+            attr_match = (attr_pred == attrs).float()
+            attr_correct += attr_match.sum(dim=0)
 
-            history["batch_gender_acc"].append(
-                (out["gender_logits"].argmax(dim=1) == gender).float().mean().item()
-            )
-            history["batch_attr_acc_mean"].append(
-                (attr_pred == attrs).float().mean().item()
-            )
+            history["batch_gender_acc"].append(gender_match.float().mean().item())
+            history["batch_attr_acc_mean"].append(attr_match.mean().item())
 
         history["epoch_ends"].append(len(history["batch_gender_acc"]) - 1)
 

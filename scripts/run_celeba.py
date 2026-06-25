@@ -240,7 +240,7 @@ def _to_jsonable(obj):
     if isinstance(obj, (list, tuple)):
         return [_to_jsonable(v) for v in obj]
     if isinstance(obj, np.ndarray):
-        return None
+        return None  # fpr/tpr/score arrays are too large for the summary JSON
     if isinstance(obj, (np.floating,)):
         return float(obj)
     if isinstance(obj, (np.integer,)):
