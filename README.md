@@ -9,13 +9,25 @@ OOD detection on CelebA faces via deep-ensemble reconstruction error decomposed 
 
 ## What it does
 
-A from-scratch convolutional classifier is trained on glasses-free CelebA faces; lightweight decoders attached to each conv block learn to invert that block's frozen activations back to a `(3, 64, 64)` reconstruction. Training `M` such models independently forms a deep ensemble whose per-pixel reconstruction risk decomposes exactly as `Risk = Bias + Variance`. The **bias** term — the irreducible error of the consensus reconstruction — is the anomaly score; faces with eyeglasses are held out as OOD and score higher.
+A from-scratch convolutional classifier is trained on accessory-free CelebA faces; lightweight decoders attached to each conv block learn to invert that block's frozen activations back to a `(3, 64, 64)` reconstruction. Training `M` such models independently forms a deep ensemble whose per-pixel reconstruction risk decomposes exactly as `Risk = Bias + Variance`. The **bias** term — the irreducible error of the consensus reconstruction — is the anomaly score; faces wearing eyeglasses or a hat are held out as OOD (the attribute set is configurable) and score higher.
+
+## Architecture
+
+**Classifier** — convolutional trunk with gender and attribute heads:
+
+![Classifier diagram](docs/diagrams/Classifier.svg)
+
+**Decoder** — per-block reconstruction head, upsampling frozen activations back to `(3, 64, 64)`:
+
+![Decoder diagram](docs/diagrams/Decoder.svg)
 
 ## Features
 
 - Exact pixelwise `Risk = Bias + Variance` decomposition, verified at runtime
 - Anchored ensembling: L2-toward-random-init penalty calibrates the epistemic (variance) term across members
 - Predictive-uncertainty decomposition on classifier heads (total = aleatoric + epistemic / MI)
+- Per-instance figures: each face's reconstruction + error across every member, the bias / mean / min summary, and the smoothed bias overlaid on the image
+- Configurable OOD attribute set (eyeglasses, hats, …) and decoder upsampling (bilinear resize-then-conv or transposed conv)
 - Epoch-variability study: traces inter-model variability σ(e) from per-epoch decoder checkpoints
 - Single YAML config shared by both single-model and ensemble runners; dotted `key=value` CLI overrides
 
@@ -88,10 +100,10 @@ python scripts/epoch_variability_study.py \
 
 | Section | Key parameters |
 | --- | --- |
-| `dataset` | `root`, `image_size`, `batch_size`, `train_ratio`, `val_ratio` |
+| `dataset` | `root`, `image_size`, `batch_size`, `train_ratio`, `val_ratio`, `ood_attrs` (attribute name or list defining OOD) |
 | `model` | `channels` (one int per conv block), `n_attrs`, `n_gender` |
-| `training` | `epochs`, `lr`, `weight_decay`, `attr_loss_weight`, `save_every_epoch`; nested `decoders: {epochs, lr, anchor_lambda}` |
-| `evaluation` | `n_viz_in_samples`, `n_viz_ood_samples`, `viz_seed`, `score_comparison_block`, `score_comparison_k` |
+| `training` | `epochs`, `lr`, `weight_decay`, `attr_loss_weight`, `save_every_epoch`; nested `decoders: {epochs, lr, anchor_lambda, upsample}` (`upsample`: `bilinear` / `transpose`) |
+| `evaluation` | `n_viz_in_samples`, `n_viz_ood_samples`, `viz_seed`, `score_comparison_block`, `score_comparison_k`, `n_instances_in`, `n_instances_ood`, `overlay_sigma`, `overlay_power` |
 | `ensemble` | `size`, `base_seed` (model `i` uses `base_seed + i`), `agg` (`mean` / `max` / `p95`) |
 
 ## Project structure
@@ -99,7 +111,7 @@ python scripts/epoch_variability_study.py \
 ```text
 lrad/
 ├── lrad/                          # library (flat layout)
-│   ├── dataset.py                 # CelebA loaders; Eyeglasses OOD split
+│   ├── dataset.py                 # CelebA loaders; configurable accessory OOD split
 │   ├── model.py                   # FacialCNN: conv trunk + gender/attrs heads
 │   ├── decoder.py                 # per-block reconstruction decoders
 │   ├── train.py                   # classifier + decoder training loops
@@ -117,7 +129,7 @@ lrad/
                                    #         decoders, training, checkpointing
 ```
 
-Outputs are gitignored. An ensemble run writes per-model results under `model_<i>/` (weights, history, plots) and the decomposition under `ensemble/` (AUROC table, identity residual, all heatmap figures).
+Outputs are gitignored. An ensemble run writes per-model results under `model_<i>/` (weights, history, plots) and the decomposition under `ensemble/` (AUROC table, identity residual, all heatmap figures), with the per-instance figures under `ensemble/plots/instances_in/` and `ensemble/plots/instances_ood/` (one PNG per face).
 
 ## Contributing
 
