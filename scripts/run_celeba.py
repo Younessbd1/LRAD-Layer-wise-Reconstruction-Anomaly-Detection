@@ -147,9 +147,9 @@ def _plot_score_distribution(
 ) -> None:
     fig, ax = plt.subplots(figsize=(6.5, 4), constrained_layout=True)
     bins = 60
-    ax.hist(in_scores, bins=bins, alpha=0.55, label="in-dist (no glasses)",
+    ax.hist(in_scores, bins=bins, alpha=0.55, label="in-distribution",
             color="#377eb8", density=True)
-    ax.hist(ood_scores, bins=bins, alpha=0.55, label="OOD (Eyeglasses)",
+    ax.hist(ood_scores, bins=bins, alpha=0.55, label="OOD",
             color="#e41a1c", density=True)
     ax.set_xlabel(score_name)
     ax.set_ylabel("Density")
@@ -330,10 +330,16 @@ def build_and_run(
 
     # --- Per-block decoders ---
     image_size = cfg.get("dataset", {}).get("image_size", 64)
-    decoders = build_decoders(model, image_size=image_size).to(device)
+    dec_cfg = cfg.get("training", {}).get("decoders")
+    # Upsampling stage of every decoder (bilinear resize-then-conv, or a
+    # transposed conv). Read before building so eval-only loads the same
+    # architecture the weights were trained with.
+    upsample = str((dec_cfg or {}).get("upsample", "bilinear"))
+    decoders = build_decoders(
+        model, image_size=image_size, upsample=upsample,
+    ).to(device)
     dec_history: dict | None = None
     decoders_path = output_dir / "weights" / "decoders.pt"
-    dec_cfg = cfg.get("training", {}).get("decoders")
 
     if eval_only:
         if decoders_path.exists():
@@ -348,7 +354,8 @@ def build_and_run(
             decoders = None  # type: ignore[assignment]
     elif dec_cfg:
         logger.info("=" * 70)
-        logger.info("PHASE 2 — training per-block reconstruction decoders")
+        logger.info("PHASE 2 — training per-block reconstruction decoders "
+                    f"(upsample={upsample})")
         logger.info("=" * 70)
         for k, d in enumerate(decoders):
             logger.info(
