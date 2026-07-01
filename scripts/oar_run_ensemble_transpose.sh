@@ -3,16 +3,14 @@
 # OAR submission script for Grid'5000 — CelebA OOD deep-ensemble run with the
 # ConvTranspose2d decoder variant (training.decoders.upsample=transpose).
 #
-# Same job as oar_run_ensemble.sh EXCEPT:
-#   * decoder upsampling: each per-block decoder grows its activation back to
-#     image size with learnable ConvTranspose2d(4x4, stride 2) instead of the
-#     default bilinear resize-then-conv;
-#   * trunk depth: 5 conv blocks, channels (32, 64, 128, 256, 256) — the
-#     model's default layout — instead of the 6-block config trunk.
-# Same schedule, same plots — per-instance figures, bias/variance maps and
-# AUROCs come out with the same structure as the bilinear run. Outputs go to
-# their own ensemble_transpose_* folder so the two variants never overwrite
-# each other.
+# Same job as oar_run_ensemble.sh in every respect EXCEPT the decoder
+# upsampling stage: here each per-block decoder grows its activation back to
+# image size with learnable ConvTranspose2d(4x4, stride 2) instead of the
+# default bilinear resize-then-conv. Same 5-block trunk (32, 64, 128, 256,
+# 256), same schedule, same plots — so the per-instance figures, bias/
+# variance maps and AUROCs come out directly comparable to the bilinear run.
+# Outputs go to their own ensemble_transpose_* folder so the two variants
+# never overwrite each other.
 #
 # Pinned to the gratouille cluster (Nancy — A100). An OAR reservation is cut
 # at its walltime even mid-epoch and the ensemble run does not checkpoint, so
@@ -82,8 +80,8 @@ nvidia-smi || echo "nvidia-smi not available"
 "$PYTHON" -c "import torch; print('torch', torch.__version__, 'cuda', torch.cuda.is_available(), 'devices', torch.cuda.device_count())"
 
 # --- Run -----------------------------------------------------------------
-# Functional differences from oar_run_ensemble.sh: the ConvTranspose2d
-# upsampling and the 5-block trunk, both applied as overrides below.
+# The only functional difference from oar_run_ensemble.sh is the
+# training.decoders.upsample=transpose override on the last line.
 DATA_ROOT="$HOME/lrad/data"
 
 set +e
@@ -91,8 +89,7 @@ set +e
     --config configs/celeba_ood.yaml \
     --output-dir "$OUTPUT_DIR" \
     --override dataset.root="$DATA_ROOT" dataset.download=false dataset.num_workers=4 \
-               training.decoders.upsample=transpose \
-               'model.channels=[32,64,128,256,256]'
+               training.decoders.upsample=transpose
 RC=$?
 set -e
 

@@ -42,17 +42,16 @@ dataset:
   ood_attrs: [Eyeglasses, Wearing_Hat]
 
 # ---- Model --------------------------------------------------------------
-# 6 conv blocks, no pretrained weights. Each block:
+# 5 conv blocks (the FacialCNN default layout), no pretrained weights.
+# Each block:
 #   Conv3x3 + BN + ReLU + MaxPool2x2 (last block: no pool)
-# The extra block 256→256 with a MaxPool doubles the spatial compression
-# of the final feature map (4×4 → 2×2 → GAP), so the deepest activations
-# encode a much more abstract summary of the face.
+# The trunk bottoms out at a 4×4 feature map (64 → 32 → 16 → 8 → 4 → GAP).
 # No Dropout: ensemble diversity for the bias/variance decomposition comes
 # from independent weight init + SGD shuffle order (deep ensemble), not
 # from MC-Dropout.
 model:
   in_channels: 3
-  channels: [32, 64, 128, 256, 256, 256]
+  channels: [32, 64, 128, 256, 256]
   n_attrs: 6
   n_gender: 2
 
