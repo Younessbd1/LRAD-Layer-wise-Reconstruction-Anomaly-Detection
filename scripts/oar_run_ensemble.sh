@@ -8,7 +8,7 @@
 # a full classifier + per-block decoders), then runs the bias/variance
 # decomposition + every plot — including mean_error_maps.png and
 # min_error_maps.png — in that one run (there is no separate eval/plot job
-# any more). The current config does 8 models on a 6-block trunk with a
+# any more). The current config does 10 models on a 6-block trunk with a
 # 25 classifier + 25 decoder epoch schedule per model, and anchored
 # ensembling (decoders.anchor_lambda) pulls each member toward its own
 # random init so the variance term stays a calibrated OOD signal.
@@ -39,7 +39,7 @@
 
 #OAR -n celeba-ood-ensemble-gratouille
 #OAR -p cluster='gratouille'
-#OAR -l gpu=1,walltime=48:00:00
+#OAR -l gpu=1,walltime=24:00:00
 #OAR -O outputs/celeba_ood/_oar/oar.%jobid%.stdout
 #OAR -E outputs/celeba_ood/_oar/oar.%jobid%.stderr
 
