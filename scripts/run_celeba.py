@@ -82,6 +82,13 @@ def _apply_override(cfg: dict, key_path: str, value: str) -> None:
         if k not in node or not isinstance(node[k], dict):
             node[k] = {}
         node = node[k]
+    # YAML-style lists, e.g. model.channels=[32,64,128,256,256]
+    if value.startswith("[") and value.endswith("]"):
+        try:
+            node[keys[-1]] = yaml.safe_load(value)
+            return
+        except yaml.YAMLError:
+            pass
     for cast in (int, float):
         try:
             node[keys[-1]] = cast(value)
@@ -313,7 +320,6 @@ def build_and_run(
             loaders.get("val"),
             epochs=tcfg.get("epochs", 30),
             lr=tcfg.get("lr", 1e-3),
-            weight_decay=tcfg.get("weight_decay", 0.0),
             attr_loss_weight=tcfg.get("attr_loss_weight", 1.0),
             device=device,
             log_every=tcfg.get("log_every", 1),
@@ -375,8 +381,6 @@ def build_and_run(
             loaders.get("val"),
             epochs=dec_cfg.get("epochs", 20),
             lr=dec_cfg.get("lr", 1e-3),
-            weight_decay=dec_cfg.get("weight_decay", 0.0),
-            anchor_lambda=dec_cfg.get("anchor_lambda", 0.0),
             device=device,
             log_every=dec_cfg.get("log_every", 1),
             checkpoint_dir=(output_dir / "weights") if save_every_epoch

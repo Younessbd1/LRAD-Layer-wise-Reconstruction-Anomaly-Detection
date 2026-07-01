@@ -68,7 +68,6 @@ training:
   epochs: 25
   save_every_epoch: true
   lr: 0.0003
-  weight_decay: 0.0    # no weight decay (kept as a knob, neutralized)
   attr_loss_weight: 2.0
   log_every: 1
 
@@ -86,23 +85,10 @@ training:
   decoders:
     epochs: 25
     lr: 0.001
-    weight_decay: 0.0  # no weight decay (kept as a knob, neutralized)
     # Decoder upsampling stage: "bilinear" (resize-then-conv, smoother, the
     # default) or "transpose" (ConvTranspose2d — the original learnable
     # upsampling; can leave faint checkerboard texture in the error maps).
     upsample: bilinear
-    # Anchored ensembling (Pearce et al. 2020). Each member's decoders are
-    # L2-pulled toward their OWN random init (the anchor = a draw from the
-    # weight prior), not toward zero. Architecture stays identical across
-    # members; only the anchor target differs (distinct per seed). This
-    # holds each decoder near its distinct prior off-manifold, so the
-    # ensemble Variance term spreads out on OOD while staying tight on ID —
-    # a calibrated epistemic-uncertainty signal. It is ordinary L2 weight
-    # decay toward the random anchor instead of zero, so anchor_lambda sits
-    # on the same scale as a weight_decay coefficient. 0.0 = plain deep
-    # ensemble. Start ~1e-3 and tune up if ID variance stays near zero /
-    # down if the bias (anomaly) AUROC drops.
-    anchor_lambda: 0.9
     log_every: 1
 
 # ---- Evaluation ---------------------------------------------------------

@@ -40,7 +40,8 @@ directly from the ensemble, with **no sigma and no division**:
 
 Implementation follows current matplotlib best practices:
 ``layout='constrained'``, viridis colormap for error maps, hidden
-spines/ticks on image axes, dpi=150 PNG export with tight bounding box.
+spines/ticks on image axes, high-resolution PNG export (``_SAVE_DPI``)
+with tight bounding box, and a modern sans-serif typeface.
 """
 
 from __future__ import annotations
@@ -56,6 +57,21 @@ import torch
 _TITLE_FS = 14
 _LABEL_FS = 12
 _TICK_FS = 10
+
+# High-resolution export for every figure in this module (requirement:
+# dpi >= 200, ideally 300).
+_SAVE_DPI = 300
+
+# Modern sans-serif typeface, first available wins (falls back to
+# matplotlib's bundled DejaVu Sans). Module-wide so callers that build
+# their own figures (e.g. run_celeba's history plots) share the look.
+plt.rcParams.update({
+    "font.family": "sans-serif",
+    "font.sans-serif": [
+        "Inter", "Helvetica Neue", "Helvetica", "Arial", "DejaVu Sans",
+    ],
+    "savefig.dpi": _SAVE_DPI,
+})
 
 
 def plot_batch_accuracy(history: dict, save_path: str | Path) -> None:
@@ -121,7 +137,7 @@ def plot_batch_accuracy(history: dict, save_path: str | Path) -> None:
         ax.grid(alpha=0.25)
         ax.legend(fontsize=9)
 
-    fig.savefig(save_path, dpi=150, bbox_inches="tight")
+    fig.savefig(save_path, dpi=_SAVE_DPI, bbox_inches="tight")
     plt.close(fig)
 
 
@@ -242,7 +258,7 @@ def plot_per_block_breakdown(
 
     if title:
         fig.suptitle(title, fontsize=_TITLE_FS)
-    fig.savefig(save_path, dpi=150, bbox_inches="tight")
+    fig.savefig(save_path, dpi=_SAVE_DPI, bbox_inches="tight")
     plt.close(fig)
 
 
@@ -318,7 +334,7 @@ def plot_activations(
 
     if title:
         fig.suptitle(title, fontsize=_TITLE_FS)
-    fig.savefig(save_path, dpi=150, bbox_inches="tight")
+    fig.savefig(save_path, dpi=_SAVE_DPI, bbox_inches="tight")
     plt.close(fig)
 
 
@@ -445,7 +461,7 @@ def plot_fusion_overlay(
 
     if title:
         fig.suptitle(title, fontsize=_TITLE_FS)
-    fig.savefig(save_path, dpi=150, bbox_inches="tight")
+    fig.savefig(save_path, dpi=_SAVE_DPI, bbox_inches="tight")
     plt.close(fig)
 
 
@@ -512,7 +528,7 @@ def plot_fusion_auroc(
 
     if title:
         fig.suptitle(title, fontsize=_TITLE_FS)
-    fig.savefig(save_path, dpi=150, bbox_inches="tight")
+    fig.savefig(save_path, dpi=_SAVE_DPI, bbox_inches="tight")
     plt.close(fig)
     return auroc
 
@@ -558,7 +574,7 @@ def plot_recons_only(
 
     if title:
         fig.suptitle(title, fontsize=_TITLE_FS)
-    fig.savefig(save_path, dpi=150, bbox_inches="tight")
+    fig.savefig(save_path, dpi=_SAVE_DPI, bbox_inches="tight")
     plt.close(fig)
 
 
@@ -652,7 +668,7 @@ def _block_heatmap_grid(
 
     if title:
         fig.suptitle(title, fontsize=_TITLE_FS)
-    fig.savefig(save_path, dpi=150, bbox_inches="tight")
+    fig.savefig(save_path, dpi=_SAVE_DPI, bbox_inches="tight")
     plt.close(fig)
 
 
@@ -908,9 +924,10 @@ def plot_instance_decomposition(
                                shrink=0.9, pad=0.02, aspect=12)
         cb.ax.tick_params(labelsize=7)
 
-    # Min error on its own scale (no shared vmin/vmax).
-    im_min = bot[3].imshow(min_err, cmap="viridis", vmin=0.0,
-                           vmax=max(float(min_err.max()), 1e-12))
+    # Min error on the raw scale: no vmin/vmax at all, matplotlib autoscales
+    # to the data range (the per-pixel minimum sits far below bias/mean, so
+    # any shared cap would render it flat).
+    im_min = bot[3].imshow(min_err, cmap="viridis")
     _bare(bot[3])
     bot[3].set_title("Min error", fontsize=_TICK_FS)
     _annot(bot[3], min_err.mean(), fmt="{:.4f}")
@@ -924,7 +941,7 @@ def plot_instance_decomposition(
     _bare(bot[4])
     bot[4].set_title(f"Bias overlay (σ={sigma:g})", fontsize=_TICK_FS)
 
-    fig.savefig(save_path, dpi=150, bbox_inches="tight")
+    fig.savefig(save_path, dpi=_SAVE_DPI, bbox_inches="tight")
     plt.close(fig)
 
 
@@ -1011,7 +1028,7 @@ def plot_score_comparison(
 
     if title:
         fig.suptitle(title, fontsize=_TITLE_FS)
-    fig.savefig(save_path, dpi=150, bbox_inches="tight")
+    fig.savefig(save_path, dpi=_SAVE_DPI, bbox_inches="tight")
     plt.close(fig)
 
 
@@ -1110,7 +1127,7 @@ def plot_bias_variance_vs_block(
         title or "Bias & Variance evolution with block depth (ID vs OOD)",
         fontsize=_TITLE_FS,
     )
-    fig.savefig(save_path, dpi=150, bbox_inches="tight")
+    fig.savefig(save_path, dpi=_SAVE_DPI, bbox_inches="tight")
     plt.close(fig)
 
 
@@ -1155,7 +1172,7 @@ def plot_bias_variance_vs_percentile(
         title or "Bias & Variance score vs percentile (ID vs OOD)",
         fontsize=_TITLE_FS,
     )
-    fig.savefig(save_path, dpi=150, bbox_inches="tight")
+    fig.savefig(save_path, dpi=_SAVE_DPI, bbox_inches="tight")
     plt.close(fig)
 
 
@@ -1246,7 +1263,7 @@ def plot_ensemble_decomposition(
 
     if title:
         fig.suptitle(title, fontsize=_TITLE_FS)
-    fig.savefig(save_path, dpi=150, bbox_inches="tight")
+    fig.savefig(save_path, dpi=_SAVE_DPI, bbox_inches="tight")
     plt.close(fig)
 
 
@@ -1302,7 +1319,7 @@ def plot_decomposition_auroc_bars(
         title or "Per-block OOD AUROC — Risk / Bias / Variance",
         fontsize=_TITLE_FS,
     )
-    fig.savefig(save_path, dpi=150, bbox_inches="tight")
+    fig.savefig(save_path, dpi=_SAVE_DPI, bbox_inches="tight")
     plt.close(fig)
 
 
@@ -1349,5 +1366,5 @@ def plot_ensemble_score_hists(
         title or "Ensemble decomposition — score distributions",
         fontsize=_TITLE_FS,
     )
-    fig.savefig(save_path, dpi=150, bbox_inches="tight")
+    fig.savefig(save_path, dpi=_SAVE_DPI, bbox_inches="tight")
     plt.close(fig)
