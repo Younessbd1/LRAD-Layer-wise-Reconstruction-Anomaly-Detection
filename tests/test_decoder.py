@@ -1,12 +1,14 @@
 """Shape/architecture tests for the per-block decoders.
 
-Pins the bilinear-Upsample + Conv replacement of the former
-ConvTranspose2d stages: every decoder of the full 6-block CelebA config
-must still map its block activation to a (3, 64, 64) reconstruction.
+Covers both upsampling stages: the default bilinear-Upsample + Conv stack
+and the optional ConvTranspose2d stack. Every decoder of the full 6-block
+CelebA config must map its block activation to a (3, 64, 64) reconstruction
+regardless of which one is selected.
 """
 
 from __future__ import annotations
 
+import pytest
 import torch
 import torch.nn as nn
 
@@ -40,7 +42,7 @@ def test_all_six_decoders_output_image_shape():
 
 
 def test_decoders_use_bilinear_upsample_not_transposed_conv():
-    """Upsampling is bilinear Upsample + Conv2d — no ConvTranspose2d left."""
+    """Default upsampling is bilinear Upsample + Conv2d — no ConvTranspose2d."""
     decoders = build_decoders(_model(), image_size=IMG)
     has_upsample = False
     for dec in decoders:
@@ -51,6 +53,39 @@ def test_decoders_use_bilinear_upsample_not_transposed_conv():
                 assert m.align_corners is False
                 has_upsample = True
     assert has_upsample
+
+
+def test_transpose_decoders_output_image_shape():
+    """The transposed-conv variant also maps every block to (3, 64, 64)."""
+    model = _model()
+    decoders = build_decoders(model, image_size=IMG,
+                              upsample="transpose").eval()
+    x = torch.rand(2, 3, IMG, IMG)
+    with torch.no_grad():
+        _, acts = model.forward_features(x)
+        for k, dec in enumerate(decoders):
+            out = dec(acts[k])
+            assert out.shape == (2, 3, IMG, IMG), f"decoder {k}"
+            assert torch.isfinite(out).all()
+            assert out.min() >= 0.0 and out.max() <= 1.0
+
+
+def test_transpose_decoders_use_convtranspose_not_upsample():
+    """upsample='transpose' swaps in ConvTranspose2d and drops nn.Upsample."""
+    decoders = build_decoders(_model(), image_size=IMG, upsample="transpose")
+    has_transpose = False
+    for dec in decoders:
+        for m in dec.modules():
+            assert not isinstance(m, nn.Upsample)
+            if isinstance(m, nn.ConvTranspose2d):
+                has_transpose = True
+    assert has_transpose
+
+
+def test_unknown_upsample_mode_rejected():
+    with pytest.raises(ValueError):
+        BlockDecoder(in_channels=64, in_size=8, out_size=64,
+                     upsample="nearest")
 
 
 def test_channel_progression_preserved():
