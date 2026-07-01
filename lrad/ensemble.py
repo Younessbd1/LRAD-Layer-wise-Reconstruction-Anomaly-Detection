@@ -308,6 +308,32 @@ def sample_decomposition(
 
 
 @torch.no_grad()
+def sample_block_recons(
+    models: Sequence[FacialCNN],
+    decoders_list: Sequence[nn.ModuleList],
+    images: torch.Tensor,
+    device: torch.device,
+    block: int,
+) -> tuple[torch.Tensor, list[torch.Tensor]]:
+    """Each member's reconstruction at ONE block depth, for a few images.
+
+    Returns ``(images_on_device, recons)`` where ``recons`` is a length-``M``
+    list of ``(B, 3, H, W)`` tensors — member ``m``'s reconstruction of the
+    batch at ``block``. Unlike the pooled map helpers above, this keeps the
+    members separate, which is what the per-instance figure draws (one tile
+    per model). The images are returned too so callers can render against the
+    exact tensor that was reconstructed.
+    """
+    images, recons_per_model = _ensemble_recons(
+        models, decoders_list, images, device,
+    )
+    n_blocks = len(recons_per_model[0])
+    if not 0 <= block < n_blocks:
+        raise ValueError(f"block must be in [0, {n_blocks - 1}], got {block}")
+    return images, [recons_per_model[m][block] for m in range(len(models))]
+
+
+@torch.no_grad()
 def collect_decomposition_scores(
     models: Sequence[FacialCNN],
     decoders_list: Sequence[nn.ModuleList],
