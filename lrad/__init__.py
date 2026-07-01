@@ -8,6 +8,7 @@ from .dataset import (
     CELEBA_ATTRS,
     GENDER_ATTR,
     OOD_ATTR,
+    OOD_ATTRS,
     CelebAFacialAttributes,
     get_celeba_loaders,
 )
@@ -17,6 +18,7 @@ from .ensemble import (
     decomposition_maps,
     evaluate_ensemble_decomposition,
     identity_residual,
+    sample_block_recons,
     sample_decomposition,
 )
 from .model import FacialCNN, build_model, count_parameters
@@ -26,10 +28,12 @@ from .plots import (
     plot_decomposition_auroc_bars,
     plot_ensemble_decomposition,
     plot_ensemble_score_hists,
+    plot_instance_decomposition,
     plot_mean_abs_bias,
     plot_per_block_breakdown,
     plot_recons_only,
     plot_variance_heatmaps,
+    smooth_cam,
 )
 from .train import evaluate_one_epoch, train_decoders, train_model
 from .evaluate import (
@@ -48,6 +52,7 @@ __all__ = [
     "FacialCNN",
     "GENDER_ATTR",
     "OOD_ATTR",
+    "OOD_ATTRS",
     "aggregate_anomaly_score",
     "build_decoders",
     "build_model",
@@ -68,13 +73,16 @@ __all__ = [
     "plot_decomposition_auroc_bars",
     "plot_ensemble_decomposition",
     "plot_ensemble_score_hists",
+    "plot_instance_decomposition",
     "plot_mean_abs_bias",
     "plot_per_block_breakdown",
     "plot_recons_only",
     "plot_variance_heatmaps",
+    "sample_block_recons",
     "sample_decomposition",
     "seed_everything",
     "setup_logging",
+    "smooth_cam",
     "train_decoders",
     "train_model",
 ]
