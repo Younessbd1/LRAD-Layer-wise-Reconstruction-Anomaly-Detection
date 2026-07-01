@@ -1,12 +1,16 @@
 """CelebA dataset for the gender + facial-attribute OOD task.
 
+OOD is defined by a *set* of accessory attributes (``dataset.ood_attrs``,
+default ``[Eyeglasses, Wearing_Hat]``). A face is out-of-distribution as
+soon as it carries any one of them; the in-distribution pool is the clean
+faces that carry none.
+
 In-distribution protocol:
-    train / val / test_in  : every image with Eyeglasses == 0
-                             (these are the "clean" faces — no glasses,
-                             no sunglasses)
-    test_ood               : every image with Eyeglasses == 1
-                             (treated as OOD at evaluation time — the
-                             classifier was never shown these)
+    train / val / test_in  : faces with none of the OOD attributes set
+                             (no glasses, no sunglasses, no hat) — the
+                             "clean" faces the classifier trains on
+    test_ood               : faces with at least one OOD attribute set,
+                             held out and only seen at evaluation time
 
 Each in-distribution sample yields:
 
@@ -20,10 +24,11 @@ Each in-distribution sample yields:
                      test_ood. Useful for the evaluator to assemble a
                      single (score, label) pair across the in/ood split.
 
-Accessory attributes (Wearing_Hat, Wearing_Earrings, Heavy_Makeup) are
-deliberately *not* exposed as targets — we want the encoder to learn
-identity-/expression-level facial features, not accessory features that
-would partially generalize to sunglasses.
+The OOD attributes (and the other accessory attributes — Wearing_Earrings,
+Heavy_Makeup) are deliberately *not* exposed as targets: we want the encoder
+to learn identity-/expression-level facial features, not the accessories
+themselves. Holding glasses and hats out entirely is what makes them a clean
+OOD test — the model never gets to fit the occlusion they cause.
 """
 
 from __future__ import annotations
@@ -51,7 +56,12 @@ CELEBA_ATTRS: tuple[str, ...] = (
 )
 
 GENDER_ATTR: str = "Male"
+
+# OOD is the union of these accessory attributes (any one present -> OOD).
+# OOD_ATTR is kept as the historical single-attribute name; OOD_ATTRS is the
+# default set the config falls back to when dataset.ood_attrs is unset.
 OOD_ATTR: str = "Eyeglasses"
+OOD_ATTRS: tuple[str, ...] = ("Eyeglasses", "Wearing_Hat")
 
 ATTR_TARGETS: tuple[str, ...] = (
     "Young",
@@ -67,8 +77,39 @@ def _resolve(name: str) -> int:
     return CELEBA_ATTRS.index(name)
 
 
+def _resolve_ood_attrs(value) -> list[str]:
+    """Normalize the configured OOD attribute(s) to a list of names.
+
+    Accepts a single name (the old ``dataset.ood_attr`` string), a list of
+    names (``dataset.ood_attrs``), or ``None`` (fall back to ``OOD_ATTRS``).
+    """
+    if value is None:
+        return list(OOD_ATTRS)
+    if isinstance(value, str):
+        return [value]
+    names = list(value)
+    if not names:
+        raise ValueError("ood_attrs is empty — give at least one attribute")
+    return names
+
+
+def _split_in_ood(
+    attr: torch.Tensor, ood_indices: Sequence[int],
+) -> tuple[list[int], list[int]]:
+    """Partition row indices into (in-distribution, OOD).
+
+    ``attr`` is the ``(N, 40)`` CelebA attribute matrix in {0, 1}. A row is
+    OOD if *any* of the ``ood_indices`` columns is set, in-distribution if
+    *all* of them are off.
+    """
+    cols = attr[:, list(ood_indices)]            # (N, k)
+    ood_any = cols.to(torch.bool).any(dim=1)     # (N,)
+    in_rows = (~ood_any).nonzero(as_tuple=True)[0].tolist()
+    ood_rows = ood_any.nonzero(as_tuple=True)[0].tolist()
+    return in_rows, ood_rows
+
+
 _GENDER_IDX = _resolve(GENDER_ATTR)
-_OOD_IDX = _resolve(OOD_ATTR)
 _ATTR_IDX = [_resolve(a) for a in ATTR_TARGETS]
 
 
@@ -112,10 +153,14 @@ def get_celeba_loaders(cfg: dict) -> dict:
         val_ratio     fraction used for validation (default 0.10)
         pin_memory    default True
         seed          split RNG seed (default 42)
+        ood_attrs     attribute name or list defining OOD (default
+                      ``[Eyeglasses, Wearing_Hat]``); ``ood_attr`` (singular)
+                      is still accepted for back-compat
 
     Returns:
         dict with keys 'train', 'val', 'test_in', 'test_ood',
-        'gender_attr', 'attr_targets', 'ood_attr'.
+        'gender_attr', 'attr_targets', 'ood_attr' (display string) and
+        'ood_attrs' (resolved list of names).
     """
     dcfg = cfg.get("dataset", {})
     root = dcfg.get("root", "./data")
@@ -144,11 +189,18 @@ def get_celeba_loaders(cfg: dict) -> dict:
         download=download,
     )
 
-    ood_col = base.attr[:, _OOD_IDX]
-    in_idx = (ood_col == 0).nonzero(as_tuple=True)[0].tolist()
-    ood_idx = (ood_col == 1).nonzero(as_tuple=True)[0].tolist()
+    ood_names = _resolve_ood_attrs(dcfg.get("ood_attrs", dcfg.get("ood_attr")))
+    ood_indices = [_resolve(n) for n in ood_names]
+    in_idx, ood_idx = _split_in_ood(base.attr, ood_indices)
     if not in_idx or not ood_idx:
-        raise RuntimeError("CelebA splits are empty — check Eyeglasses column")
+        raise RuntimeError(
+            "CelebA splits are empty — check the ood_attrs columns "
+            f"{ood_names}"
+        )
+    logger.info(
+        "OOD attributes: %s  →  in-dist=%d  ood=%d images",
+        "+".join(ood_names), len(in_idx), len(ood_idx),
+    )
 
     n = len(in_idx)
     n_train = int(round(n * train_ratio))
@@ -206,5 +258,8 @@ def get_celeba_loaders(cfg: dict) -> dict:
         "test_ood": _make(ood_idx, is_ood=1, shuffle=False),
         "gender_attr": GENDER_ATTR,
         "attr_targets": list(ATTR_TARGETS),
-        "ood_attr": OOD_ATTR,
+        # "ood_attr" stays a single display string for logs/summaries;
+        # "ood_attrs" is the resolved list the split was actually built from.
+        "ood_attr": "+".join(ood_names),
+        "ood_attrs": ood_names,
     }
