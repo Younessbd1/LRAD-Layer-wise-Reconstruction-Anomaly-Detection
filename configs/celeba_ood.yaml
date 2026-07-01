@@ -2,8 +2,9 @@
 # CelebA OOD configuration.
 #
 # Task:
-#   In-distribution = CelebA images with Eyeglasses == 0
-#   OOD             = CelebA images with Eyeglasses == 1 (sunglasses included)
+#   In-distribution = faces with none of the OOD accessories
+#   OOD             = faces wearing eyeglasses (sunglasses included) OR a hat
+#                     (see dataset.ood_attrs below to change the set)
 #
 # Targets:
 #   gender (Male/Female) — 2-way softmax + CrossEntropyLoss
@@ -36,6 +37,9 @@ dataset:
   val_ratio: 0.00
   pin_memory: true
   seed: 42
+  # OOD = any of these accessories present; in-dist = none of them. A single
+  # string still works (e.g. ood_attrs: Eyeglasses) for the glasses-only task.
+  ood_attrs: [Eyeglasses, Wearing_Hat]
 
 # ---- Model --------------------------------------------------------------
 # 6 conv blocks, no pretrained weights. Each block:
@@ -83,6 +87,10 @@ training:
     epochs: 25
     lr: 0.001
     weight_decay: 0.0  # no weight decay (kept as a knob, neutralized)
+    # Decoder upsampling stage: "bilinear" (resize-then-conv, smoother, the
+    # default) or "transpose" (ConvTranspose2d — the original learnable
+    # upsampling; can leave faint checkerboard texture in the error maps).
+    upsample: bilinear
     # Anchored ensembling (Pearce et al. 2020). Each member's decoders are
     # L2-pulled toward their OWN random init (the anchor = a draw from the
     # weight prior), not toward zero. Architecture stays identical across
@@ -98,13 +106,24 @@ training:
     log_every: 1
 
 # ---- Evaluation ---------------------------------------------------------
-# Plots use 10 in-dist + 15 OOD samples (randomly drawn from the test
-# loaders with a fixed seed, so the picks are reproducible and disjoint
-# from the older 4-sample displays).
+# Grid plots use 10 in-dist + 15 OOD samples (randomly drawn from the test
+# loaders with a fixed seed, so the picks are reproducible).
+#
+# The ensemble runner also writes per-instance figures — one PNG per face
+# under ensemble/plots/instances_{in,ood}/ — each showing every member's
+# reconstruction + error, the bias / mean / min summary, and the smoothed
+# bias overlaid on the face. n_instances_* sets how many of each are saved;
+# instance_block picks the reconstruction depth (default = deepest block,
+# same as the score comparison); overlay_sigma and overlay_power are the two
+# display knobs of the bias overlay (blur, then alpha = cam ** power).
 evaluation:
   n_viz_in_samples: 10
   n_viz_ood_samples: 15
   viz_seed: 1234
+  n_instances_in: 20
+  n_instances_ood: 20
+  overlay_sigma: 7
+  overlay_power: 0.8
 
 # ---- Ensemble (bias/variance decomposition) -----------------------------
 # scripts/run_ensemble.py trains `size` independent models (classifier +
@@ -115,6 +134,6 @@ evaluation:
 #   Variance  = E[ E_D[(f_hat(x) - E_D[f_hat(x)])^2] ]   (model spread)
 # with the exact per-pixel identity Risk = Bias + Variance.
 ensemble:
-  size: 8
-  base_seed: 42      # models are seeded 42, 43, 44, ..., 49
+  size: 10
+  base_seed: 42      # models are seeded 42, 43, ..., 51
   agg: p95           # pixel -> scalar reduction for the decomposition scores
