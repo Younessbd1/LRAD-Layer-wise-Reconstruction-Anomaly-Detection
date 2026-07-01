@@ -17,6 +17,7 @@ from lrad.ensemble import (
     mean_error_maps,
     min_error_maps,
     quantile_min_error_maps,
+    sample_block_recons,
 )
 from lrad.evaluate import _bernoulli_entropy, _bernoulli_entropy_logits
 from lrad.model import FacialCNN
@@ -158,6 +159,23 @@ def test_quantile_min_rejects_bad_k(setup):
         quantile_min_error_maps(images, recons, k=N_MODELS + 1)
     with pytest.raises(ValueError):
         quantile_min_error_maps(images, [], k=1)
+
+
+def test_sample_block_recons_keeps_members_separate(setup):
+    """One reconstruction per member at a chosen block; bad blocks rejected."""
+    models, decoders_list, images, _ = setup
+    device = torch.device("cpu")
+    imgs, recons = sample_block_recons(
+        models, decoders_list, images, device, block=1,
+    )
+    assert imgs.shape == images.shape
+    assert len(recons) == N_MODELS
+    for r in recons:
+        assert r.shape == (images.shape[0], 3, IMG, IMG)
+        assert torch.isfinite(r).all()
+    with pytest.raises(ValueError):
+        sample_block_recons(models, decoders_list, images, device,
+                            block=N_BLOCKS)
 
 
 def test_evaluate_ensemble_decomposition(setup):
