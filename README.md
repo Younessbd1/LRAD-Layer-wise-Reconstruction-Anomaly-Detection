@@ -16,13 +16,13 @@ A from-scratch convolutional classifier is trained on accessory-free CelebA face
 - **Removed Randomised MAP Sampling (anchored ensembling) and weight decay** from the whole pipeline: no `anchor_lambda`, no L2-to-anchor penalty in `train_decoders`, no `weight_decay` on either optimizer. The ensemble is now a clean deep ensemble, exactly as the LRAD note calls for.
 - **Per-instance test figures**: for each test face, one standalone figure with the 10 members' reconstructions, the 10 per-model error maps, the Bias map, the Mean-error map, the **Min-error map on its raw scale (no vmin/vmax)**, and the Gaussian-smoothed bias painted over the face (`smooth_cam`, `inferno`, `alpha = cam ** overlay_power`). `overlay_sigma` and `overlay_power` are exposed as config knobs and affect **display only**, never the score. ~20 IND + ~20 OOD instances are saved per run under `ensemble/plots/instances_{in,ood}/`.
 - **OOD set extended with hats**: `dataset.ood_attrs: [Eyeglasses, Wearing_Hat]` — in-distribution faces carry none of the OOD accessories.
-- **ConvTranspose2d decoder variant** run in parallel: same pipeline on the 5-block trunk `channels = (32, 64, 128, 256, 256)` with every upsampling stage replaced by `ConvTranspose2d(4×4, stride 2)` (`scripts/oar_run_ensemble_transpose.sh`).
+- **ConvTranspose2d decoder variant** run in parallel: exactly the same 5-block trunk `channels = (32, 64, 128, 256, 256)`, with every decoder upsampling stage replaced by `ConvTranspose2d(4×4, stride 2)` (`scripts/oar_run_ensemble_transpose.sh`).
 - **High-resolution rendering** for every figure: 300 dpi export, modern sans-serif typeface (Inter/Helvetica fallback chain), `constrained_layout`, hidden spines/ticks on image axes, colorbars where relevant, fixed colour scales so figures stay comparable across runs.
 - **Grid'5000 (Nancy) batch scripts**: both variants submit via OAR to the `gratouille` cluster (1× A100 40 GB — the job needs < 10 GB of VRAM; the A100 is there to fit 10 models × (25 + 25) epochs in the window), walltime 24 h, advance-reservation supported.
 
 ## Architecture
 
-**Classifier** — `FacialCNN`, shared conv trunk (blocks L0…L5) with gender and attribute heads. Each block exposes its post-activation tensor for the downstream decoders:
+**Classifier** — `FacialCNN`, shared 5-block conv trunk (L0…L4, `channels = [32, 64, 128, 256, 256]`) with gender and attribute heads. Each block exposes its post-activation tensor for the downstream decoders:
 
 ![Classifier diagram](docs/diagrams/Classifier.svg)
 
@@ -38,7 +38,7 @@ A from-scratch convolutional classifier is trained on accessory-free CelebA face
 - Per-instance figures: each face's reconstruction + error across every member, the bias / mean / min summary, and the smoothed bias overlaid on the image
 - Configurable OOD attribute set (eyeglasses, hats, …) and decoder upsampling (bilinear resize-then-conv or transposed conv)
 - Epoch-variability study: traces inter-model variability σ(e) from per-epoch decoder checkpoints
-- Single YAML config shared by both single-model and ensemble runners; dotted `key=value` CLI overrides (lists supported, e.g. `model.channels=[32,64,128,256,256]`)
+- Single YAML config shared by both single-model and ensemble runners; dotted `key=value` CLI overrides (lists supported, e.g. `model.channels=[...]`)
 
 ## Tech stack
 
@@ -116,12 +116,11 @@ python scripts/run_ensemble.py --config configs/celeba_ood.yaml \
     --override ensemble.size=3 training.lr=5e-4
 ```
 
-**Run the ConvTranspose2d / 5-block variant locally:**
+**Run the ConvTranspose2d decoder variant locally:**
 
 ```bash
 python scripts/run_ensemble.py --config configs/celeba_ood.yaml \
-    --override training.decoders.upsample=transpose \
-               'model.channels=[32,64,128,256,256]'
+    --override training.decoders.upsample=transpose
 ```
 
 **Trace inter-model variability vs training epochs** (requires `training.save_every_epoch: true`):

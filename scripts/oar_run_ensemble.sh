@@ -8,7 +8,7 @@
 # a full classifier + per-block decoders), then runs the bias/variance
 # decomposition + every plot — including mean_error_maps.png and
 # min_error_maps.png — in that one run (there is no separate eval/plot job
-# any more). The current config does 10 models on a 6-block trunk with a
+# any more). The current config does 10 models on a 5-block trunk with a
 # 25 classifier + 25 decoder epoch schedule per model — a plain deep
 # ensemble (no regularizer): diversity comes only from the per-seed init
 # and shuffle order.

@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 1190" width="900" height="1190" role="img"
-     aria-label="Architecture du classifieur FacialCNN — 6 blocs convolutifs, GAP, têtes genre et attributs."
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 1086" width="900" height="1086" role="img"
+     aria-label="Architecture du classifieur FacialCNN — 5 blocs convolutifs, GAP, têtes genre et attributs."
      font-family="'IBM Plex Sans', 'Helvetica Neue', Helvetica, Arial, sans-serif">
   <style>
     @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&amp;family=IBM+Plex+Sans:wght@400;500;600;700&amp;display=swap');
@@ -29,15 +29,15 @@
     </marker>
   </defs>
 
-  <rect width="900" height="1190" fill="#F5F6F9"/>
+  <rect width="900" height="1086" fill="#F5F6F9"/>
 
   <!-- ===== header ===== -->
   <g id="header">
     <rect width="900" height="96" fill="url(#g-header)"/>
     <rect y="96" width="900" height="3" fill="url(#g-accent)"/>
     <text x="60" y="42" font-size="23" font-weight="700" letter-spacing=".2" fill="#FFFFFF">Architecture du Classifieur</text>
-    <text x="60" y="68" class="mono" font-size="13" fill="#C2C8EE">FacialCNN · CNN multi-têtes · 6 blocs convolutifs (L0…L5)</text>
-    <text x="840" y="42" text-anchor="end" class="mono" font-size="13" fill="#9FA6E0">channels = [32, 64, 128, 256, 256, 256]</text>
+    <text x="60" y="68" class="mono" font-size="13" fill="#C2C8EE">FacialCNN · CNN multi-têtes · 5 blocs convolutifs (L0…L4)</text>
+    <text x="840" y="42" text-anchor="end" class="mono" font-size="13" fill="#9FA6E0">channels = [32, 64, 128, 256, 256]</text>
     <text x="840" y="68" text-anchor="end" class="mono" font-size="13" fill="#9FA6E0">init. Kaiming · celeba_ood.yaml</text>
   </g>
 
@@ -126,95 +126,76 @@
   </g>
   <line x1="450" y1="612" x2="450" y2="626" stroke="#C4CAD4" stroke-width="2" marker-end="url(#arrow)"/>
 
-  <!-- ===== bloc L4 ===== -->
+  <!-- ===== bloc L4 (sans pool) ===== -->
   <g id="block-L4">
-    <rect x="60" y="628" width="780" height="86" rx="16" fill="#FFFFFF" stroke="#E7EAF0" stroke-width="1" filter="url(#card-shadow)"/>
-    <rect x="64" y="642" width="5" height="58" rx="2.5" fill="#3A53D0"/>
-    <circle cx="110" cy="671" r="17" fill="#3A53D0"/>
+    <rect x="60" y="628" width="780" height="86" rx="16" fill="#FFFFFF" stroke="#CDE7EC" stroke-width="1.5" filter="url(#card-shadow)"/>
+    <rect x="64" y="642" width="5" height="58" rx="2.5" fill="#128AA3"/>
+    <circle cx="110" cy="671" r="17" fill="#128AA3"/>
     <text x="110" y="675.5" text-anchor="middle" font-size="12" font-weight="700" fill="#FFFFFF">L4</text>
     <text x="140" y="667" font-size="14.5" font-weight="700" fill="#1A1E27">Bloc L4</text>
-    <rect x="140" y="677" width="86" height="20" rx="10" fill="#ECEFFB"/>
-    <text x="183" y="691" text-anchor="middle" class="mono" font-size="10.5" font-weight="600" fill="#3A53D0">256 canaux</text>
-    <text x="272" y="659" font-size="12.5" fill="#5A6271">Conv 3×3 (256 → 256)  ·  BatchNorm  ·  ReLU  ·  MaxPool 2×2</text>
-    <rect x="272" y="668" width="254" height="22" rx="6" fill="#F2F4F8"/>
-    <text x="284" y="683" class="mono" font-size="11" font-weight="500" fill="#3A53D0">Act₄  →  (B, 256, 2, 2)</text>
-    <text x="272" y="706" font-size="9.5" fill="#9AA1AE">résolution spatiale : 4×4 → 2×2  ·  ÷2 (MaxPool)</text>
+    <rect x="140" y="677" width="86" height="20" rx="10" fill="#E4F4F8"/>
+    <text x="183" y="691" text-anchor="middle" class="mono" font-size="10.5" font-weight="600" fill="#128AA3">256 canaux</text>
+    <text x="272" y="659" font-size="12.5" fill="#5A6271">Conv 3×3 (256 → 256)  ·  BatchNorm  ·  ReLU  <tspan font-weight="700" fill="#128AA3">(sans MaxPool)</tspan></text>
+    <rect x="272" y="668" width="254" height="22" rx="6" fill="#EAF6F9"/>
+    <text x="284" y="683" class="mono" font-size="11" font-weight="500" fill="#0F7A90">Act₄  →  (B, 256, 4, 4)</text>
+    <text x="272" y="706" font-size="9.5" fill="#9AA1AE">résolution spatiale préservée : 4×4  ·  pas de pooling avant le GAP</text>
     <text x="836" y="660" text-anchor="end" class="mono" font-size="8.5" letter-spacing=".4" fill="#9AA1AE">CANAUX</text>
     <rect x="688" y="666" width="148" height="6" rx="3" fill="#EAECF1"/>
-    <rect x="688" y="666" width="148" height="6" rx="3" fill="#3A53D0"/>
+    <rect x="688" y="666" width="148" height="6" rx="3" fill="#128AA3"/>
   </g>
-  <line x1="450" y1="716" x2="450" y2="730" stroke="#C4CAD4" stroke-width="2" marker-end="url(#arrow)"/>
-
-  <!-- ===== bloc L5 (sans pool) ===== -->
-  <g id="block-L5">
-    <rect x="60" y="732" width="780" height="86" rx="16" fill="#FFFFFF" stroke="#CDE7EC" stroke-width="1.5" filter="url(#card-shadow)"/>
-    <rect x="64" y="746" width="5" height="58" rx="2.5" fill="#128AA3"/>
-    <circle cx="110" cy="775" r="17" fill="#128AA3"/>
-    <text x="110" y="779.5" text-anchor="middle" font-size="12" font-weight="700" fill="#FFFFFF">L5</text>
-    <text x="140" y="771" font-size="14.5" font-weight="700" fill="#1A1E27">Bloc L5</text>
-    <rect x="140" y="781" width="86" height="20" rx="10" fill="#E4F4F8"/>
-    <text x="183" y="795" text-anchor="middle" class="mono" font-size="10.5" font-weight="600" fill="#128AA3">256 canaux</text>
-    <text x="272" y="763" font-size="12.5" fill="#5A6271">Conv 3×3 (256 → 256)  ·  BatchNorm  ·  ReLU  <tspan font-weight="700" fill="#128AA3">(sans MaxPool)</tspan></text>
-    <rect x="272" y="772" width="254" height="22" rx="6" fill="#EAF6F9"/>
-    <text x="284" y="787" class="mono" font-size="11" font-weight="500" fill="#0F7A90">Act₅  →  (B, 256, 2, 2)</text>
-    <text x="272" y="810" font-size="9.5" fill="#9AA1AE">résolution spatiale préservée : 2×2  ·  pas de pooling avant le GAP</text>
-    <text x="836" y="764" text-anchor="end" class="mono" font-size="8.5" letter-spacing=".4" fill="#9AA1AE">CANAUX</text>
-    <rect x="688" y="770" width="148" height="6" rx="3" fill="#EAECF1"/>
-    <rect x="688" y="770" width="148" height="6" rx="3" fill="#128AA3"/>
-  </g>
-  <line x1="450" y1="820" x2="450" y2="838" stroke="#C4CAD4" stroke-width="2" marker-end="url(#arrow)"/>
+  <line x1="450" y1="716" x2="450" y2="734" stroke="#C4CAD4" stroke-width="2" marker-end="url(#arrow)"/>
 
   <!-- ===== GAP ===== -->
   <g id="gap">
-    <rect x="250" y="842" width="400" height="60" rx="14" fill="#F0EAFC" stroke="#DACDF6" stroke-width="1" filter="url(#soft-shadow)"/>
-    <circle cx="280" cy="872" r="7" fill="#7A4FDE"/>
-    <text x="450" y="869" text-anchor="middle" font-size="13.5" font-weight="700" fill="#5E36C0">AdaptiveAvgPool2d(1, 1)  +  Flatten</text>
-    <text x="450" y="889" text-anchor="middle" class="mono" font-size="12" font-weight="500" fill="#7A4FDE">→  (B, 256)</text>
+    <rect x="250" y="738" width="400" height="60" rx="14" fill="#F0EAFC" stroke="#DACDF6" stroke-width="1" filter="url(#soft-shadow)"/>
+    <circle cx="280" cy="768" r="7" fill="#7A4FDE"/>
+    <text x="450" y="765" text-anchor="middle" font-size="13.5" font-weight="700" fill="#5E36C0">AdaptiveAvgPool2d(1, 1)  +  Flatten</text>
+    <text x="450" y="785" text-anchor="middle" class="mono" font-size="12" font-weight="500" fill="#7A4FDE">→  (B, 256)</text>
   </g>
 
-  <path d="M 410 902 C 360 924 280 916 248 932" fill="none" stroke="#C4CAD4" stroke-width="2" marker-end="url(#arrow)"/>
-  <path d="M 490 902 C 540 924 620 916 652 932" fill="none" stroke="#C4CAD4" stroke-width="2" marker-end="url(#arrow)"/>
+  <path d="M 410 798 C 360 820 280 812 248 828" fill="none" stroke="#C4CAD4" stroke-width="2" marker-end="url(#arrow)"/>
+  <path d="M 490 798 C 540 820 620 812 652 828" fill="none" stroke="#C4CAD4" stroke-width="2" marker-end="url(#arrow)"/>
 
   <!-- ===== tête genre ===== -->
   <g id="head-genre">
-    <rect x="60" y="936" width="370" height="104" rx="16" fill="#E5F4EF" stroke="#C5E6DA" stroke-width="1" filter="url(#card-shadow)"/>
-    <circle cx="92" cy="966" r="7" fill="#0E976E"/>
-    <text x="110" y="971" font-size="15" font-weight="700" fill="#0B7B5A">Tête Genre</text>
-    <text x="84" y="996" font-size="11.5" fill="#2A6D58">Linear (256 → 2)  ·  CrossEntropyLoss</text>
-    <text x="84" y="1016" font-size="11.5" fill="#4F8576">Classes : Homme / Femme  (softmax)</text>
-    <text x="406" y="1031" text-anchor="end" class="mono" font-size="11" font-weight="500" fill="#0B7B5A">gender_logits → (B, 2)</text>
+    <rect x="60" y="832" width="370" height="104" rx="16" fill="#E5F4EF" stroke="#C5E6DA" stroke-width="1" filter="url(#card-shadow)"/>
+    <circle cx="92" cy="862" r="7" fill="#0E976E"/>
+    <text x="110" y="867" font-size="15" font-weight="700" fill="#0B7B5A">Tête Genre</text>
+    <text x="84" y="892" font-size="11.5" fill="#2A6D58">Linear (256 → 2)  ·  CrossEntropyLoss</text>
+    <text x="84" y="912" font-size="11.5" fill="#4F8576">Classes : Homme / Femme  (softmax)</text>
+    <text x="406" y="927" text-anchor="end" class="mono" font-size="11" font-weight="500" fill="#0B7B5A">gender_logits → (B, 2)</text>
   </g>
 
   <!-- ===== tête attributs ===== -->
   <g id="head-attr">
-    <rect x="470" y="936" width="370" height="104" rx="16" fill="#FAF0DE" stroke="#EBD9B6" stroke-width="1" filter="url(#card-shadow)"/>
-    <circle cx="502" cy="966" r="7" fill="#CE7E12"/>
-    <text x="520" y="971" font-size="15" font-weight="700" fill="#A6650C">Tête Attributs</text>
-    <text x="494" y="996" font-size="11.5" fill="#8A6418">Linear (256 → 6)  ·  BCEWithLogitsLoss  (sigmoid)</text>
-    <text x="494" y="1016" font-size="9.5" fill="#9A7530">Young · Smiling · Mouth_Slightly_Open · High_Cheekbones · Pointy_Nose · Oval_Face</text>
-    <text x="816" y="1031" text-anchor="end" class="mono" font-size="11" font-weight="500" fill="#A6650C">attr_logits → (B, 6)</text>
+    <rect x="470" y="832" width="370" height="104" rx="16" fill="#FAF0DE" stroke="#EBD9B6" stroke-width="1" filter="url(#card-shadow)"/>
+    <circle cx="502" cy="862" r="7" fill="#CE7E12"/>
+    <text x="520" y="867" font-size="15" font-weight="700" fill="#A6650C">Tête Attributs</text>
+    <text x="494" y="892" font-size="11.5" fill="#8A6418">Linear (256 → 6)  ·  BCEWithLogitsLoss  (sigmoid)</text>
+    <text x="494" y="912" font-size="9.5" fill="#9A7530">Young · Smiling · Mouth_Slightly_Open · High_Cheekbones · Pointy_Nose · Oval_Face</text>
+    <text x="816" y="927" text-anchor="end" class="mono" font-size="11" font-weight="500" fill="#A6650C">attr_logits → (B, 6)</text>
   </g>
 
-  <path d="M 245 1040 C 245 1054 380 1052 430 1058" fill="none" stroke="#C4CAD4" stroke-width="2"/>
-  <path d="M 655 1040 C 655 1054 520 1052 470 1058" fill="none" stroke="#C4CAD4" stroke-width="2"/>
-  <line x1="450" y1="1054" x2="450" y2="1062" stroke="#C4CAD4" stroke-width="2" marker-end="url(#arrow)"/>
+  <path d="M 245 936 C 245 950 380 948 430 954" fill="none" stroke="#C4CAD4" stroke-width="2"/>
+  <path d="M 655 936 C 655 950 520 948 470 954" fill="none" stroke="#C4CAD4" stroke-width="2"/>
+  <line x1="450" y1="950" x2="450" y2="958" stroke="#C4CAD4" stroke-width="2" marker-end="url(#arrow)"/>
 
   <!-- ===== loss ===== -->
   <g id="loss">
-    <rect x="190" y="1066" width="520" height="40" rx="12" fill="#E8E9FA" stroke="#C9CCF1" stroke-width="1"/>
-    <text x="450" y="1091" text-anchor="middle" font-size="12.5" font-weight="600" fill="#2C2C6B">ℒ = CrossEntropy(genre) + 2 × BCE(attributs)  ·  Adam (lr = 3e-4, sans weight decay)</text>
+    <rect x="190" y="962" width="520" height="40" rx="12" fill="#E8E9FA" stroke="#C9CCF1" stroke-width="1"/>
+    <text x="450" y="987" text-anchor="middle" font-size="12.5" font-weight="600" fill="#2C2C6B">ℒ = CrossEntropy(genre) + 2 × BCE(attributs)  ·  Adam (lr = 3e-4, sans weight decay)</text>
   </g>
 
   <!-- ===== legend ===== -->
   <g id="legend">
-    <line x1="60" y1="1132" x2="840" y2="1132" stroke="#E2E5EC" stroke-width="1"/>
-    <g transform="translate(72, 1152)" font-size="10.5" font-weight="500" fill="#5A6271">
+    <line x1="60" y1="1028" x2="840" y2="1028" stroke="#E2E5EC" stroke-width="1"/>
+    <g transform="translate(72, 1048)" font-size="10.5" font-weight="500" fill="#5A6271">
       <rect x="0" y="-9" width="11" height="11" rx="3" fill="#2F7CC2"/>
       <text x="18" y="0">Entrée</text>
       <rect x="84" y="-9" width="11" height="11" rx="3" fill="#3A53D0"/>
-      <text x="102" y="0">Blocs conv. L0–L4 (MaxPool)</text>
+      <text x="102" y="0">Blocs conv. L0–L3 (MaxPool)</text>
       <rect x="308" y="-9" width="11" height="11" rx="3" fill="#128AA3"/>
-      <text x="326" y="0">Bloc L5 (sans MaxPool)</text>
+      <text x="326" y="0">Bloc L4 (sans MaxPool)</text>
       <rect x="500" y="-9" width="11" height="11" rx="3" fill="#7A4FDE"/>
       <text x="518" y="0">GAP + Flatten</text>
       <rect x="618" y="-9" width="11" height="11" rx="3" fill="#0E976E"/>
@@ -224,5 +205,5 @@
     </g>
   </g>
 
-  <text x="450" y="1178" text-anchor="middle" class="mono" font-size="9.5" fill="#9AA1AE">LRAD · FacialCNN · Les 6 activations Act₀…Act₅ (forward_features) alimentent les 6 BlockDecoders en aval — voir Decoder.svg</text>
+  <text x="450" y="1074" text-anchor="middle" class="mono" font-size="9.5" fill="#9AA1AE">LRAD · FacialCNN · Les 5 activations Act₀…Act₄ (forward_features) alimentent les 5 BlockDecoders en aval — voir Decoder.svg</text>
 </svg>

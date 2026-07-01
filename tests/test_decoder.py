@@ -1,7 +1,7 @@
 """Shape/architecture tests for the per-block decoders.
 
 Covers both upsampling stages: the default bilinear-Upsample + Conv stack
-and the optional ConvTranspose2d stack. Every decoder of the full 6-block
+and the optional ConvTranspose2d stack. Every decoder of the full 5-block
 CelebA config must map its block activation to a (3, 64, 64) reconstruction
 regardless of which one is selected.
 """
@@ -15,8 +15,8 @@ import torch.nn as nn
 from lrad.decoder import BlockDecoder, build_decoders
 from lrad.model import FacialCNN
 
-# Full configs/celeba_ood.yaml trunk: 6 conv blocks on 64x64 input.
-CHANNELS = (32, 64, 128, 256, 256, 256)
+# Full configs/celeba_ood.yaml trunk: 5 conv blocks on 64x64 input.
+CHANNELS = (32, 64, 128, 256, 256)
 IMG = 64
 
 
@@ -25,7 +25,7 @@ def _model() -> FacialCNN:
     return FacialCNN(channels=CHANNELS, input_size=IMG).eval()
 
 
-def test_all_six_decoders_output_image_shape():
+def test_all_five_decoders_output_image_shape():
     """Every BlockDecoder maps its activation back to (3, 64, 64)."""
     model = _model()
     decoders = build_decoders(model, image_size=IMG).eval()
@@ -90,12 +90,12 @@ def test_unknown_upsample_mode_rejected():
 
 def test_channel_progression_preserved():
     """Each upsampling stage still halves channels down to min_channels."""
-    dec = BlockDecoder(in_channels=256, in_size=2, out_size=64,
+    dec = BlockDecoder(in_channels=256, in_size=4, out_size=64,
                        min_channels=16)
     convs = [m for m in dec.net
              if isinstance(m, nn.Conv2d) and m.kernel_size == (3, 3)]
     expected, ch = [], 256
-    for _ in range(5):  # log2(64 / 2)
+    for _ in range(4):  # log2(64 / 4)
         new_ch = max(16, ch // 2)
         expected.append((ch, new_ch))
         ch = new_ch
