@@ -58,6 +58,7 @@ from lrad.ensemble import (  # noqa: E402
     evaluate_ensemble_decomposition,
     evaluate_ensemble_uncertainty,
     identity_residual,
+    sample_block_recons,
     sample_decomposition,
     sample_mean_error_maps,
     sample_min_error_maps,
@@ -69,6 +70,7 @@ from lrad.plots import (  # noqa: E402
     plot_decomposition_auroc_bars,
     plot_ensemble_decomposition,
     plot_ensemble_score_hists,
+    plot_instance_decomposition,
     plot_mean_abs_bias,
     plot_mean_error_maps,
     plot_min_error_maps,
@@ -99,6 +101,45 @@ def _per_model_record(seed: int, results: dict) -> dict:
         "auroc_entropy_gender": _au("score_entropy_gender"),
         "auroc_entropy_combined": _au("score_entropy_combined"),
     }
+
+
+def _write_instance_figures(
+    models,
+    decoders_list,
+    images,
+    device,
+    out_dir: Path,
+    *,
+    block: int,
+    prefix: str,
+    sigma: float,
+    overlay_power: float,
+) -> int:
+    """Save one per-instance decomposition figure per image in ``images``.
+
+    Reconstructs the whole batch once with every member (at ``block``), then
+    slices it image by image so each figure shows that one face across all M
+    models. Files are written as ``{prefix}_01.png``, ``{prefix}_02.png`` … in
+    ``out_dir``. Returns the number of figures written.
+    """
+    out_dir.mkdir(parents=True, exist_ok=True)
+    images_dev, recons = sample_block_recons(
+        models, decoders_list, images, device, block,
+    )
+    n = images_dev.size(0)
+    n_models = len(recons)
+    for i in range(n):
+        recon_i = [recons[m][i] for m in range(n_models)]
+        plot_instance_decomposition(
+            images_dev[i], recon_i,
+            out_dir / f"{prefix}_{i + 1:02d}.png",
+            label=f"{prefix} {i + 1}",
+            sigma=sigma,
+            overlay_power=overlay_power,
+            title=f"{prefix} sample {i + 1} — block L{block}  "
+                  f"({n_models}-model ensemble)",
+        )
+    return n
 
 
 def main() -> None:
@@ -401,6 +442,47 @@ def main() -> None:
             row_labels=row_labels,
             title=f"Score comparison at block {cmp_block}  "
                   f"(per-column colour scales, {size}-model ensemble)",
+        )
+
+        # --- Per-instance figures: one face at a time -------------------
+        # For a couple of dozen ID and OOD faces, write a standalone figure
+        # showing every member's reconstruction and error, the bias / mean /
+        # min summary, and the smoothed bias overlaid on the face. Same
+        # reconstruction depth as the score comparison; the overlay's sigma
+        # and alpha falloff are display-only knobs.
+        n_inst_in = int(ecfg_v.get("n_instances_in",
+                                   ecfg_v.get("n_instances", 20)))
+        n_inst_ood = int(ecfg_v.get("n_instances_ood",
+                                    ecfg_v.get("n_instances", 20)))
+        inst_block = int(ecfg_v.get("instance_block", cmp_block))
+        overlay_sigma = float(ecfg_v.get("overlay_sigma", 7.0))
+        overlay_power = float(ecfg_v.get("overlay_power", 0.8))
+        # A fresh, larger draw of faces; the seed offset keeps them distinct
+        # from the small grid-figure samples gathered above.
+        inst_in = _gather_samples(
+            loaders["test_in"], n_inst_in,
+            seed=(viz_seed + 100) if viz_seed is not None else None,
+        )
+        inst_ood = _gather_samples(
+            loaders["test_ood"], n_inst_ood,
+            seed=(viz_seed + 101) if viz_seed is not None else None,
+        )
+        n_in_done = _write_instance_figures(
+            models, decoders_list, inst_in, device,
+            plot_dir / "instances_in",
+            block=inst_block, prefix="ID",
+            sigma=overlay_sigma, overlay_power=overlay_power,
+        )
+        n_ood_done = _write_instance_figures(
+            models, decoders_list, inst_ood, device,
+            plot_dir / "instances_ood",
+            block=inst_block, prefix="OOD",
+            sigma=overlay_sigma, overlay_power=overlay_power,
+        )
+        logger.info(
+            f"Wrote per-instance figures: {n_in_done} ID → instances_in/, "
+            f"{n_ood_done} OOD → instances_ood/  (block L{inst_block}, "
+            f"sigma={overlay_sigma:g}, overlay_power={overlay_power:g})"
         )
 
         # Bias/Variance evolution curves (full test loaders).
