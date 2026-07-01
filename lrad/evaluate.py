@@ -196,7 +196,8 @@ def evaluate(
     device: torch.device,
 ) -> dict:
     """Run the full evaluation: per-attribute accuracy on the held-out
-    in-distribution test split and OOD AUROC against the Eyeglasses split."""
+    in-distribution test split and OOD AUROC against the held-out OOD split."""
+    ood_label = loaders.get("ood_attr", "OOD")
     logger.info("Collecting predictions on test_in...")
     preds_in = collect_predictions(model, loaders["test_in"], device)
     logger.info(
@@ -205,7 +206,7 @@ def evaluate(
         f"{preds_in['score_entropy_combined'].mean():.4f}"
     )
 
-    logger.info("Collecting predictions on test_ood (Eyeglasses)...")
+    logger.info(f"Collecting predictions on test_ood ({ood_label})...")
     preds_ood = collect_predictions(model, loaders["test_ood"], device)
     logger.info(
         f"  test_ood size = {preds_ood['is_ood'].shape[0]}, "
@@ -221,7 +222,7 @@ def evaluate(
     for name, acc in accuracy["attrs"].items():
         logger.info(f"  {name:<22}: {acc*100:.2f}%")
 
-    logger.info("OOD AUROC (in-dist vs Eyeglasses):")
+    logger.info(f"OOD AUROC (in-dist vs {ood_label}):")
     for k in (
         "score_msp",
         "score_entropy_gender",
