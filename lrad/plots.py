@@ -34,6 +34,9 @@ directly from the ensemble, with **no sigma and no division**:
   * ``plot_ensemble_decomposition`` / ``plot_decomposition_auroc_bars`` /
     ``plot_ensemble_score_hists`` — the full Risk | Bias | Variance maps,
     per-block AUROC bars, and aggregated score histograms.
+  * ``plot_instance_decomposition`` — one figure per test image: every
+    member's reconstruction and error side by side, the bias / mean / min
+    summary, and the smoothed bias painted onto the face (``smooth_cam``).
 
 Implementation follows current matplotlib best practices:
 ``layout='constrained'``, viridis colormap for error maps, hidden
@@ -749,6 +752,180 @@ def plot_min_error_maps(
         cbar_label="min_m (x − f̂^m)²  (sum over RGB)",
         row_labels=row_labels, title=title,
     )
+
+
+# ---------------------------------------------------------------------------
+# Per-instance view: one test image at a time
+#
+# The grid figures above stack many samples as rows, which is great for
+# spotting trends but hides what each individual model does. The figure below
+# zooms into a single image: every ensemble member's reconstruction and error
+# side by side, then the bias / mean / min summary, then the bias painted back
+# onto the face as a heat overlay. Saved one PNG per instance.
+# ---------------------------------------------------------------------------
+
+def smooth_cam(cam: np.ndarray, sigma: float = 7.0) -> np.ndarray:
+    """Blur and peak-normalize an error/saliency map for overlaying.
+
+    Rectifies to non-negative, normalizes by the peak, Gaussian-blurs by
+    ``sigma``, then normalizes again so the result lives in ``[0, 1]`` and can
+    drive both the colour and the per-pixel alpha of an overlay. A bigger
+    ``sigma`` spreads the highlight into smoother blobs; it is a display knob,
+    not part of the score.
+    """
+    from scipy.ndimage import gaussian_filter
+
+    cam = np.maximum(np.asarray(cam, dtype=np.float32), 0.0)
+    peak = float(cam.max())
+    if peak > 1e-8:
+        cam = cam / peak
+    cam = gaussian_filter(cam, sigma=sigma)
+    peak = float(cam.max())
+    if peak > 1e-8:
+        cam = cam / peak
+    return cam
+
+
+def _single_image(t: torch.Tensor) -> np.ndarray:
+    """A single ``(3, H, W)`` tensor → ``(H, W, 3)`` numpy in [0, 1]."""
+    return _to_image_grid(t.unsqueeze(0))[0]
+
+
+def plot_instance_decomposition(
+    image: torch.Tensor,
+    recons: Sequence[torch.Tensor],
+    save_path: str | Path,
+    *,
+    label: str | None = None,
+    sigma: float = 7.0,
+    overlay_power: float = 0.8,
+    vmax: float = 0.5,
+    title: str | None = None,
+) -> None:
+    """All ``M`` members' recon + error for ONE image, plus a bias overlay.
+
+    ``image`` is a single ``(3, H, W)`` tensor and ``recons`` holds the ``M``
+    ensemble members' reconstructions of it, each ``(3, H, W)``, taken at one
+    block depth. Everything else is derived right here so the panels are
+    guaranteed to agree with one another::
+
+        e_m   = sum_RGB (x − f̂^m)²      per-model squared error  (M maps)
+        f̄     = mean_m f̂^m              ensemble-mean reconstruction
+        bias  = sum_RGB (x − f̄)²        error of the consensus model
+        mean  = mean_m e_m               Risk — the average of the errors
+        min   = min_m e_m                error of the best member, per pixel
+
+    The figure has three bands:
+
+        1. the ``M`` reconstructions
+        2. the ``M`` per-model error maps  (shared [0, vmax] colour scale)
+        3. Original | Bias | Mean error | Min error | Bias overlay
+
+    The Min-error tile gets its OWN colour scale: the per-pixel minimum lives
+    on a much smaller magnitude than the bias/mean, so the shared [0, vmax]
+    cap would render it almost flat. The overlay is the Gaussian-smoothed bias
+    (see :func:`smooth_cam`) painted over the face with ``inferno``; ``sigma``
+    sets the blur and ``overlay_power`` the alpha falloff (alpha = cam **
+    overlay_power) — both are purely cosmetic.
+    """
+    import matplotlib.patheffects as pe
+
+    img_np = _single_image(image)                       # (H, W, 3)
+    recon_np = [_single_image(r) for r in recons]       # M × (H, W, 3)
+    n_models = len(recon_np)
+    if n_models == 0:
+        raise ValueError("need at least one reconstruction to plot")
+
+    per_model_err = [_sq_error(img_np, rc) for rc in recon_np]   # M × (H, W)
+    err_stack = np.stack(per_model_err, axis=0)                  # (M, H, W)
+    mean_recon = np.mean(np.stack(recon_np, axis=0), axis=0)     # (H, W, 3)
+    bias = _sq_error(img_np, mean_recon)                         # (H, W)
+    mean_err = err_stack.mean(axis=0)
+    min_err = err_stack.min(axis=0)
+    cam = smooth_cam(bias, sigma=sigma)
+
+    text_pe = [pe.withStroke(linewidth=1.6, foreground="black")]
+
+    def _annot(ax, value: float, fmt: str = "{:.3f}") -> None:
+        ax.text(0.5, 0.04, fmt.format(float(value)), transform=ax.transAxes,
+                ha="center", va="bottom", fontsize=8.0, color="white",
+                path_effects=text_pe)
+
+    # Width follows the model count; the floor keeps the 5-tile summary band
+    # readable even for a tiny ensemble.
+    fig = plt.figure(
+        figsize=(max(1.25 * n_models + 0.8, 7.5), 6.0),
+        layout="constrained",
+    )
+    if title:
+        fig.suptitle(title, fontsize=_TITLE_FS)
+    bands = fig.subfigures(3, 1, height_ratios=[1.0, 1.0, 1.35])
+
+    # --- Band 1: every member's reconstruction --------------------------
+    row_lbl = f"  ({label})" if label else ""
+    bands[0].suptitle(f"Reconstructions — {n_models} models{row_lbl}",
+                      fontsize=_LABEL_FS)
+    top = bands[0].subplots(1, n_models, squeeze=False)[0]
+    for m in range(n_models):
+        top[m].imshow(recon_np[m])
+        _bare(top[m])
+        top[m].set_title(f"M{m + 1}", fontsize=_TICK_FS)
+
+    # --- Band 2: every member's squared error (shared scale) ------------
+    bands[1].suptitle("Per-model squared error  (x − f̂^m)²",
+                      fontsize=_LABEL_FS)
+    mid = bands[1].subplots(1, n_models, squeeze=False)[0]
+    err_im = None
+    for m in range(n_models):
+        err_im = mid[m].imshow(per_model_err[m], cmap="viridis",
+                               vmin=0.0, vmax=vmax)
+        _bare(mid[m])
+        _annot(mid[m], per_model_err[m].mean())
+    if err_im is not None:
+        cbar = bands[1].colorbar(err_im, ax=mid.tolist(), location="right",
+                                 shrink=0.85, pad=0.012, aspect=18)
+        cbar.ax.tick_params(labelsize=8)
+
+    # --- Band 3: consensus summary + overlay ----------------------------
+    # Bias and mean keep the shared [0, vmax] scale; min is autoscaled (its
+    # own vmin/vmax), as it sits far below the others. Original and overlay
+    # are images, not heatmaps, so they carry no colour bar.
+    bands[2].suptitle("Bias  |  mean error (risk)  |  min error  |  overlay",
+                      fontsize=_LABEL_FS)
+    bot = bands[2].subplots(1, 5, squeeze=False)[0]
+
+    bot[0].imshow(img_np)
+    _bare(bot[0])
+    bot[0].set_title("Original", fontsize=_TICK_FS)
+
+    fixed = [("Bias  (x − f̄)²", bias), ("Mean error", mean_err)]
+    for ax, (name, mp) in zip(bot[1:3], fixed):
+        im = ax.imshow(mp, cmap="viridis", vmin=0.0, vmax=vmax)
+        _bare(ax)
+        ax.set_title(name, fontsize=_TICK_FS)
+        _annot(ax, mp.mean(), fmt="{:.4f}")
+        cb = bands[2].colorbar(im, ax=[ax], location="bottom",
+                               shrink=0.9, pad=0.02, aspect=12)
+        cb.ax.tick_params(labelsize=7)
+
+    # Min error on its own scale (no shared vmin/vmax).
+    im_min = bot[3].imshow(min_err, cmap="viridis", vmin=0.0,
+                           vmax=max(float(min_err.max()), 1e-12))
+    _bare(bot[3])
+    bot[3].set_title("Min error", fontsize=_TICK_FS)
+    _annot(bot[3], min_err.mean(), fmt="{:.4f}")
+    cb = bands[2].colorbar(im_min, ax=[bot[3]], location="bottom",
+                           shrink=0.9, pad=0.02, aspect=12)
+    cb.ax.tick_params(labelsize=7)
+
+    # Smoothed bias painted back onto the face.
+    bot[4].imshow(img_np)
+    bot[4].imshow(cam, cmap="inferno", alpha=np.clip(cam, 0.0, 1.0) ** overlay_power)
+    _bare(bot[4])
+    bot[4].set_title(f"Bias overlay (σ={sigma:g})", fontsize=_TICK_FS)
+
+    fig.savefig(save_path, dpi=150, bbox_inches="tight")
+    plt.close(fig)
 
 
 def plot_score_comparison(
