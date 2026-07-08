@@ -9,34 +9,33 @@ OOD detection on CelebA faces via deep-ensemble reconstruction error decomposed 
 
 ## What it does
 
-A from-scratch convolutional classifier is trained on accessory-free CelebA faces; lightweight decoders attached to each conv block learn to invert that block's frozen activations back to a `(3, 64, 64)` reconstruction. Training `M` such models independently forms a **plain deep ensemble** — diversity comes only from the per-seed weight init and the SGD shuffle order — whose per-pixel reconstruction risk decomposes exactly as `Risk = Bias + Variance`. The **bias** term — the irreducible error of the consensus reconstruction — is the anomaly score; faces wearing **eyeglasses or a hat** are held out as OOD (the attribute set is configurable) and score higher.
+A from-scratch convolutional classifier is trained on normal (glasses-free) CelebA faces; lightweight decoders attached to each conv block learn to invert that block's frozen activations back to a `(3, 64, 64)` reconstruction. Training `M` such models independently forms an **architecturally diverse deep ensemble** — each member has its own channel widths and conv kernel size (`ensemble.member_variants`), on top of its own weight init and SGD shuffle order — whose per-pixel reconstruction risk decomposes exactly as `Risk = Bias + Variance`. The **bias** term — the irreducible error of the consensus reconstruction — is the anomaly score; faces wearing **eyeglasses** are held out as OOD (the attribute set is configurable) and score higher.
 
 ## What was done in this run
 
-- **Removed Randomised MAP Sampling (anchored ensembling) and weight decay** from the whole pipeline: no `anchor_lambda`, no L2-to-anchor penalty in `train_decoders`, no `weight_decay` on either optimizer. The ensemble is now a clean deep ensemble, exactly as the LRAD note calls for.
-- **Per-instance test figures**: for each test face, one standalone figure with the 10 members' reconstructions, the 10 per-model error maps, the Bias map, the Mean-error map, the **Min-error map on its raw scale (no vmin/vmax)**, and the Gaussian-smoothed bias painted over the face (`smooth_cam`, `inferno`, `alpha = cam ** overlay_power`). `overlay_sigma` and `overlay_power` are exposed as config knobs and affect **display only**, never the score. ~20 IND + ~20 OOD instances are saved per run under `ensemble/plots/instances_{in,ood}/`.
-- **OOD set extended with hats**: `dataset.ood_attrs: [Eyeglasses, Wearing_Hat]` — in-distribution faces carry none of the OOD accessories.
-- **ConvTranspose2d decoder variant** run in parallel: exactly the same 5-block trunk `channels = (32, 64, 128, 256, 256)`, with every decoder upsampling stage replaced by `ConvTranspose2d(4×4, stride 2)` (`scripts/oar_run_ensemble_transpose.sh`).
-- **High-resolution rendering** for every figure: 300 dpi export, modern sans-serif typeface (Inter/Helvetica fallback chain), `constrained_layout`, hidden spines/ticks on image axes, colorbars where relevant, fixed colour scales so figures stay comparable across runs.
-- **Grid'5000 (Nancy) batch scripts**: both variants submit via OAR to the `gratouille` cluster (1× A100 40 GB — the job needs < 10 GB of VRAM; the A100 is there to fit 10 models × (25 + 25) epochs in the window), walltime 24 h, advance-reservation supported.
+- **Single decoder architecture — ConvTranspose2d only**: every ×2 upsampling stage is a learnable `ConvTranspose2d(4×4, stride 2)` + BN + ReLU; the bilinear resize-then-conv variant (and the `upsample` config knob) was removed from the whole pipeline.
+- **Per-member architectures**: `ensemble.member_variants` gives each of the 10 members its own trunk (channel widths + 3×3 or 5×5 convs, ~0.9M–2.7M parameters) while keeping the exact same 5-block / pool-after-first-4 spatial layout, so the per-block decompositions stay aligned across members.
+- **Glasses-only OOD**: `dataset.ood_attrs: [Eyeglasses]` — training/val/test_in contain only faces **without** eyeglasses (normal images); every face wearing glasses (sunglasses included) is held out as OOD. Wearing_Hat was dropped from the OOD set.
+- **Eye-region attribute targets**: 4 of the 6 attribute heads are eye-region attributes (`Arched_Eyebrows, Bushy_Eyebrows, Narrow_Eyes, Bags_Under_Eyes`; `Smiling, Young` stay as global targets). Training only sees glasses-free faces, so the classifier must attend to the eye area — eyeglasses then occlude exactly that evidence, maximizing the ID/OOD activation gap the bias picks up.
+- **Schedules**: 20 classifier epochs + 25 decoder epochs per member (`val_ratio=0`, no early stopping).
+- **Per-instance figures restructured**: each test face gets its own folder with one figure **per ensemble member** (`model_01.png` … `model_10.png`: Original | Recon | Error) plus a `summary.png` (Original | Bias | Mean error | Min error on its raw scale | smoothed-bias overlay). The per-tile numeric score annotations were removed everywhere — the maps read through the shared colour bars. `overlay_sigma` (now 3) and `overlay_power` affect **display only**, never the score.
+- **Top-10 OOD eyeglasses ranking**: the full OOD test set (restricted to `Eyeglasses` faces) is ranked by eye-region bias strength × concentration and the winners are written to `plots/top_ood_glasses.png` + `top_ood_glasses.json`.
+- **Conference-paper figure styling**: serif (Times-like) typeface with STIX math, the Okabe–Ito colorblind-safe palette with fixed role assignments (ID = blue, OOD = vermillion, variance = orange), recessive axes (no top/right spines, light grid), 300 dpi export, fixed colour scales so figures stay comparable across runs.
 
 ## Architecture
 
-**Classifier** — `FacialCNN`, shared 5-block conv trunk (L0…L4, `channels = [32, 64, 128, 256, 256]`) with gender and attribute heads. Each block exposes its post-activation tensor for the downstream decoders:
+**Classifier** — `FacialCNN`, 5-block conv trunk with gender and attribute heads; each block is `Conv(k×k) + BN + ReLU (+ MaxPool2×2, except the last)` and exposes its post-activation tensor for the downstream decoders. The single-model default is `channels = [32, 64, 128, 256, 256]`, `kernel_size = 3`; ensemble members override both via `ensemble.member_variants`.
 
-![Classifier diagram](docs/diagrams/Classifier.svg)
-
-**Decoders** — one `BlockDecoder` per conv block, upsampling frozen activations back to `(3, 64, 64)` through ×2 stages (`bilinear` resize-then-conv by default, `ConvTranspose2d` as the variant):
-
-![Decoder diagram](docs/diagrams/Decoder.svg)
+**Decoders** — one `BlockDecoder` per conv block, upsampling frozen activations back to `(3, 64, 64)` through ×2 stages of `ConvTranspose2d(4×4, stride 2) + BN + ReLU`, halving channels per stage down to 16, ending in a 1×1 conv + Sigmoid.
 
 ## Features
 
 - Exact pixelwise `Risk = Bias + Variance` decomposition, verified at runtime
-- Plain deep ensemble: diversity comes only from independent weight init + SGD shuffle order (no regularizer)
+- Architecturally diverse deep ensemble: per-member channel widths + kernel size, independent weight init + SGD shuffle order (no regularizer)
 - Predictive-uncertainty decomposition on classifier heads (total = aleatoric + epistemic / MI)
-- Per-instance figures: each face's reconstruction + error across every member, the bias / mean / min summary, and the smoothed bias overlaid on the image
-- Configurable OOD attribute set (eyeglasses, hats, …) and decoder upsampling (bilinear resize-then-conv or transposed conv)
+- Per-instance figures: one figure per member (recon + error) and a bias / mean / min + overlay summary, per test face
+- Top-N OOD eyeglasses faces ranked by eye-region bias (strength × concentration)
+- Configurable OOD attribute set (default: eyeglasses only)
 - Epoch-variability study: traces inter-model variability σ(e) from per-epoch decoder checkpoints
 - Single YAML config shared by both single-model and ensemble runners; dotted `key=value` CLI overrides (lists supported, e.g. `model.channels=[...]`)
 
@@ -90,14 +89,8 @@ Both runners accept `--override key=value …` for dotted config overrides and `
 From the Nancy frontend, in `~/lrad` (OAR directives — cluster, GPU, walltime — are embedded in the scripts):
 
 ```bash
-# main run: 10-model ensemble, bilinear decoders (submit immediately)
+# main run: 10-model ensemble, one architecture per member
 ./scripts/oar_run_ensemble.sh
-
-# ConvTranspose2d variant on the 5-block trunk (can run in parallel)
-./scripts/oar_run_ensemble_transpose.sh
-
-# advance reservation (guaranteed window, never preempted)
-./scripts/oar_run_ensemble.sh '2026-07-03 20:00:00'
 
 # track / cancel
 oarstat -u $USER
@@ -105,7 +98,7 @@ tail -f outputs/celeba_ood/_oar/oar.<jobid>.stdout
 oardel <jobid>
 ```
 
-Both jobs reserve **1 GPU on `gratouille` (A100 40 GB) for 24 h**. The reservation is sized generously on purpose: an OAR job is cut at its walltime even mid-epoch and the ensemble run does not checkpoint.
+The job requests **1 GPU on `graffiti` (RTX 2080 Ti, 11 GiB) in the production/Abaca queue, walltime 48 h**. graffiti is the largest GPU pool at Nancy (12 nodes × 4 GPUs), so allocation is usually fast; the run needs < 10 GiB of VRAM, and ~3 h/model × 10 models fits comfortably in 48 h (a 2080 Ti is ~2–3× slower than the A100 this used to run on). The walltime is sized generously on purpose: an OAR job is cut at its walltime even mid-epoch and the ensemble run does not checkpoint. Note the production queue does **not** allow advance reservations (`oarsub -r`) — submission only. Fallback clusters (edit the `#OAR -p` line): `gruss` (2× A40 45 GiB) or `grue` (4× T4 15 GiB).
 
 ## Usage examples
 
@@ -114,13 +107,6 @@ Both jobs reserve **1 GPU on `gratouille` (A100 40 GB) for 24 h**. The reservati
 ```bash
 python scripts/run_ensemble.py --config configs/celeba_ood.yaml \
     --override ensemble.size=3 training.lr=5e-4
-```
-
-**Run the ConvTranspose2d decoder variant locally:**
-
-```bash
-python scripts/run_ensemble.py --config configs/celeba_ood.yaml \
-    --override training.decoders.upsample=transpose
 ```
 
 **Trace inter-model variability vs training epochs** (requires `training.save_every_epoch: true`):
@@ -138,11 +124,11 @@ python scripts/epoch_variability_study.py \
 
 | Section | Key parameters |
 | --- | --- |
-| `dataset` | `root`, `image_size`, `batch_size`, `train_ratio`, `val_ratio`, `ood_attrs` (attribute name or list defining OOD; default `[Eyeglasses, Wearing_Hat]`) |
-| `model` | `channels` (one int per conv block), `n_attrs`, `n_gender` |
-| `training` | `epochs`, `lr`, `attr_loss_weight`, `save_every_epoch`; nested `decoders: {epochs, lr, upsample}` (`upsample`: `bilinear` / `transpose`) |
-| `evaluation` | `n_viz_in_samples`, `n_viz_ood_samples`, `viz_seed`, `score_comparison_block`, `score_comparison_k`, `n_instances_in`, `n_instances_ood`, `instance_block`, `overlay_sigma`, `overlay_power` (the last two are display-only knobs of the bias overlay) |
-| `ensemble` | `size`, `base_seed` (model `i` uses `base_seed + i`), `agg` (`mean` / `max` / `p95`) |
+| `dataset` | `root`, `image_size`, `batch_size`, `train_ratio`, `val_ratio`, `ood_attrs` (attribute name or list defining OOD; default `[Eyeglasses]`) |
+| `model` | `channels` (one int per conv block), `kernel_size` (3/5), `n_attrs`, `n_gender` — the single-model architecture; ensemble members use `ensemble.member_variants` |
+| `training` | `epochs` (20), `lr`, `attr_loss_weight`, `save_every_epoch`; nested `decoders: {epochs (25), lr}` |
+| `evaluation` | `n_viz_in_samples`, `n_viz_ood_samples`, `viz_seed`, `score_comparison_block`, `score_comparison_k`, `n_instances_in`, `n_instances_ood`, `instance_block`, `overlay_sigma`, `overlay_power` (display-only knobs of the bias overlay), `n_top_ood` (size of the top OOD eyeglasses ranking) |
+| `ensemble` | `size`, `base_seed` (model `i` uses `base_seed + i`), `agg` (`mean` / `max` / `p95`), `member_variants` (per-member `{channels, kernel_size}`, cycled if `size` exceeds the list) |
 
 ## Project structure
 
@@ -151,26 +137,24 @@ lrad/
 ├── lrad/                          # library (flat layout)
 │   ├── dataset.py                 # CelebA loaders; configurable accessory OOD split
 │   ├── model.py                   # FacialCNN: conv trunk + gender/attrs heads
-│   ├── decoder.py                 # per-block decoders (bilinear / transpose stages)
+│   ├── decoder.py                 # per-block ConvTranspose2d decoders
 │   ├── train.py                   # classifier + decoder training loops
 │   ├── evaluate.py                # accuracy + classifier-confidence OOD AUROC
 │   ├── anomaly_score.py           # per-pixel error + pixel→scalar reductions
-│   ├── ensemble.py                # bias/variance decomposition
-│   ├── plots.py                   # all figures (300 dpi, incl. per-instance view)
+│   ├── ensemble.py                # bias/variance decomposition + eye-region bias
+│   ├── plots.py                   # all figures (300 dpi, paper styling)
 │   └── utils.py                   # device, seeding, logging
 ├── configs/celeba_ood.yaml        # single config file
-├── docs/diagrams/                 # architecture diagrams (SVG, embedded above)
 ├── scripts/
 │   ├── run_celeba.py              # single-model pipeline
 │   ├── run_ensemble.py            # ensemble + decomposition + instance figures
 │   ├── epoch_variability_study.py # σ(e) variability vs decoder epochs
-│   ├── oar_run_ensemble.sh        # Grid'5000 OAR job — bilinear (default) run
-│   └── oar_run_ensemble_transpose.sh  # Grid'5000 OAR job — transpose 5-block variant
+│   └── oar_run_ensemble.sh        # Grid'5000 OAR job
 └── tests/                         # pytest: anomaly score, decomposition,
                                    #         decoders, training, plots, checkpointing
 ```
 
-Outputs are gitignored. An ensemble run writes per-model results under `model_<i>/` (weights, history, plots) and the decomposition under `ensemble/` (AUROC table, identity residual, all heatmap figures), with the per-instance figures under `ensemble/plots/instances_in/` and `ensemble/plots/instances_ood/` (one PNG per face, `ID_XX.png` / `OOD_XX.png`).
+Outputs are gitignored. An ensemble run writes per-model results under `model_<i>/` (weights, history, plots) and the decomposition under `ensemble/` (AUROC table, identity residual, all heatmap figures, `top_ood_glasses.png` + `.json`), with the per-instance figures under `ensemble/plots/instances_{in,ood}/<ID|OOD>_XX/` (one folder per face: `model_01.png` … `model_10.png` + `summary.png`).
 
 ## Contributing
 
