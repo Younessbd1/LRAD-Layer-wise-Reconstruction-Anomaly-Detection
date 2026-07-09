@@ -2,15 +2,19 @@
 # CelebA OOD configuration.
 #
 # Task:
-#   In-distribution = faces with none of the OOD accessories
-#   OOD             = faces wearing eyeglasses (sunglasses included) OR a hat
+#   In-distribution = normal faces WITHOUT eyeglasses (training set)
+#   OOD             = faces wearing eyeglasses (sunglasses included)
 #                     (see dataset.ood_attrs below to change the set)
 #
 # Targets:
 #   gender (Male/Female) — 2-way softmax + CrossEntropyLoss
-#   6 binary attributes  — sigmoid + BCEWithLogitsLoss
-#     [Young, Smiling, Mouth_Slightly_Open, High_Cheekbones,
-#      Pointy_Nose, Oval_Face]
+#   6 binary attributes  — sigmoid + BCE
+#     [Arched_Eyebrows, Bushy_Eyebrows, Narrow_Eyes, Bags_Under_Eyes,
+#      Smiling, Young]
+#   Four of the six are eye-region attributes on purpose: training happens
+#   only on glasses-free faces, so the classifier must attend to the eye
+#   area — eyeglasses then occlude exactly that evidence, which maximizes
+#   the ID/OOD activation gap the reconstruction bias picks up.
 #
 # Run:
 #   python scripts/run_celeba.py --config configs/celeba_ood.yaml
@@ -25,8 +29,6 @@ experiment:
 # val_ratio=0 disables the validation split entirely: all in-dist images
 # outside the test split are used for training. There is no early stopping
 # and no val_loss curve — every model runs for exactly `epochs` epochs.
-# This is what the LRAD note calls for: a clean deep ensemble where
-# diversity comes only from the init + shuffle order.
 dataset:
   root: "./data"          # parent dir of the celeba/ folder
   download: false         # set true to let torchvision download
@@ -37,21 +39,23 @@ dataset:
   val_ratio: 0.00
   pin_memory: true
   seed: 42
-  # OOD = any of these accessories present; in-dist = none of them. A single
-  # string still works (e.g. ood_attrs: Eyeglasses) for the glasses-only task.
-  ood_attrs: [Eyeglasses, Wearing_Hat]
+  # OOD = any of these accessories present; in-dist (train/val/test_in) =
+  # none of them. Glasses-only task: the models train exclusively on faces
+  # without eyeglasses, and every face wearing glasses is held out as OOD.
+  ood_attrs: [Eyeglasses]
 
 # ---- Model --------------------------------------------------------------
 # 5 conv blocks (the FacialCNN default layout), no pretrained weights.
 # Each block:
-#   Conv3x3 + BN + ReLU + MaxPool2x2 (last block: no pool)
+#   Conv(k×k) + BN + ReLU + MaxPool2x2 (last block: no pool)
 # The trunk bottoms out at a 4×4 feature map (64 → 32 → 16 → 8 → 4 → GAP).
-# No Dropout: ensemble diversity for the bias/variance decomposition comes
-# from independent weight init + SGD shuffle order (deep ensemble), not
-# from MC-Dropout.
+# No Dropout. This section is the SINGLE-MODEL architecture (run_celeba.py);
+# the ensemble runner overrides it per member with ensemble.member_variants
+# below, so every member of the deep ensemble has a different architecture.
 model:
   in_channels: 3
   channels: [32, 64, 128, 256, 256]
+  kernel_size: 3
   n_attrs: 6
   n_gender: 2
 
@@ -60,11 +64,11 @@ model:
 # Single .backward() per step. With val_ratio=0 there is no validation
 # loop — every model runs the full `epochs` schedule.
 training:
-  # Long schedule. With save_every_epoch=true a checkpoint is written at
-  # the end of EVERY epoch (model_ep{e}.pt / decoders_ep{e}.pt) so that
+  # 20 classifier epochs. With save_every_epoch=true a checkpoint is written
+  # at the end of EVERY epoch (model_ep{e}.pt / decoders_ep{e}.pt) so that
   # scripts/epoch_variability_study.py can trace the inter-model
   # variability sigma(e) as a function of the number of training epochs.
-  epochs: 25
+  epochs: 20
   save_every_epoch: true
   lr: 0.0003
   attr_loss_weight: 2.0
@@ -73,42 +77,42 @@ training:
   # --- Per-block decoders -----------------------------------------------
   # After classifier training, freeze the classifier and train one small
   # decoder per conv block to reconstruct the input from that block's
-  # activations. These reconstructions are what the anomaly score is built
-  # on: across the ensemble they drive the bias/variance decomposition
+  # activations. Each ×2 upsampling stage is a learnable
+  # ConvTranspose2d(4×4, stride 2) + BN + ReLU (single architecture).
+  # These reconstructions are what the anomaly score is built on: across
+  # the ensemble they drive the bias/variance decomposition
   # (run_ensemble.py), and per model they feed the per-block plots + fused
   # error score. Set this section to ~null~ to skip decoder training.
-  #
-  # Same long schedule as the classifier; per-epoch checkpoints
-  # (decoders_ep{e}.pt, controlled by save_every_epoch above) feed the
-  # sigma(e) epoch-variability study.
   decoders:
     epochs: 25
     lr: 0.001
-    # Decoder upsampling stage: "bilinear" (resize-then-conv, smoother, the
-    # default) or "transpose" (ConvTranspose2d — the original learnable
-    # upsampling; can leave faint checkerboard texture in the error maps).
-    upsample: bilinear
     log_every: 1
 
 # ---- Evaluation ---------------------------------------------------------
 # Grid plots use 10 in-dist + 15 OOD samples (randomly drawn from the test
 # loaders with a fixed seed, so the picks are reproducible).
 #
-# The ensemble runner also writes per-instance figures — one PNG per face
-# under ensemble/plots/instances_{in,ood}/ — each showing every member's
-# reconstruction + error, the bias / mean / min summary, and the smoothed
-# bias overlaid on the face. n_instances_* sets how many of each are saved;
-# instance_block picks the reconstruction depth (default = deepest block,
-# same as the score comparison); overlay_sigma and overlay_power are the two
-# display knobs of the bias overlay (blur, then alpha = cam ** power).
+# The ensemble runner writes per-instance figures under
+# ensemble/plots/instances_{in,ood}/<ID|OOD>_XX/: one figure per ensemble
+# member (that member's reconstruction + error map) plus a summary.png with
+# the Bias / Mean-error / Min-error maps and the smoothed-bias overlay.
+# overlay_sigma and overlay_power are the two display knobs of the bias
+# overlay (Gaussian blur, then alpha = cam ** power) — display only, never
+# part of the score.
+#
+# top_ood_glasses: the runner also ranks the FULL OOD test set (restricted
+# to faces with the Eyeglasses attribute) by how strongly and how locally
+# the bias lights up in the eye region, and writes the top n_top_ood faces
+# to plots/top_ood_glasses.png (+ per-instance folders).
 evaluation:
   n_viz_in_samples: 10
   n_viz_ood_samples: 15
   viz_seed: 1234
   n_instances_in: 20
   n_instances_ood: 20
-  overlay_sigma: 7
+  overlay_sigma: 3
   overlay_power: 0.8
+  n_top_ood: 10
 
 # ---- Ensemble (bias/variance decomposition) -----------------------------
 # scripts/run_ensemble.py trains `size` independent models (classifier +
@@ -118,7 +122,25 @@ evaluation:
 #   Bias      = E[(x - E_D[f_hat(x)])^2]     (error of the mean recon)
 #   Variance  = E[ E_D[(f_hat(x) - E_D[f_hat(x)])^2] ]   (model spread)
 # with the exact per-pixel identity Risk = Bias + Variance.
+#
+# member_variants gives each member its OWN architecture (channel widths +
+# conv kernel size), on top of the per-seed init and shuffle order — an
+# architecturally diverse deep ensemble. Every variant keeps the same
+# 5-block / pool-after-first-4 layout, so the per-block decompositions stay
+# aligned (block k means the same spatial scale in every member). If size
+# exceeds the list, variants are cycled.
 ensemble:
   size: 10
   base_seed: 42      # models are seeded 42, 43, ..., 51
   agg: p95           # pixel -> scalar reduction for the decomposition scores
+  member_variants:
+    - {channels: [32, 64, 128, 256, 256], kernel_size: 3}   # baseline
+    - {channels: [24, 48, 96, 192, 384], kernel_size: 3}    # slim early, wide late
+    - {channels: [48, 96, 192, 256, 256], kernel_size: 3}   # wide early
+    - {channels: [16, 48, 96, 192, 320], kernel_size: 5}    # slim + large RF
+    - {channels: [40, 80, 160, 320, 320], kernel_size: 3}   # 1.25x width
+    - {channels: [32, 64, 128, 256, 256], kernel_size: 5}   # baseline, large RF
+    - {channels: [64, 96, 160, 224, 288], kernel_size: 3}   # flat progression
+    - {channels: [24, 64, 128, 192, 256], kernel_size: 5}   # narrow late, large RF
+    - {channels: [48, 64, 96, 192, 384], kernel_size: 3}    # heavy head + tail
+    - {channels: [32, 48, 112, 224, 336], kernel_size: 5}   # steep growth, large RF
