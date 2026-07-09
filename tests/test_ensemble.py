@@ -10,6 +10,7 @@ from lrad.decoder import build_decoders
 from lrad.ensemble import (
     UNC_TERMS,
     block_reconstructions,
+    collect_eye_region_bias,
     decomposition_maps,
     evaluate_ensemble_decomposition,
     evaluate_ensemble_uncertainty,
@@ -201,6 +202,35 @@ def test_evaluate_ensemble_decomposition(setup):
         assert out["scores_in"]["aggregated"][t].shape == (10,)
         assert out["scores_ood"]["aggregated"][t].shape == (7,)
         assert np.isfinite(out["scores_in"]["aggregated"][t]).all()
+
+
+def test_collect_eye_region_bias_shapes_and_score(setup):
+    """Per-image eye-region bias stats: shapes, finiteness, score formula."""
+    models, decoders_list, _, _ = setup
+    device = torch.device("cpu")
+    images = torch.rand(9, 3, IMG, IMG)
+    loader = [(images[:5], None, None, None), (images[5:], None, None, None)]
+    out = collect_eye_region_bias(
+        models, decoders_list, loader, device, block=1,
+    )
+    for key in ("global_mean", "eye_mean", "score"):
+        assert out[key].shape == (9,)
+        assert np.isfinite(out[key]).all()
+        assert (out[key] >= 0).all()
+    # score = eye_mean * (eye_mean / global_mean)
+    expected = out["eye_mean"] ** 2 / np.maximum(out["global_mean"], 1e-12)
+    assert np.allclose(out["score"], expected, rtol=1e-5)
+
+
+def test_collect_eye_region_bias_rejects_bad_region(setup):
+    models, decoders_list, _, _ = setup
+    device = torch.device("cpu")
+    loader = [(torch.rand(2, 3, IMG, IMG), None, None, None)]
+    with pytest.raises(ValueError):
+        collect_eye_region_bias(
+            models, decoders_list, loader, device, block=0,
+            region=(0.6, 0.4, 0.0, 1.0),
+        )
 
 
 # ---------------------------------------------------------------------------
