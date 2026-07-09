@@ -1,14 +1,14 @@
 """CelebA dataset for the gender + facial-attribute OOD task.
 
 OOD is defined by a *set* of accessory attributes (``dataset.ood_attrs``,
-default ``[Eyeglasses, Wearing_Hat]``). A face is out-of-distribution as
-soon as it carries any one of them; the in-distribution pool is the clean
-faces that carry none.
+default ``[Eyeglasses]`` — the glasses-only task). A face is
+out-of-distribution as soon as it carries any one of them; the
+in-distribution pool is the clean faces that carry none.
 
 In-distribution protocol:
     train / val / test_in  : faces with none of the OOD attributes set
-                             (no glasses, no sunglasses, no hat) — the
-                             "clean" faces the classifier trains on
+                             (no glasses, no sunglasses) — the "normal"
+                             faces the classifier trains on
     test_ood               : faces with at least one OOD attribute set,
                              held out and only seen at evaluation time
 
@@ -17,8 +17,8 @@ Each in-distribution sample yields:
     image          : (3, H, W) float tensor in [0, 1]
     gender         : long scalar in {0, 1}     (1 == Male, 0 == Female)
     attrs          : (6,) float tensor of binary {0, 1} targets, in this order
-                     [Young, Smiling, Mouth_Slightly_Open, High_Cheekbones,
-                      Pointy_Nose, Oval_Face]
+                     [Arched_Eyebrows, Bushy_Eyebrows, Narrow_Eyes,
+                      Bags_Under_Eyes, Smiling, Young]
     is_ood         : long scalar (0 for in-dist, 1 for OOD).
                      Always 0 for the train/val/test_in loaders, 1 for
                      test_ood. Useful for the evaluator to assemble a
@@ -27,8 +27,16 @@ Each in-distribution sample yields:
 The OOD attributes (and the other accessory attributes — Wearing_Earrings,
 Heavy_Makeup) are deliberately *not* exposed as targets: we want the encoder
 to learn identity-/expression-level facial features, not the accessories
-themselves. Holding glasses and hats out entirely is what makes them a clean
-OOD test — the model never gets to fit the occlusion they cause.
+themselves. Holding glasses out entirely is what makes them a clean OOD
+test — the model never gets to fit the occlusion they cause.
+
+Four of the six targets (Arched_Eyebrows, Bushy_Eyebrows, Narrow_Eyes,
+Bags_Under_Eyes) are *eye-region* attributes on purpose: training happens
+only on glasses-free faces, so the classifier must attend to the eyebrows
+and eye area to predict them. Eyeglasses then occlude exactly the evidence
+those heads rely on, which maximizes the activation gap between ID and OOD
+faces in the eye region — the signal the reconstruction bias picks up.
+Smiling and Young stay as global-appearance targets.
 """
 
 from __future__ import annotations
@@ -60,16 +68,17 @@ GENDER_ATTR: str = "Male"
 # OOD is the union of these accessory attributes (any one present -> OOD).
 # OOD_ATTR is kept as the historical single-attribute name; OOD_ATTRS is the
 # default set the config falls back to when dataset.ood_attrs is unset.
+# Glasses-only task: training sees only faces WITHOUT eyeglasses.
 OOD_ATTR: str = "Eyeglasses"
-OOD_ATTRS: tuple[str, ...] = ("Eyeglasses", "Wearing_Hat")
+OOD_ATTRS: tuple[str, ...] = ("Eyeglasses",)
 
 ATTR_TARGETS: tuple[str, ...] = (
-    "Young",
+    "Arched_Eyebrows",
+    "Bushy_Eyebrows",
+    "Narrow_Eyes",
+    "Bags_Under_Eyes",
     "Smiling",
-    "Mouth_Slightly_Open",
-    "High_Cheekbones",
-    "Pointy_Nose",
-    "Oval_Face",
+    "Young",
 )
 
 
@@ -154,8 +163,8 @@ def get_celeba_loaders(cfg: dict) -> dict:
         pin_memory    default True
         seed          split RNG seed (default 42)
         ood_attrs     attribute name or list defining OOD (default
-                      ``[Eyeglasses, Wearing_Hat]``); ``ood_attr`` (singular)
-                      is still accepted for back-compat
+                      ``[Eyeglasses]``); ``ood_attr`` (singular) is still
+                      accepted for back-compat
 
     Returns:
         dict with keys 'train', 'val', 'test_in', 'test_ood',
