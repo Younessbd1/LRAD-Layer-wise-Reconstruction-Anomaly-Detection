@@ -152,12 +152,14 @@ def _plot_score_distribution(
     score_name: str,
     save_path: Path,
 ) -> None:
+    from lrad.plots import _C_ID, _C_OOD
+
     fig, ax = plt.subplots(figsize=(6.5, 4), constrained_layout=True)
     bins = 60
-    ax.hist(in_scores, bins=bins, alpha=0.55, label="in-distribution",
-            color="#377eb8", density=True)
-    ax.hist(ood_scores, bins=bins, alpha=0.55, label="OOD",
-            color="#e41a1c", density=True)
+    ax.hist(in_scores, bins=bins, alpha=0.6, label="in-distribution",
+            color=_C_ID, density=True)
+    ax.hist(ood_scores, bins=bins, alpha=0.6, label="OOD",
+            color=_C_OOD, density=True)
     ax.set_xlabel(score_name)
     ax.set_ylabel("Density")
     ax.grid(alpha=0.3)
@@ -337,13 +339,7 @@ def build_and_run(
     # --- Per-block decoders ---
     image_size = cfg.get("dataset", {}).get("image_size", 64)
     dec_cfg = cfg.get("training", {}).get("decoders")
-    # Upsampling stage of every decoder (bilinear resize-then-conv, or a
-    # transposed conv). Read before building so eval-only loads the same
-    # architecture the weights were trained with.
-    upsample = str((dec_cfg or {}).get("upsample", "bilinear"))
-    decoders = build_decoders(
-        model, image_size=image_size, upsample=upsample,
-    ).to(device)
+    decoders = build_decoders(model, image_size=image_size).to(device)
     dec_history: dict | None = None
     decoders_path = output_dir / "weights" / "decoders.pt"
 
@@ -360,8 +356,7 @@ def build_and_run(
             decoders = None  # type: ignore[assignment]
     elif dec_cfg:
         logger.info("=" * 70)
-        logger.info("PHASE 2 — training per-block reconstruction decoders "
-                    f"(upsample={upsample})")
+        logger.info("PHASE 2 — training per-block reconstruction decoders")
         logger.info("=" * 70)
         for k, d in enumerate(decoders):
             logger.info(
