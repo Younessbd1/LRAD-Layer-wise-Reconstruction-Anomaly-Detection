@@ -11,7 +11,7 @@ below (no pretrained weights)::
       Block5: Conv3x3(256->256) + BN + ReLU               -> (256, 4, 4)
       AdaptiveAvgPool -> (256,)
       head_gender: Linear(256 -> 2)     # Male vs Female (softmax + CE)
-      head_attrs:  Linear(256 -> 6)     # Young, Smiling, ... (sigmoid + BCE)
+      head_attrs:  Linear(256 -> 6)     # Arched_Eyebrows, ... (sigmoid + BCE)
 
 Forward returns a dict with keys ``gender_logits`` (B, 2) and
 ``attr_logits`` (B, 6). The loss combines CrossEntropyLoss on gender_logits
@@ -30,9 +30,13 @@ def _conv_block(
     in_ch: int,
     out_ch: int,
     pool: bool = True,
+    kernel_size: int = 3,
 ) -> nn.Sequential:
+    if kernel_size % 2 != 1:
+        raise ValueError(f"kernel_size must be odd, got {kernel_size}")
     layers: list[nn.Module] = [
-        nn.Conv2d(in_ch, out_ch, kernel_size=3, padding=1, bias=False),
+        nn.Conv2d(in_ch, out_ch, kernel_size=kernel_size,
+                  padding=kernel_size // 2, bias=False),
         nn.BatchNorm2d(out_ch),
         nn.ReLU(inplace=True),
     ]
@@ -57,6 +61,7 @@ class FacialCNN(nn.Module):
         n_attrs: int = 6,
         n_gender: int = 2,
         input_size: int = 64,
+        kernel_size: int = 3,
     ):
         super().__init__()
         if len(channels) < 2:
@@ -66,14 +71,19 @@ class FacialCNN(nn.Module):
         self.n_attrs = n_attrs
         self.n_gender = n_gender
         self.input_size = input_size
+        self.kernel_size = int(kernel_size)
 
         blocks: list[nn.Module] = []
         prev = in_channels
         # Pool after every block except the last to preserve a small
-        # spatial map for the GAP layer.
+        # spatial map for the GAP layer. ``kernel_size`` only changes the
+        # receptive field of each conv (padding keeps H, W), so the block
+        # spatial layout — and therefore the decoder geometry — is the same
+        # for every ensemble member regardless of the variant.
         for i, ch in enumerate(channels):
             pool = i < len(channels) - 1
-            blocks.append(_conv_block(prev, ch, pool=pool))
+            blocks.append(_conv_block(prev, ch, pool=pool,
+                                      kernel_size=self.kernel_size))
             prev = ch
         self.blocks = nn.ModuleList(blocks)
         self.pool = nn.AdaptiveAvgPool2d((1, 1))
@@ -138,6 +148,7 @@ def build_model(cfg: dict) -> FacialCNN:
         n_attrs=mcfg.get("n_attrs", 6),
         n_gender=mcfg.get("n_gender", 2),
         input_size=mcfg.get("input_size", dcfg.get("image_size", 64)),
+        kernel_size=mcfg.get("kernel_size", 3),
     )
 
 
