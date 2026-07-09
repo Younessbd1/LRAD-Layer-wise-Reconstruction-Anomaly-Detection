@@ -1,9 +1,10 @@
-"""Tests for smooth_cam and the per-instance decomposition figure.
+"""Tests for smooth_cam and the per-instance figures.
 
 The figure code is mostly matplotlib plumbing, so these checks stay light:
 smooth_cam's numeric contract (rectify, blur, peak-normalize into [0, 1]) and
-that plot_instance_decomposition actually writes a non-empty PNG for a small
-synthetic ensemble. matplotlib runs headless via the Agg backend.
+that the per-member / summary / top-OOD figures actually write a non-empty
+PNG for a small synthetic ensemble. matplotlib runs headless via the Agg
+backend.
 """
 
 from __future__ import annotations
@@ -16,7 +17,12 @@ import numpy as np
 import pytest
 import torch
 
-from lrad.plots import plot_instance_decomposition, smooth_cam
+from lrad.plots import (
+    plot_instance_summary,
+    plot_member_instance,
+    plot_top_ood_glasses,
+    smooth_cam,
+)
 
 
 def test_smooth_cam_normalized_into_unit_range():
@@ -50,19 +56,48 @@ def test_smooth_cam_larger_sigma_spreads_energy():
     assert wide[16, 24] > tight[16, 24]
 
 
-def test_plot_instance_decomposition_writes_png(tmp_path):
+def test_plot_member_instance_writes_png(tmp_path):
     torch.manual_seed(0)
-    img = torch.rand(3, 16, 16)
-    recons = [torch.rand(3, 16, 16) for _ in range(4)]
-    out = tmp_path / "instance.png"
-    plot_instance_decomposition(
-        img, recons, out, label="ID 1", sigma=3.0, overlay_power=0.8,
+    out = tmp_path / "member.png"
+    plot_member_instance(
+        torch.rand(3, 16, 16), torch.rand(3, 16, 16), out,
+        member=3, title="OOD sample 1 — member 3/10",
     )
     assert out.exists() and out.stat().st_size > 0
 
 
-def test_plot_instance_decomposition_rejects_empty(tmp_path):
+def test_plot_instance_summary_writes_png(tmp_path):
+    torch.manual_seed(0)
+    img = torch.rand(3, 16, 16)
+    recons = [torch.rand(3, 16, 16) for _ in range(4)]
+    out = tmp_path / "summary.png"
+    plot_instance_summary(
+        img, recons, out, sigma=3.0, overlay_power=0.8,
+    )
+    assert out.exists() and out.stat().st_size > 0
+
+
+def test_plot_instance_summary_rejects_empty(tmp_path):
     with pytest.raises(ValueError):
-        plot_instance_decomposition(
+        plot_instance_summary(
             torch.rand(3, 16, 16), [], tmp_path / "empty.png",
+        )
+
+
+def test_plot_top_ood_glasses_writes_png(tmp_path):
+    torch.manual_seed(0)
+    n, m = 5, 3
+    images = torch.rand(n, 3, 16, 16)
+    recons_per_model = [
+        [torch.rand(3, 16, 16) for _ in range(n)] for _ in range(m)
+    ]
+    out = tmp_path / "top.png"
+    plot_top_ood_glasses(images, recons_per_model, out, sigma=2.0)
+    assert out.exists() and out.stat().st_size > 0
+
+
+def test_plot_top_ood_glasses_rejects_empty(tmp_path):
+    with pytest.raises(ValueError):
+        plot_top_ood_glasses(
+            torch.zeros(0, 3, 16, 16), [], tmp_path / "empty.png",
         )
