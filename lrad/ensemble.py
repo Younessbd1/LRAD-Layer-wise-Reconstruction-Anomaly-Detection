@@ -333,6 +333,72 @@ def sample_block_recons(
     return images, [recons_per_model[m][block] for m in range(len(models))]
 
 
+# Eye-region window as fractions of the image height/width. CelebA aligned
+# faces put the eyes slightly above the vertical centre; after the square
+# resize the eyeglasses (frame + lenses) span roughly rows 42–62 % and
+# columns 15–85 % of the image. Display-independent: used only to *rank*
+# OOD faces by how much bias falls on the glasses region.
+EYE_REGION: tuple[float, float, float, float] = (0.42, 0.62, 0.15, 0.85)
+
+
+@torch.no_grad()
+def collect_eye_region_bias(
+    models: Sequence[FacialCNN],
+    decoders_list: Sequence[nn.ModuleList],
+    loader,
+    device: torch.device,
+    block: int,
+    region: tuple[float, float, float, float] = EYE_REGION,
+) -> dict[str, np.ndarray]:
+    """Per-image bias statistics at ONE block over a whole loader.
+
+    For every image the ensemble bias map ``(x − f̄)²`` is reduced to two
+    scalars: its mean over the whole image and its mean over the eye-region
+    window ``region`` (fractional ``(row0, row1, col0, col1)``). The
+    returned ``score`` is::
+
+        score = eye_mean * (eye_mean / global_mean)
+
+    which is large only when the bias is *strong* in the eye region AND
+    *concentrated* there — exactly "the glasses are well detected as the
+    anomaly". A face with equally high bias everywhere (e.g. a globally bad
+    reconstruction) gets no concentration boost. Memory stays ``O(N)``:
+    only the scalars are kept, never the maps.
+
+    Returns ``{'global_mean': (N,), 'eye_mean': (N,), 'score': (N,)}`` in
+    loader order.
+    """
+    r0f, r1f, c0f, c1f = region
+    if not (0.0 <= r0f < r1f <= 1.0 and 0.0 <= c0f < c1f <= 1.0):
+        raise ValueError(f"bad eye region {region!r}")
+
+    global_means: list[np.ndarray] = []
+    eye_means: list[np.ndarray] = []
+    for batch in loader:
+        img = batch[0].to(device, non_blocking=True)
+        recons = torch.stack(
+            [block_reconstructions(models[m], decoders_list[m], img)[block]
+             for m in range(len(models))],
+            dim=0,
+        )  # (M, B, 3, H, W)
+        bias = ((img - recons.mean(dim=0)) ** 2).sum(dim=1)  # (B, H, W)
+        H, W = bias.shape[-2:]
+        r0, r1 = int(round(r0f * H)), max(int(round(r1f * H)), 1)
+        c0, c1 = int(round(c0f * W)), max(int(round(c1f * W)), 1)
+        global_means.append(bias.flatten(1).mean(dim=1).cpu().numpy())
+        eye_means.append(
+            bias[:, r0:r1, c0:c1].flatten(1).mean(dim=1).cpu().numpy()
+        )
+
+    g = (np.concatenate(global_means) if global_means else np.zeros(0))
+    e = (np.concatenate(eye_means) if eye_means else np.zeros(0))
+    return {
+        "global_mean": g,
+        "eye_mean": e,
+        "score": e * (e / np.maximum(g, 1e-12)),
+    }
+
+
 @torch.no_grad()
 def collect_decomposition_scores(
     models: Sequence[FacialCNN],
