@@ -4,9 +4,11 @@
 Implements the LRAD note end to end:
 
   1. Train ``size`` independent models (classifier + per-block decoders),
-     each seeded ``base_seed + i``. With Dropout removed, the ensemble
-     diversity comes purely from the random init and the SGD shuffle
-     order — a genuine *deep ensemble*, not MC-Dropout.
+     each seeded ``base_seed + i`` — and, when ``ensemble.member_variants``
+     is set, each with its OWN architecture (channel widths + conv kernel
+     size). Diversity therefore comes from the architecture, the random
+     init and the SGD shuffle order — an architecturally diverse deep
+     ensemble, not MC-Dropout.
   2. Write the full per-model results into ``model_<i>/`` (the usual
      plots + summary, one set per model — "the results x5").
   3. Form the ensemble-mean reconstruction ``E_D[f_hat]`` and decompose
@@ -15,7 +17,8 @@ Implements the LRAD note end to end:
   4. Write the decomposition plots + summary into ``ensemble/``. Scoring
      the *mean* reconstruction isolates the Bias term (item 5 of the
      note); the Variance term doubles as an epistemic-uncertainty OOD
-     score.
+     score. The runner also ranks the OOD eyeglasses faces by eye-region
+     bias and writes the top-N to ``plots/top_ood_glasses.png``.
 
 Usage:
     python scripts/run_ensemble.py --config configs/celeba_ood.yaml
@@ -36,6 +39,7 @@ import time
 import traceback
 from pathlib import Path
 
+import numpy as np
 import torch
 import yaml
 
@@ -53,8 +57,9 @@ from run_celeba import (  # noqa: E402  (path set up just above)
     load_config,
 )
 
-from lrad.dataset import get_celeba_loaders  # noqa: E402
+from lrad.dataset import CELEBA_ATTRS, get_celeba_loaders  # noqa: E402
 from lrad.ensemble import (  # noqa: E402
+    collect_eye_region_bias,
     evaluate_ensemble_decomposition,
     evaluate_ensemble_uncertainty,
     identity_residual,
@@ -70,13 +75,15 @@ from lrad.plots import (  # noqa: E402
     plot_decomposition_auroc_bars,
     plot_ensemble_decomposition,
     plot_ensemble_score_hists,
-    plot_instance_decomposition,
+    plot_instance_summary,
     plot_mean_abs_bias,
     plot_mean_error_maps,
+    plot_member_instance,
     plot_min_error_maps,
     plot_per_block_breakdown,
     plot_recons_only,
     plot_score_comparison,
+    plot_top_ood_glasses,
     plot_variance_heatmaps,
 )
 from lrad.utils import get_device, seed_everything, setup_logging  # noqa: E402
@@ -86,8 +93,9 @@ logger = logging.getLogger("celeba_ood")
 TERMS = ("risk", "bias", "variance")
 
 
-def _per_model_record(seed: int, results: dict) -> dict:
-    """Compact per-model summary: gender accuracy + the classifier OOD AUROCs."""
+def _per_model_record(seed: int, results: dict, variant: dict) -> dict:
+    """Compact per-model summary: architecture, gender accuracy + the
+    classifier OOD AUROCs."""
     auroc = results.get("auroc", {})
 
     def _au(key: str):
@@ -96,11 +104,48 @@ def _per_model_record(seed: int, results: dict) -> dict:
 
     return {
         "seed": seed,
+        "channels": list(variant.get("channels", [])),
+        "kernel_size": variant.get("kernel_size"),
         "gender_acc": results.get("accuracy", {}).get("gender"),
         "auroc_msp": _au("score_msp"),
         "auroc_entropy_gender": _au("score_entropy_gender"),
         "auroc_entropy_combined": _au("score_entropy_combined"),
     }
+
+
+def _member_configs(cfg: dict, size: int) -> list[dict]:
+    """One resolved config per ensemble member.
+
+    ``ensemble.member_variants`` is a list of model overrides
+    (``{channels, kernel_size}``); member ``i`` gets variant ``i`` (cycled
+    when the ensemble outgrows the list). Every variant must keep the same
+    number of conv blocks so the per-block decomposition stays aligned
+    across members. Without variants every member shares ``cfg['model']``
+    (the historical behaviour).
+    """
+    import copy
+
+    variants = cfg.get("ensemble", {}).get("member_variants") or []
+    n_blocks = len(cfg.get("model", {}).get("channels",
+                                            (32, 64, 128, 256, 256)))
+    member_cfgs: list[dict] = []
+    for i in range(size):
+        mc = copy.deepcopy(cfg)
+        if variants:
+            var = variants[i % len(variants)]
+            channels = list(var.get("channels",
+                                    mc["model"].get("channels")))
+            if len(channels) != n_blocks:
+                raise ValueError(
+                    f"member_variants[{i % len(variants)}] has "
+                    f"{len(channels)} blocks, expected {n_blocks} — the "
+                    "per-block decomposition needs the same block count "
+                    "in every member."
+                )
+            mc["model"]["channels"] = channels
+            mc["model"]["kernel_size"] = int(var.get("kernel_size", 3))
+        member_cfgs.append(mc)
+    return member_cfgs
 
 
 def _write_instance_figures(
@@ -115,25 +160,36 @@ def _write_instance_figures(
     sigma: float,
     overlay_power: float,
 ) -> int:
-    """Save one per-instance decomposition figure per image in ``images``.
+    """Save the per-instance figures for every image in ``images``.
 
     Reconstructs the whole batch once with every member (at ``block``), then
-    slices it image by image so each figure shows that one face across all M
-    models. Files are written as ``{prefix}_01.png``, ``{prefix}_02.png`` … in
-    ``out_dir``. Returns the number of figures written.
+    slices it image by image. Each instance gets its own folder
+    ``{prefix}_XX/`` holding one figure PER ENSEMBLE MEMBER —
+    ``model_01.png`` … ``model_M.png``, that member's reconstruction +
+    error map — plus ``summary.png`` with the Bias / Mean-error / Min-error
+    maps and the smoothed-bias overlay. Returns the number of instances
+    written.
     """
-    out_dir.mkdir(parents=True, exist_ok=True)
     images_dev, recons = sample_block_recons(
         models, decoders_list, images, device, block,
     )
     n = images_dev.size(0)
     n_models = len(recons)
     for i in range(n):
+        inst_dir = out_dir / f"{prefix}_{i + 1:02d}"
+        inst_dir.mkdir(parents=True, exist_ok=True)
         recon_i = [recons[m][i] for m in range(n_models)]
-        plot_instance_decomposition(
+        for m in range(n_models):
+            plot_member_instance(
+                images_dev[i], recon_i[m],
+                inst_dir / f"model_{m + 1:02d}.png",
+                member=m + 1,
+                title=f"{prefix} sample {i + 1} — member {m + 1}/{n_models}"
+                      f"  (block L{block})",
+            )
+        plot_instance_summary(
             images_dev[i], recon_i,
-            out_dir / f"{prefix}_{i + 1:02d}.png",
-            label=f"{prefix} {i + 1}",
+            inst_dir / "summary.png",
             sigma=sigma,
             overlay_power=overlay_power,
             title=f"{prefix} sample {i + 1} — block L{block}  "
@@ -223,19 +279,28 @@ def main() -> None:
     )
 
     # --- Train / load the ensemble ---------------------------------------
+    # Each member gets its own architecture from ensemble.member_variants
+    # (cycled if size exceeds the list) on top of its own seed.
+    member_cfgs = _member_configs(cfg, size)
+
     models: list = []
     decoders_list: list = []
     per_model: list[dict] = []
     t_ensemble = time.time()
 
     for i, seed in enumerate(seeds):
+        mcfg = member_cfgs[i]["model"]
         logger.info("#" * 70)
-        logger.info(f"# MODEL {i + 1}/{size}   (seed={seed})")
+        logger.info(
+            f"# MODEL {i + 1}/{size}   (seed={seed}, "
+            f"channels={mcfg.get('channels')}, "
+            f"kernel={mcfg.get('kernel_size', 3)})"
+        )
         logger.info("#" * 70)
         model_dir = output_dir / f"model_{i}"
         t0 = time.time()
         model, decoders, results = build_and_run(
-            cfg, loaders, device, model_dir,
+            member_cfgs[i], loaders, device, model_dir,
             seed=seed, eval_only=args.eval_only, no_plots=args.no_plots,
         )
         if decoders is None:
@@ -251,7 +316,7 @@ def main() -> None:
         # remaining models train; moved back as a group for decomposition.
         models.append(model.to("cpu").eval())
         decoders_list.append(decoders.to("cpu").eval())
-        per_model.append(_per_model_record(seed, results))
+        per_model.append(_per_model_record(seed, results, mcfg))
 
     logger.info(
         f"All {size} models ready in {time.time() - t_ensemble:.1f}s"
@@ -455,7 +520,7 @@ def main() -> None:
         n_inst_ood = int(ecfg_v.get("n_instances_ood",
                                     ecfg_v.get("n_instances", 20)))
         inst_block = int(ecfg_v.get("instance_block", cmp_block))
-        overlay_sigma = float(ecfg_v.get("overlay_sigma", 7.0))
+        overlay_sigma = float(ecfg_v.get("overlay_sigma", 3.0))
         overlay_power = float(ecfg_v.get("overlay_power", 0.8))
         # A fresh, larger draw of faces; the seed offset keeps them distinct
         # from the small grid-figure samples gathered above.
@@ -481,9 +546,71 @@ def main() -> None:
         )
         logger.info(
             f"Wrote per-instance figures: {n_in_done} ID → instances_in/, "
-            f"{n_ood_done} OOD → instances_ood/  (block L{inst_block}, "
+            f"{n_ood_done} OOD → instances_ood/  (one folder per instance: "
+            f"{size} member figures + summary.png; block L{inst_block}, "
             f"sigma={overlay_sigma:g}, overlay_power={overlay_power:g})"
         )
+
+        # --- Top OOD faces where the glasses are best detected ----------
+        # Rank the FULL OOD test set, restricted to faces that actually
+        # carry the Eyeglasses attribute, by how strongly AND how locally
+        # the bias (x − f̄)² lights up in the eye region (see
+        # collect_eye_region_bias). The winners are rendered as one figure
+        # (Original / Bias / Overlay per column, rank order) and their
+        # ranking is recorded in top_ood_glasses.json.
+        n_top = int(ecfg_v.get("n_top_ood", 10))
+        ood_ds = loaders["test_ood"].dataset
+        eye_idx = CELEBA_ATTRS.index("Eyeglasses")
+        glasses_mask = (
+            ood_ds.base.attr[list(ood_ds.indices), eye_idx]
+            .to(torch.bool).numpy()
+        )
+        if not glasses_mask.any():
+            logger.info(
+                "No Eyeglasses faces in the OOD split — skipping the "
+                "top-OOD-glasses figure."
+            )
+        else:
+            eye_scores = collect_eye_region_bias(
+                models, decoders_list, loaders["test_ood"], device,
+                block=inst_block,
+            )
+            score = np.where(glasses_mask, eye_scores["score"], -np.inf)
+            n_top = min(n_top, int(glasses_mask.sum()))
+            top_idx = np.argsort(score)[::-1][:n_top]
+            top_images = torch.stack(
+                [ood_ds[int(j)][0] for j in top_idx], dim=0,
+            )
+            top_dev, top_recons = sample_block_recons(
+                models, decoders_list, top_images, device, inst_block,
+            )
+            plot_top_ood_glasses(
+                top_dev, top_recons,
+                plot_dir / "top_ood_glasses.png",
+                sigma=overlay_sigma, overlay_power=overlay_power,
+                title=f"Top {n_top} OOD eyeglasses faces — eye-region bias "
+                      f"(block L{inst_block}, {size}-model ensemble)",
+            )
+            top_record = [
+                {
+                    "rank": r + 1,
+                    "ood_dataset_index": int(j),
+                    "celeba_index": int(ood_ds.indices[int(j)]),
+                    "score": float(eye_scores["score"][int(j)]),
+                    "eye_mean_bias": float(eye_scores["eye_mean"][int(j)]),
+                    "global_mean_bias": float(
+                        eye_scores["global_mean"][int(j)]
+                    ),
+                }
+                for r, j in enumerate(top_idx)
+            ]
+            with open(ens_dir / "top_ood_glasses.json", "w") as f:
+                json.dump(top_record, f, indent=2)
+            logger.info(
+                f"Top {n_top} OOD eyeglasses faces (eye-region bias, block "
+                f"L{inst_block}) → top_ood_glasses.png; ranking in "
+                "top_ood_glasses.json"
+            )
 
         # Bias/Variance evolution curves (full test loaders).
         plot_bias_variance_vs_block(
