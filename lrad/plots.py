@@ -34,14 +34,22 @@ directly from the ensemble, with **no sigma and no division**:
   * ``plot_ensemble_decomposition`` / ``plot_decomposition_auroc_bars`` /
     ``plot_ensemble_score_hists`` — the full Risk | Bias | Variance maps,
     per-block AUROC bars, and aggregated score histograms.
-  * ``plot_instance_decomposition`` — one figure per test image: every
-    member's reconstruction and error side by side, the bias / mean / min
-    summary, and the smoothed bias painted onto the face (``smooth_cam``).
+  * ``plot_member_instance`` — ONE member's reconstruction + error for one
+    test image (one figure per ensemble member).
+  * ``plot_instance_summary`` — the consensus view for one test image:
+    Bias / Mean-error / Min-error maps and the smoothed bias painted onto
+    the face (``smooth_cam``).
+  * ``plot_top_ood_glasses`` — the top-N OOD eyeglasses faces ranked by
+    how strongly the bias lights up in the eye region.
 
-Implementation follows current matplotlib best practices:
-``layout='constrained'``, viridis colormap for error maps, hidden
-spines/ticks on image axes, high-resolution PNG export (``_SAVE_DPI``)
-with tight bounding box, and a modern sans-serif typeface.
+Styling targets a conference paper: serif (Times-like) typeface with STIX
+math, the Okabe–Ito colorblind-safe palette with FIXED role assignments
+(ID is always blue, OOD always vermillion, variance always orange),
+recessive axes (no top/right spines, light grid), viridis for error maps
+with fixed colour scales so figures stay comparable, hidden spines/ticks
+on image axes, ``layout='constrained'``, and 300-dpi PNG export. Error
+tiles carry no per-tile numeric annotations — the maps speak through the
+shared colour bar.
 """
 
 from __future__ import annotations
@@ -54,23 +62,45 @@ import numpy as np
 import torch
 
 
-_TITLE_FS = 14
-_LABEL_FS = 12
-_TICK_FS = 10
+_TITLE_FS = 13
+_LABEL_FS = 11
+_TICK_FS = 9
 
 # High-resolution export for every figure in this module (requirement:
 # dpi >= 200, ideally 300).
 _SAVE_DPI = 300
 
-# Modern sans-serif typeface, first available wins (falls back to
-# matplotlib's bundled DejaVu Sans). Module-wide so callers that build
-# their own figures (e.g. run_celeba's history plots) share the look.
+# Okabe–Ito colorblind-safe palette (Wong, Nature Methods 2011), with fixed
+# role assignments used across every figure in the project — a role never
+# changes colour between figures:
+_C_ID = "#0072B2"        # in-distribution           (blue)
+_C_OOD = "#D55E00"       # out-of-distribution       (vermillion)
+_C_RISK = "#56B4E9"      # Risk term                 (sky blue)
+_C_BIAS = "#0072B2"      # Bias term (the anomaly)   (blue)
+_C_VARIANCE = "#E69F00"  # Variance term             (orange)
+_C_ACCENT = "#009E73"    # secondary series          (bluish green)
+
+# Conference-paper styling, module-wide so callers that build their own
+# figures (e.g. run_celeba's history plots) share the look: serif
+# (Times-like) text with STIX math, recessive axes and unframed legends.
 plt.rcParams.update({
-    "font.family": "sans-serif",
-    "font.sans-serif": [
-        "Inter", "Helvetica Neue", "Helvetica", "Arial", "DejaVu Sans",
+    "font.family": "serif",
+    "font.serif": [
+        "Times New Roman", "Times", "Nimbus Roman No9 L",
+        "STIXGeneral", "DejaVu Serif",
     ],
+    "mathtext.fontset": "stix",
     "savefig.dpi": _SAVE_DPI,
+    "axes.spines.top": False,
+    "axes.spines.right": False,
+    "axes.linewidth": 0.8,
+    "axes.edgecolor": "#444444",
+    "xtick.color": "#444444",
+    "ytick.color": "#444444",
+    "xtick.labelcolor": "black",
+    "ytick.labelcolor": "black",
+    "grid.linewidth": 0.6,
+    "legend.frameon": False,
 })
 
 
@@ -112,8 +142,8 @@ def plot_batch_accuracy(history: dict, save_path: str | Path) -> None:
     fig.suptitle("Per-batch accuracy during training", fontsize=_TITLE_FS)
 
     pairs = [
-        (axes[0], gender, gender_smooth, "Gender accuracy", "#1f4e79"),
-        (axes[1], attrs,  attrs_smooth,  "Mean attribute accuracy", "#5a1f6e"),
+        (axes[0], gender, gender_smooth, "Gender accuracy", _C_ID),
+        (axes[1], attrs,  attrs_smooth,  "Mean attribute accuracy", _C_ACCENT),
     ]
     for ax, raw, smooth, title, colour in pairs:
         ax.plot(x, raw,    alpha=0.18, linewidth=0.55, color=colour)
@@ -183,12 +213,8 @@ def plot_per_block_breakdown(
     Error tiles use the fixed ``[0, 3]`` colour scale (images live in
     ``[0, 1]`` so the RGB-summed squared error lives in ``[0, 3]``), never a
     per-figure max, so error tiles are directly comparable across different
-    figures. A single colour bar is drawn on the right. Each error tile is
-    annotated with its mean squared error score (white text with a black
-    outline).
+    figures. A single colour bar is drawn on the right.
     """
-    import matplotlib.patheffects as pe
-
     images_np = _to_image_grid(images)
     recons_np = [_to_image_grid(r) for r in recons]
     n_rows = images_np.shape[0]
@@ -214,7 +240,6 @@ def plot_per_block_breakdown(
     labels = list(row_labels) if row_labels is not None else [None] * n_rows
 
     err_im = None
-    text_pe = [pe.withStroke(linewidth=1.6, foreground="black")]
 
     for r in range(n_rows):
         ax = axes[r, 0]
@@ -233,14 +258,6 @@ def plot_per_block_breakdown(
             _bare(ax_err)
             if r == 0:
                 ax_err.set_title(f"Err L{k}", fontsize=_LABEL_FS)
-            score = float(err.mean())
-            ax_err.text(
-                0.5, 0.04, f"{score:.3f}",
-                transform=ax_err.transAxes,
-                ha="center", va="bottom",
-                fontsize=8.5, color="white",
-                path_effects=text_pe,
-            )
 
             ax_rec = axes[r, 2 + 2 * k]
             ax_rec.imshow(recons_np[k][r])
@@ -354,16 +371,12 @@ def plot_fusion_overlay(
 
     where ``err_map_k = (x − recon_k)²`` summed over RGB, the fused map
     is the per-pixel max across all blocks, and the overlay renders the
-    fused heatmap on top of the original image. The scalar anomaly score
-    annotated under each fused tile is ``fused.max()`` — the most
-    surprising pixel for that sample.
+    fused heatmap on top of the original image.
 
     Error tiles, the fused tile, and the overlay all share the fixed
     ``[0, 3]`` colour scale (no data-dependent normalization) and a single
     colour bar on the right, so figures stay comparable to one another.
     """
-    import matplotlib.patheffects as pe
-
     images_np = _to_image_grid(images)
     recons_np = [_to_image_grid(r) for r in recons]
     n_rows = images_np.shape[0]
@@ -373,14 +386,11 @@ def plot_fusion_overlay(
 
     err_maps: list[list[np.ndarray]] = []
     fused_maps: list[np.ndarray] = []
-    anomaly_scores: list[float] = []
     for r in range(n_rows):
         row = [_sq_error(images_np[r], recons_np[k][r])
                for k in range(n_blocks)]
         err_maps.append(row)
-        fused = np.maximum.reduce(row)  # per-pixel max across blocks
-        fused_maps.append(fused)
-        anomaly_scores.append(float(fused.max()))
+        fused_maps.append(np.maximum.reduce(row))  # per-pixel max over blocks
     # same fixed cap as plot_per_block_breakdown — see comment there
     vmax = 0.5
 
@@ -391,7 +401,6 @@ def plot_fusion_overlay(
     )
     axes = np.atleast_2d(axes)
     labels = list(row_labels) if row_labels is not None else [None] * n_rows
-    text_pe = [pe.withStroke(linewidth=1.6, foreground="black")]
 
     err_im = None
     for r in range(n_rows):
@@ -411,13 +420,6 @@ def plot_fusion_overlay(
             _bare(ax_err)
             if r == 0:
                 ax_err.set_title(f"Err L{k}", fontsize=_LABEL_FS)
-            ax_err.text(
-                0.5, 0.04, f"{float(err.mean()):.3f}",
-                transform=ax_err.transAxes,
-                ha="center", va="bottom",
-                fontsize=8.5, color="white",
-                path_effects=text_pe,
-            )
 
         fused = fused_maps[r]
         ax_fused = axes[r, 1 + n_blocks]
@@ -426,13 +428,6 @@ def plot_fusion_overlay(
         _bare(ax_fused)
         if r == 0:
             ax_fused.set_title("Fused (max)", fontsize=_LABEL_FS)
-        ax_fused.text(
-            0.5, 0.04, f"score={anomaly_scores[r]:.3f}",
-            transform=ax_fused.transAxes,
-            ha="center", va="bottom",
-            fontsize=8.5, color="white",
-            path_effects=text_pe,
-        )
 
         ax_ov = axes[r, 2 + n_blocks]
         ax_ov.imshow(images_np[r] * 0.45)
@@ -500,10 +495,10 @@ def plot_fusion_auroc(
 
     ax_h = axes[0]
     bins = 50
-    ax_h.hist(in_scores, bins=bins, alpha=0.55, density=True,
-              color="#377eb8", label=f"normal  (n={in_scores.size})")
-    ax_h.hist(ood_scores, bins=bins, alpha=0.55, density=True,
-              color="#e41a1c", label=f"anomaly (n={ood_scores.size})")
+    ax_h.hist(in_scores, bins=bins, alpha=0.6, density=True,
+              color=_C_ID, label=f"normal  (n={in_scores.size})")
+    ax_h.hist(ood_scores, bins=bins, alpha=0.6, density=True,
+              color=_C_OOD, label=f"anomaly (n={ood_scores.size})")
     ax_h.set_xlabel("Fused anomaly score  (max of per-pixel fused map)",
                     fontsize=_LABEL_FS)
     ax_h.set_ylabel("Density", fontsize=_LABEL_FS)
@@ -513,7 +508,7 @@ def plot_fusion_auroc(
     ax_h.legend(fontsize=9)
 
     ax_r = axes[1]
-    ax_r.plot(fpr, tpr, color="#1f4e79", linewidth=1.6,
+    ax_r.plot(fpr, tpr, color=_C_BIAS, linewidth=1.6,
               label=f"fused (max)  AUROC = {auroc:.3f}")
     ax_r.plot([0, 1], [0, 1], color="gray", linestyle=":", linewidth=0.7)
     ax_r.set_xlabel("False Positive Rate", fontsize=_LABEL_FS)
@@ -602,7 +597,6 @@ def _block_heatmap_grid(
     col_titles: Sequence[str],
     cbar_label: str,
     cmap: str = "viridis",
-    annot_fmt: str = "{:.3f}",
     row_labels: Iterable[str] | None = None,
     title: str | None = None,
 ) -> None:
@@ -614,11 +608,9 @@ def _block_heatmap_grid(
     ``[0, 1]``) but typical recon errors sit well below 1, so 0.5 gives a
     readable range without washing out structure. The cap is fixed, not
     data-dependent, so any two figures are comparable. One colour bar sits on
-    the right and each tile is annotated with its mean. Shared backend for
-    the bias / mean-error / min-error / variance heatmap figures.
+    the right. Shared backend for the bias / mean-error / min-error /
+    variance heatmap figures.
     """
-    import matplotlib.patheffects as pe
-
     images_np = _to_image_grid(images)
     n_rows = images_np.shape[0]
     n_blocks = len(block_maps)
@@ -633,7 +625,6 @@ def _block_heatmap_grid(
         squeeze=False,
     )
     labels = list(row_labels) if row_labels is not None else [None] * n_rows
-    text_pe = [pe.withStroke(linewidth=1.6, foreground="black")]
     im = None
 
     for r in range(n_rows):
@@ -652,11 +643,6 @@ def _block_heatmap_grid(
             _bare(ax_e)
             if r == 0:
                 ax_e.set_title(col_titles[bi], fontsize=_LABEL_FS)
-            ax_e.text(
-                0.5, 0.04, annot_fmt.format(float(e.mean())),
-                transform=ax_e.transAxes, ha="center", va="bottom",
-                fontsize=8.0, color="white", path_effects=text_pe,
-            )
 
     if im is not None:
         cbar = fig.colorbar(
@@ -689,9 +675,9 @@ def plot_mean_abs_bias(
 
     This is the Bias term of the decomposition — the squared error of the
     consensus model. The colour scale is fixed to ``[0, 3]`` (no per-figure
-    normalization) so figures are comparable, with a single colour bar; each
-    tile is annotated with its mean. ID rows should be dim everywhere while
-    OOD rows light up on the anomaly (e.g. eyeglasses).
+    normalization) so figures are comparable, with a single colour bar.
+    ID rows should be dim everywhere while OOD rows light up on the
+    anomaly (e.g. eyeglasses).
     """
     images_np = _to_image_grid(images)
     recons_np = [_to_image_grid(r) for r in mean_recons]
@@ -726,8 +712,7 @@ def plot_mean_error_maps(
     This is the average of the per-model error maps, i.e. exactly the Risk
     term of the decomposition — not the error of the averaged
     reconstruction. The colour scale is fixed to ``[0, 3]`` (no per-figure
-    normalization) so figures are comparable, with a single colour bar; each
-    tile is annotated with its mean.
+    normalization) so figures are comparable, with a single colour bar.
     """
     blocks = sorted(error_maps.keys())
     _block_heatmap_grid(
@@ -759,7 +744,7 @@ def plot_min_error_maps(
     each pixel keeps the error of the *best* member, so a tile stays bright
     only where no model in the ensemble reconstructs well. The colour scale
     is fixed to ``[0, 3]`` (no per-figure normalization) so figures are
-    comparable, with a single colour bar; each is annotated with its mean.
+    comparable, with a single colour bar.
     """
     blocks = sorted(error_maps.keys())
     _block_heatmap_grid(
@@ -774,13 +759,15 @@ def plot_min_error_maps(
 # Per-instance view: one test image at a time
 #
 # The grid figures above stack many samples as rows, which is great for
-# spotting trends but hides what each individual model does. The figure below
-# zooms into a single image: every ensemble member's reconstruction and error
-# side by side, then the bias / mean / min summary, then the bias painted back
-# onto the face as a heat overlay. Saved one PNG per instance.
+# spotting trends but hides what each individual model does. The functions
+# below zoom into a single image. Per instance the runner writes one figure
+# PER ENSEMBLE MEMBER (that member's reconstruction + error map,
+# ``plot_member_instance``) plus one consensus summary figure (Bias / Mean /
+# Min error maps and the smoothed bias painted back onto the face,
+# ``plot_instance_summary``).
 # ---------------------------------------------------------------------------
 
-def smooth_cam(cam: np.ndarray, sigma: float = 7.0) -> np.ndarray:
+def smooth_cam(cam: np.ndarray, sigma: float = 3.0) -> np.ndarray:
     """Blur and peak-normalize an error/saliency map for overlaying.
 
     Rectifies to non-negative, normalizes by the peak, Gaussian-blurs by
@@ -807,140 +794,216 @@ def _single_image(t: torch.Tensor) -> np.ndarray:
     return _to_image_grid(t.unsqueeze(0))[0]
 
 
-def plot_instance_decomposition(
+def plot_member_instance(
     image: torch.Tensor,
-    recons: Sequence[torch.Tensor],
+    recon: torch.Tensor,
     save_path: str | Path,
     *,
-    label: str | None = None,
-    sigma: float = 7.0,
-    overlay_power: float = 0.8,
+    member: int = 1,
     vmax: float = 0.5,
     title: str | None = None,
 ) -> None:
-    """All ``M`` members' recon + error for ONE image, plus a bias overlay.
+    """ONE member's view of ONE image: Original | Reconstruction | Error.
 
-    ``image`` is a single ``(3, H, W)`` tensor and ``recons`` holds the ``M``
-    ensemble members' reconstructions of it, each ``(3, H, W)``, taken at one
-    block depth. Everything else is derived right here so the panels are
-    guaranteed to agree with one another::
+    ``image`` and ``recon`` are single ``(3, H, W)`` tensors — the input and
+    member ``member``'s reconstruction of it at one block depth. The error
+    tile is the RGB-summed squared error ``sum_c (x_c − f̂_c)²`` on the fixed
+    ``[0, vmax]`` colour scale shared by every error figure in the project,
+    with its own colour bar, so the ``M`` member figures of one instance are
+    directly comparable to each other and across instances.
+    """
+    img_np = _single_image(image)
+    recon_np = _single_image(recon)
+    err = _sq_error(img_np, recon_np)
+
+    fig, axes = plt.subplots(
+        1, 3, figsize=(5.4, 2.0), layout="constrained",
+    )
+    axes[0].imshow(img_np)
+    _bare(axes[0])
+    axes[0].set_title("Original", fontsize=_LABEL_FS)
+
+    axes[1].imshow(recon_np)
+    _bare(axes[1])
+    axes[1].set_title(f"Recon $M_{{{member}}}$", fontsize=_LABEL_FS)
+
+    im = axes[2].imshow(err, cmap="viridis", vmin=0.0, vmax=vmax)
+    _bare(axes[2])
+    axes[2].set_title(r"$(x - \hat{f}^{m})^2$", fontsize=_LABEL_FS)
+    cbar = fig.colorbar(im, ax=[axes[2]], location="right",
+                        shrink=0.85, pad=0.03, aspect=14)
+    cbar.ax.tick_params(labelsize=8)
+
+    if title:
+        fig.suptitle(title, fontsize=_TITLE_FS)
+    fig.savefig(save_path, dpi=_SAVE_DPI, bbox_inches="tight")
+    plt.close(fig)
+
+
+def _instance_summary_maps(
+    image: torch.Tensor,
+    recons: Sequence[torch.Tensor],
+) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+    """(img_np, bias, mean_err, min_err) for one image and its M recons.
+
+    Everything is derived in one place so the summary panels are guaranteed
+    to agree with one another::
 
         e_m   = sum_RGB (x − f̂^m)²      per-model squared error  (M maps)
         f̄     = mean_m f̂^m              ensemble-mean reconstruction
         bias  = sum_RGB (x − f̄)²        error of the consensus model
         mean  = mean_m e_m               Risk — the average of the errors
         min   = min_m e_m                error of the best member, per pixel
-
-    The figure has three bands:
-
-        1. the ``M`` reconstructions
-        2. the ``M`` per-model error maps  (shared [0, vmax] colour scale)
-        3. Original | Bias | Mean error | Min error | Bias overlay
-
-    The Min-error tile gets its OWN colour scale: the per-pixel minimum lives
-    on a much smaller magnitude than the bias/mean, so the shared [0, vmax]
-    cap would render it almost flat. The overlay is the Gaussian-smoothed bias
-    (see :func:`smooth_cam`) painted over the face with ``inferno``; ``sigma``
-    sets the blur and ``overlay_power`` the alpha falloff (alpha = cam **
-    overlay_power) — both are purely cosmetic.
     """
-    import matplotlib.patheffects as pe
-
     img_np = _single_image(image)                       # (H, W, 3)
     recon_np = [_single_image(r) for r in recons]       # M × (H, W, 3)
-    n_models = len(recon_np)
-    if n_models == 0:
+    if not recon_np:
         raise ValueError("need at least one reconstruction to plot")
+    err_stack = np.stack(
+        [_sq_error(img_np, rc) for rc in recon_np], axis=0,
+    )                                                    # (M, H, W)
+    mean_recon = np.mean(np.stack(recon_np, axis=0), axis=0)
+    bias = _sq_error(img_np, mean_recon)                 # (H, W)
+    return img_np, bias, err_stack.mean(axis=0), err_stack.min(axis=0)
 
-    per_model_err = [_sq_error(img_np, rc) for rc in recon_np]   # M × (H, W)
-    err_stack = np.stack(per_model_err, axis=0)                  # (M, H, W)
-    mean_recon = np.mean(np.stack(recon_np, axis=0), axis=0)     # (H, W, 3)
-    bias = _sq_error(img_np, mean_recon)                         # (H, W)
-    mean_err = err_stack.mean(axis=0)
-    min_err = err_stack.min(axis=0)
+
+def plot_instance_summary(
+    image: torch.Tensor,
+    recons: Sequence[torch.Tensor],
+    save_path: str | Path,
+    *,
+    sigma: float = 3.0,
+    overlay_power: float = 0.8,
+    vmax: float = 0.5,
+    title: str | None = None,
+) -> None:
+    """Consensus summary for ONE image: bias / mean / min errors + overlay.
+
+    ``image`` is a single ``(3, H, W)`` tensor and ``recons`` holds the ``M``
+    ensemble members' reconstructions of it, each ``(3, H, W)``, taken at one
+    block depth (see :func:`_instance_summary_maps` for the derived maps).
+    One row of five tiles::
+
+        Original | Bias (x − f̄)² | Mean error | Min error | Bias overlay
+
+    Bias and Mean share the fixed ``[0, vmax]`` colour scale; the Min-error
+    tile gets its OWN colour scale — the per-pixel minimum lives on a much
+    smaller magnitude, so the shared cap would render it almost flat. The
+    overlay is the Gaussian-smoothed bias (see :func:`smooth_cam`) painted
+    over the face with ``inferno``; ``sigma`` sets the blur and
+    ``overlay_power`` the alpha falloff (alpha = cam ** overlay_power) —
+    both are purely cosmetic, never part of the score.
+    """
+    img_np, bias, mean_err, min_err = _instance_summary_maps(image, recons)
     cam = smooth_cam(bias, sigma=sigma)
 
-    text_pe = [pe.withStroke(linewidth=1.6, foreground="black")]
-
-    def _annot(ax, value: float, fmt: str = "{:.3f}") -> None:
-        ax.text(0.5, 0.04, fmt.format(float(value)), transform=ax.transAxes,
-                ha="center", va="bottom", fontsize=8.0, color="white",
-                path_effects=text_pe)
-
-    # Width follows the model count; the floor keeps the 5-tile summary band
-    # readable even for a tiny ensemble.
-    fig = plt.figure(
-        figsize=(max(1.25 * n_models + 0.8, 7.5), 6.0),
-        layout="constrained",
+    fig, axes = plt.subplots(
+        1, 5, figsize=(9.2, 2.35), layout="constrained",
     )
-    if title:
-        fig.suptitle(title, fontsize=_TITLE_FS)
-    bands = fig.subfigures(3, 1, height_ratios=[1.0, 1.0, 1.35])
+    axes[0].imshow(img_np)
+    _bare(axes[0])
+    axes[0].set_title("Original", fontsize=_LABEL_FS)
 
-    # --- Band 1: every member's reconstruction --------------------------
-    row_lbl = f"  ({label})" if label else ""
-    bands[0].suptitle(f"Reconstructions — {n_models} models{row_lbl}",
-                      fontsize=_LABEL_FS)
-    top = bands[0].subplots(1, n_models, squeeze=False)[0]
-    for m in range(n_models):
-        top[m].imshow(recon_np[m])
-        _bare(top[m])
-        top[m].set_title(f"M{m + 1}", fontsize=_TICK_FS)
-
-    # --- Band 2: every member's squared error (shared scale) ------------
-    bands[1].suptitle("Per-model squared error  (x − f̂^m)²",
-                      fontsize=_LABEL_FS)
-    mid = bands[1].subplots(1, n_models, squeeze=False)[0]
-    err_im = None
-    for m in range(n_models):
-        err_im = mid[m].imshow(per_model_err[m], cmap="viridis",
-                               vmin=0.0, vmax=vmax)
-        _bare(mid[m])
-        _annot(mid[m], per_model_err[m].mean())
-    if err_im is not None:
-        cbar = bands[1].colorbar(err_im, ax=mid.tolist(), location="right",
-                                 shrink=0.85, pad=0.012, aspect=18)
-        cbar.ax.tick_params(labelsize=8)
-
-    # --- Band 3: consensus summary + overlay ----------------------------
-    # Bias and mean keep the shared [0, vmax] scale; min is autoscaled (its
-    # own vmin/vmax), as it sits far below the others. Original and overlay
-    # are images, not heatmaps, so they carry no colour bar.
-    bands[2].suptitle("Bias  |  mean error (risk)  |  min error  |  overlay",
-                      fontsize=_LABEL_FS)
-    bot = bands[2].subplots(1, 5, squeeze=False)[0]
-
-    bot[0].imshow(img_np)
-    _bare(bot[0])
-    bot[0].set_title("Original", fontsize=_TICK_FS)
-
-    fixed = [("Bias  (x − f̄)²", bias), ("Mean error", mean_err)]
-    for ax, (name, mp) in zip(bot[1:3], fixed):
+    fixed = [(r"Bias  $(x - \bar{f})^2$", bias), ("Mean error", mean_err)]
+    for ax, (name, mp) in zip(axes[1:3], fixed):
         im = ax.imshow(mp, cmap="viridis", vmin=0.0, vmax=vmax)
         _bare(ax)
-        ax.set_title(name, fontsize=_TICK_FS)
-        _annot(ax, mp.mean(), fmt="{:.4f}")
-        cb = bands[2].colorbar(im, ax=[ax], location="bottom",
-                               shrink=0.9, pad=0.02, aspect=12)
+        ax.set_title(name, fontsize=_LABEL_FS)
+        cb = fig.colorbar(im, ax=[ax], location="bottom",
+                          shrink=0.9, pad=0.02, aspect=12)
         cb.ax.tick_params(labelsize=7)
 
     # Min error on the raw scale: no vmin/vmax at all, matplotlib autoscales
     # to the data range (the per-pixel minimum sits far below bias/mean, so
     # any shared cap would render it flat).
-    im_min = bot[3].imshow(min_err, cmap="viridis")
-    _bare(bot[3])
-    bot[3].set_title("Min error", fontsize=_TICK_FS)
-    _annot(bot[3], min_err.mean(), fmt="{:.4f}")
-    cb = bands[2].colorbar(im_min, ax=[bot[3]], location="bottom",
-                           shrink=0.9, pad=0.02, aspect=12)
+    im_min = axes[3].imshow(min_err, cmap="viridis")
+    _bare(axes[3])
+    axes[3].set_title("Min error", fontsize=_LABEL_FS)
+    cb = fig.colorbar(im_min, ax=[axes[3]], location="bottom",
+                      shrink=0.9, pad=0.02, aspect=12)
     cb.ax.tick_params(labelsize=7)
 
     # Smoothed bias painted back onto the face.
-    bot[4].imshow(img_np)
-    bot[4].imshow(cam, cmap="inferno", alpha=np.clip(cam, 0.0, 1.0) ** overlay_power)
-    _bare(bot[4])
-    bot[4].set_title(f"Bias overlay (σ={sigma:g})", fontsize=_TICK_FS)
+    axes[4].imshow(img_np)
+    axes[4].imshow(cam, cmap="inferno",
+                   alpha=np.clip(cam, 0.0, 1.0) ** overlay_power)
+    _bare(axes[4])
+    axes[4].set_title(f"Bias overlay ($\\sigma$={sigma:g})",
+                      fontsize=_LABEL_FS)
 
+    if title:
+        fig.suptitle(title, fontsize=_TITLE_FS)
+    fig.savefig(save_path, dpi=_SAVE_DPI, bbox_inches="tight")
+    plt.close(fig)
+
+
+def plot_top_ood_glasses(
+    images: torch.Tensor,
+    recons_per_model: Sequence[Sequence[torch.Tensor]],
+    save_path: str | Path,
+    *,
+    sigma: float = 3.0,
+    overlay_power: float = 0.8,
+    vmax: float = 0.5,
+    title: str | None = None,
+) -> None:
+    """Top-N OOD eyeglasses faces, one column per face (rank order).
+
+    ``images`` is ``(N, 3, H, W)`` — the top-ranked OOD faces, best first —
+    and ``recons_per_model`` is indexed ``[model][image]`` with ``(3, H, W)``
+    reconstructions at one block depth. Three rows per face::
+
+        Original
+        Bias (x − f̄)²          (fixed [0, vmax] scale, one colour bar)
+        Bias overlay            (smoothed bias painted over the face)
+
+    Columns are titled by rank (#1 … #N). The ranking itself — how strongly
+    and how locally the bias lights up in the eye region — is computed by
+    the caller (see ``lrad.ensemble.collect_eye_region_bias``).
+    """
+    n = images.size(0)
+    if n == 0:
+        raise ValueError("need at least one image to plot")
+
+    fig, axes = plt.subplots(
+        3, n, figsize=(1.4 * n + 0.8, 4.6),
+        layout="constrained", squeeze=False,
+    )
+    bias_im = None
+    for i in range(n):
+        recons_i = [recons_per_model[m][i]
+                    for m in range(len(recons_per_model))]
+        img_np, bias, _, _ = _instance_summary_maps(images[i], recons_i)
+        cam = smooth_cam(bias, sigma=sigma)
+
+        axes[0, i].imshow(img_np)
+        _bare(axes[0, i])
+        axes[0, i].set_title(f"#{i + 1}", fontsize=_LABEL_FS)
+
+        bias_im = axes[1, i].imshow(bias, cmap="viridis",
+                                    vmin=0.0, vmax=vmax)
+        _bare(axes[1, i])
+
+        axes[2, i].imshow(img_np)
+        axes[2, i].imshow(cam, cmap="inferno",
+                          alpha=np.clip(cam, 0.0, 1.0) ** overlay_power)
+        _bare(axes[2, i])
+
+    _row_label(axes[0, 0], "Original")
+    _row_label(axes[1, 0], r"Bias  $(x - \bar{f})^2$")
+    _row_label(axes[2, 0], "Overlay")
+
+    if bias_im is not None:
+        cbar = fig.colorbar(bias_im, ax=axes[1, :].ravel().tolist(),
+                            location="right", shrink=0.9, pad=0.01,
+                            aspect=14)
+        cbar.ax.tick_params(labelsize=8)
+
+    fig.suptitle(
+        title or "Top OOD eyeglasses faces — bias concentrated on the "
+                 "eye region",
+        fontsize=_TITLE_FS,
+    )
     fig.savefig(save_path, dpi=_SAVE_DPI, bbox_inches="tight")
     plt.close(fig)
 
@@ -967,11 +1030,8 @@ def plot_score_comparison(
     smaller scale than the risk), so a shared vmin/vmax would crush the
     small-magnitude columns. Each column gets its own colour scale
     (``vmin=0``, ``vmax`` = that column's max) and its own colour bar
-    below the column. Each tile is annotated with its mean, like the
-    other heatmap figures.
+    below the column.
     """
-    import matplotlib.patheffects as pe
-
     images_np = _to_image_grid(images)
     n_rows = images_np.shape[0]
     score_maps = list(score_maps)
@@ -989,7 +1049,6 @@ def plot_score_comparison(
         squeeze=False,
     )
     labels = list(row_labels) if row_labels is not None else [None] * n_rows
-    text_pe = [pe.withStroke(linewidth=1.6, foreground="black")]
     col_ims: list = [None] * n_score
 
     for r in range(n_rows):
@@ -1010,11 +1069,6 @@ def plot_score_comparison(
             _bare(ax_e)
             if r == 0:
                 ax_e.set_title(col_titles[c], fontsize=_LABEL_FS)
-            ax_e.text(
-                0.5, 0.04, f"{float(e.mean()):.4f}",
-                transform=ax_e.transAxes, ha="center", va="bottom",
-                fontsize=8.0, color="white", path_effects=text_pe,
-            )
 
     # One horizontal colour bar per score column, under that column only.
     for c, im in enumerate(col_ims):
@@ -1052,16 +1106,15 @@ def plot_variance_heatmaps(
     ensemble members extrapolate differently, so they disagree more and
     the maps brighten. The colour scale is fixed to ``[0, 3]`` (no
     per-figure normalization) so figures are comparable, with a single
-    colour bar; each is annotated with its mean. Variance is bounded above
-    by the risk so it shares the ``[0, 3]`` image-error scale, though in
-    practice it stays small.
+    colour bar. Variance is bounded above by the risk so it shares the
+    ``[0, 3]`` image-error scale, though in practice it stays small.
     """
     blocks = sorted(maps.keys())
     _block_heatmap_grid(
         images, [maps[k]["variance"] for k in blocks], save_path,
         col_titles=[f"Var L{k}" for k in blocks],
         cbar_label="ensemble variance  (sum over RGB)",
-        cmap="magma", annot_fmt="{:.4f}",
+        cmap="magma",
         row_labels=row_labels, title=title,
     )
 
@@ -1109,12 +1162,14 @@ def plot_bias_variance_vs_block(
         ood_m, ood_s = _mean_std_over_blocks(
             scores_ood_per_block, term, blocks,
         )
-        ax.plot(x, in_m, "-o", color="#377eb8", label="in-dist")
-        ax.fill_between(x, in_m - in_s, in_m + in_s, color="#377eb8",
-                        alpha=0.18)
-        ax.plot(x, ood_m, "--s", color="#e41a1c", label="OOD")
-        ax.fill_between(x, ood_m - ood_s, ood_m + ood_s, color="#e41a1c",
-                        alpha=0.18)
+        ax.plot(x, in_m, "-o", color=_C_ID, markersize=4.5,
+                label="in-dist")
+        ax.fill_between(x, in_m - in_s, in_m + in_s, color=_C_ID,
+                        alpha=0.15, linewidth=0)
+        ax.plot(x, ood_m, "--s", color=_C_OOD, markersize=4.5,
+                label="OOD")
+        ax.fill_between(x, ood_m - ood_s, ood_m + ood_s, color=_C_OOD,
+                        alpha=0.15, linewidth=0)
         ax.set_xlabel("Conv block", fontsize=_LABEL_FS)
         ax.set_ylabel(f"{name} score (mean ± std)", fontsize=_LABEL_FS)
         ax.set_title(name, fontsize=_LABEL_FS)
@@ -1158,8 +1213,8 @@ def plot_bias_variance_vs_percentile(
         in_q = np.percentile(in_s, qs) if in_s.size else np.full_like(qs, np.nan)
         ood_q = (np.percentile(ood_s, qs) if ood_s.size
                  else np.full_like(qs, np.nan))
-        ax.plot(qs, in_q, "-", color="#377eb8", label="in-dist")
-        ax.plot(qs, ood_q, "--", color="#e41a1c", label="OOD")
+        ax.plot(qs, in_q, "-", color=_C_ID, linewidth=1.8, label="in-dist")
+        ax.plot(qs, ood_q, "--", color=_C_OOD, linewidth=1.8, label="OOD")
         ax.set_xlabel("Percentile of score distribution", fontsize=_LABEL_FS)
         ax.set_ylabel(f"{name} score value", fontsize=_LABEL_FS)
         ax.set_title(name, fontsize=_LABEL_FS)
@@ -1196,11 +1251,8 @@ def plot_ensemble_decomposition(
     the Bias map (squared error of the ensemble-mean reconstruction) and
     the Variance map (model disagreement). All three share one colour
     scale — because ``Risk = Bias + Variance`` pixel by pixel, the Bias
-    and Variance tiles visibly sum to the Risk tile. Each tile is
-    annotated with its mean value.
+    and Variance tiles visibly sum to the Risk tile.
     """
-    import matplotlib.patheffects as pe
-
     images_np = _to_image_grid(images)
     n_rows = images_np.shape[0]
     blocks = sorted(maps.keys())
@@ -1226,7 +1278,6 @@ def plot_ensemble_decomposition(
     )
     axes = np.atleast_2d(axes)
     labels = list(row_labels) if row_labels is not None else [None] * n_rows
-    text_pe = [pe.withStroke(linewidth=1.6, foreground="black")]
     im = None
 
     for r in range(n_rows):
@@ -1247,11 +1298,6 @@ def plot_ensemble_decomposition(
                 if r == 0:
                     ax_m.set_title(f"{term_title[t]} L{k}",
                                    fontsize=_LABEL_FS)
-                ax_m.text(
-                    0.5, 0.04, f"{float(mp.mean()):.4f}",
-                    transform=ax_m.transAxes, ha="center", va="bottom",
-                    fontsize=8.0, color="white", path_effects=text_pe,
-                )
 
     if im is not None:
         cbar = fig.colorbar(
@@ -1282,7 +1328,7 @@ def plot_decomposition_auroc_bars(
     maps each term to its all-blocks AUROC, appended as a final group.
     """
     terms = ("risk", "bias", "variance")
-    colors = {"risk": "#9bbcd6", "bias": "#1f4e79", "variance": "#e08214"}
+    colors = {"risk": _C_RISK, "bias": _C_BIAS, "variance": _C_VARIANCE}
     series = {t: list(per_block_auroc[t]) for t in terms}
     n = len(series["risk"])
     names = (
@@ -1348,10 +1394,10 @@ def plot_ensemble_score_hists(
         in_s = np.asarray(scores_in[t]).ravel()
         ood_s = np.asarray(scores_ood[t]).ravel()
         bins = 50
-        ax.hist(in_s, bins=bins, alpha=0.55, density=True,
-                color="#377eb8", label=f"in-dist (n={in_s.size})")
-        ax.hist(ood_s, bins=bins, alpha=0.55, density=True,
-                color="#e41a1c", label=f"OOD (n={ood_s.size})")
+        ax.hist(in_s, bins=bins, alpha=0.6, density=True,
+                color=_C_ID, label=f"in-dist (n={in_s.size})")
+        ax.hist(ood_s, bins=bins, alpha=0.6, density=True,
+                color=_C_OOD, label=f"OOD (n={ood_s.size})")
         ax.set_xlabel(label[t], fontsize=_LABEL_FS)
         ax.set_ylabel("Density", fontsize=_LABEL_FS)
         ttl = label[t]
