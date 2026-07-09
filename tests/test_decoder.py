@@ -1,14 +1,14 @@
 """Shape/architecture tests for the per-block decoders.
 
-Covers both upsampling stages: the default bilinear-Upsample + Conv stack
-and the optional ConvTranspose2d stack. Every decoder of the full 5-block
-CelebA config must map its block activation to a (3, 64, 64) reconstruction
-regardless of which one is selected.
+The decoders use a single upsampling architecture: every ×2 stage is a
+learnable ConvTranspose2d(4×4, stride 2, padding 1) + BN + ReLU. Every
+decoder of the full 5-block CelebA config must map its block activation to
+a (3, 64, 64) reconstruction, whatever trunk variant (channel widths, conv
+kernel size) the classifier uses.
 """
 
 from __future__ import annotations
 
-import pytest
 import torch
 import torch.nn as nn
 
@@ -20,9 +20,10 @@ CHANNELS = (32, 64, 128, 256, 256)
 IMG = 64
 
 
-def _model() -> FacialCNN:
+def _model(channels=CHANNELS, kernel_size: int = 3) -> FacialCNN:
     torch.manual_seed(0)
-    return FacialCNN(channels=CHANNELS, input_size=IMG).eval()
+    return FacialCNN(channels=channels, input_size=IMG,
+                     kernel_size=kernel_size).eval()
 
 
 def test_all_five_decoders_output_image_shape():
@@ -41,62 +42,52 @@ def test_all_five_decoders_output_image_shape():
             assert out.min() >= 0.0 and out.max() <= 1.0
 
 
-def test_decoders_use_bilinear_upsample_not_transposed_conv():
-    """Default upsampling is bilinear Upsample + Conv2d — no ConvTranspose2d."""
+def test_decoders_use_convtranspose_not_upsample():
+    """The only upsampling stage is ConvTranspose2d — never nn.Upsample."""
     decoders = build_decoders(_model(), image_size=IMG)
-    has_upsample = False
-    for dec in decoders:
-        for m in dec.modules():
-            assert not isinstance(m, nn.ConvTranspose2d)
-            if isinstance(m, nn.Upsample):
-                assert m.mode == "bilinear"
-                assert m.align_corners is False
-                has_upsample = True
-    assert has_upsample
-
-
-def test_transpose_decoders_output_image_shape():
-    """The transposed-conv variant also maps every block to (3, 64, 64)."""
-    model = _model()
-    decoders = build_decoders(model, image_size=IMG,
-                              upsample="transpose").eval()
-    x = torch.rand(2, 3, IMG, IMG)
-    with torch.no_grad():
-        _, acts = model.forward_features(x)
-        for k, dec in enumerate(decoders):
-            out = dec(acts[k])
-            assert out.shape == (2, 3, IMG, IMG), f"decoder {k}"
-            assert torch.isfinite(out).all()
-            assert out.min() >= 0.0 and out.max() <= 1.0
-
-
-def test_transpose_decoders_use_convtranspose_not_upsample():
-    """upsample='transpose' swaps in ConvTranspose2d and drops nn.Upsample."""
-    decoders = build_decoders(_model(), image_size=IMG, upsample="transpose")
     has_transpose = False
     for dec in decoders:
         for m in dec.modules():
             assert not isinstance(m, nn.Upsample)
             if isinstance(m, nn.ConvTranspose2d):
                 has_transpose = True
+                assert m.kernel_size == (4, 4)
+                assert m.stride == (2, 2)
     assert has_transpose
 
 
-def test_unknown_upsample_mode_rejected():
-    with pytest.raises(ValueError):
-        BlockDecoder(in_channels=64, in_size=8, out_size=64,
-                     upsample="nearest")
+def test_decoders_fit_every_member_variant():
+    """Ensemble member variants (widths + kernel size) keep the decoder
+    geometry valid: same block count, same spatial sizes, image-shaped
+    reconstructions."""
+    variants = [
+        ((24, 48, 96, 192, 384), 3),
+        ((16, 48, 96, 192, 320), 5),
+        ((32, 48, 112, 224, 336), 5),
+    ]
+    x = torch.rand(2, 3, IMG, IMG)
+    for channels, ks in variants:
+        model = _model(channels=channels, kernel_size=ks)
+        # kernel size only widens the receptive field; the spatial layout
+        # (and hence the decoder stage count) is unchanged.
+        assert model.block_spatial_sizes == [32, 16, 8, 4, 4]
+        decoders = build_decoders(model, image_size=IMG).eval()
+        with torch.no_grad():
+            _, acts = model.forward_features(x)
+            for k, dec in enumerate(decoders):
+                out = dec(acts[k])
+                assert out.shape == (2, 3, IMG, IMG), (channels, ks, k)
+                assert torch.isfinite(out).all()
 
 
 def test_channel_progression_preserved():
-    """Each upsampling stage still halves channels down to min_channels."""
+    """Each upsampling stage halves channels down to min_channels."""
     dec = BlockDecoder(in_channels=256, in_size=4, out_size=64,
                        min_channels=16)
-    convs = [m for m in dec.net
-             if isinstance(m, nn.Conv2d) and m.kernel_size == (3, 3)]
+    ups = [m for m in dec.net if isinstance(m, nn.ConvTranspose2d)]
     expected, ch = [], 256
     for _ in range(4):  # log2(64 / 4)
         new_ch = max(16, ch // 2)
         expected.append((ch, new_ch))
         ch = new_ch
-    assert [(c.in_channels, c.out_channels) for c in convs] == expected
+    assert [(u.in_channels, u.out_channels) for u in ups] == expected
