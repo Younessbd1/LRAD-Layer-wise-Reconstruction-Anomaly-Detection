@@ -945,6 +945,7 @@ def plot_top_ood_glasses(
     sigma: float = 3.0,
     overlay_power: float = 0.8,
     vmax: float = 0.5,
+    col_labels: Sequence[str] | None = None,
     title: str | None = None,
 ) -> None:
     """Top-N OOD eyeglasses faces, one column per face (rank order).
@@ -957,13 +958,20 @@ def plot_top_ood_glasses(
         Bias (x − f̄)²          (fixed [0, vmax] scale, one colour bar)
         Bias overlay            (smoothed bias painted over the face)
 
-    Columns are titled by rank (#1 … #N). The ranking itself — how strongly
-    and how locally the bias lights up in the eye region — is computed by
-    the caller (see ``lrad.ensemble.collect_eye_region_bias``).
+    Columns are titled by rank (``#1 … #N``) unless ``col_labels`` gives one
+    title per image (e.g. ``"Glasses 1"``, ``"Clean 2"`` for a generalization
+    probe on custom photos — see ``scripts/run_generalization.py``), in
+    which case those are used instead. The ranking itself — how strongly and
+    how locally the bias lights up in the eye region — is computed by the
+    caller (see ``lrad.ensemble.collect_eye_region_bias``).
     """
     n = images.size(0)
     if n == 0:
         raise ValueError("need at least one image to plot")
+    if col_labels is not None and len(col_labels) != n:
+        raise ValueError(
+            f"col_labels has {len(col_labels)} entries, expected {n}"
+        )
 
     fig, axes = plt.subplots(
         3, n, figsize=(1.4 * n + 0.8, 4.6),
@@ -978,7 +986,8 @@ def plot_top_ood_glasses(
 
         axes[0, i].imshow(img_np)
         _bare(axes[0, i])
-        axes[0, i].set_title(f"#{i + 1}", fontsize=_LABEL_FS)
+        label = col_labels[i] if col_labels is not None else f"#{i + 1}"
+        axes[0, i].set_title(label, fontsize=_LABEL_FS)
 
         bias_im = axes[1, i].imshow(bias, cmap="viridis",
                                     vmin=0.0, vmax=vmax)
