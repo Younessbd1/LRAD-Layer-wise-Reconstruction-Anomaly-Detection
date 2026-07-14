@@ -16,6 +16,7 @@ from lrad.dataset import (
     _resolve,
     _resolve_ood_attrs,
     _split_in_ood,
+    load_generalization_images,
 )
 
 
@@ -60,3 +61,60 @@ def test_split_in_ood_single_attribute_matches_legacy():
     in_rows, ood_rows = _split_in_ood(attr, [g])
     assert in_rows == [0, 1, 3]
     assert ood_rows == [2]
+
+
+# ---------------------------------------------------------------------------
+# load_generalization_images — arbitrary (non-CelebA) photos for
+# scripts/run_generalization.py
+# ---------------------------------------------------------------------------
+
+def _write_photo(path, size: tuple[int, int], color) -> None:
+    from PIL import Image
+
+    Image.new("RGB", size, color=color).save(path)
+
+
+def test_load_generalization_images_shape_and_range(tmp_path):
+    # A landscape and a portrait photo — both must come out square.
+    p1 = tmp_path / "a.jpg"
+    p2 = tmp_path / "b.png"
+    _write_photo(p1, (120, 80), (255, 0, 0))
+    _write_photo(p2, (60, 100), (0, 255, 0))
+
+    out = load_generalization_images([p1, p2], image_size=32)
+    assert out.shape == (2, 3, 32, 32)
+    assert out.dtype == torch.float32
+    assert out.min() >= 0.0 and out.max() <= 1.0
+
+
+def test_load_generalization_images_rejects_empty():
+    with pytest.raises(ValueError):
+        load_generalization_images([], image_size=32)
+
+
+def test_load_generalization_images_handles_grayscale_and_rgba(tmp_path):
+    from PIL import Image
+
+    p_gray = tmp_path / "gray.png"
+    p_rgba = tmp_path / "rgba.png"
+    Image.new("L", (300, 900), 128).save(p_gray)     # grayscale, portrait
+    Image.new("RGBA", (50, 50), (1, 2, 3, 255)).save(p_rgba)  # RGBA, tiny
+
+    out = load_generalization_images([p_gray, p_rgba], image_size=64)
+    assert out.shape == (2, 3, 64, 64)
+
+
+def test_load_generalization_images_corrects_exif_orientation(tmp_path):
+    """A phone photo stored sideways (EXIF orientation tag) must be rotated
+    to its true orientation before the square crop, or the crop would cut
+    along the wrong axis."""
+    from PIL import Image
+
+    img = Image.new("RGB", (200, 100), (255, 0, 0))
+    exif = img.getexif()
+    exif[0x0112] = 6  # "rotate 90 CW to display correctly"
+    path = tmp_path / "sideways.jpg"
+    img.save(path, format="JPEG", exif=exif)
+
+    out = load_generalization_images([path], image_size=64)
+    assert out.shape == (1, 3, 64, 64)
