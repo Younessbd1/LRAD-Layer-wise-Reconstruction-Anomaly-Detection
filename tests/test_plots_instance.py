@@ -101,3 +101,33 @@ def test_plot_top_ood_glasses_rejects_empty(tmp_path):
         plot_top_ood_glasses(
             torch.zeros(0, 3, 16, 16), [], tmp_path / "empty.png",
         )
+
+
+def test_plot_top_ood_glasses_with_col_labels_writes_png(tmp_path):
+    """Custom column labels (e.g. a generalization probe on own photos)
+    replace the default rank titles."""
+    torch.manual_seed(0)
+    n, m = 4, 2
+    images = torch.rand(n, 3, 16, 16)
+    recons_per_model = [
+        [torch.rand(3, 16, 16) for _ in range(n)] for _ in range(m)
+    ]
+    out = tmp_path / "top_labeled.png"
+    plot_top_ood_glasses(
+        images, recons_per_model, out,
+        col_labels=["Clean 1", "Clean 2", "Glasses 1", "Glasses 2"],
+    )
+    assert out.exists() and out.stat().st_size > 0
+
+
+def test_plot_top_ood_glasses_rejects_mismatched_col_labels(tmp_path):
+    n, m = 3, 2
+    images = torch.rand(n, 3, 16, 16)
+    recons_per_model = [
+        [torch.rand(3, 16, 16) for _ in range(n)] for _ in range(m)
+    ]
+    with pytest.raises(ValueError):
+        plot_top_ood_glasses(
+            images, recons_per_model, tmp_path / "bad.png",
+            col_labels=["only one label"],
+        )
