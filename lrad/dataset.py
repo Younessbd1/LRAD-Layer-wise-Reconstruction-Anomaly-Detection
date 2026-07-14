@@ -272,3 +272,39 @@ def get_celeba_loaders(cfg: dict) -> dict:
         "ood_attr": "+".join(ood_names),
         "ood_attrs": ood_names,
     }
+
+
+def load_generalization_images(
+    paths: Sequence,
+    image_size: int = 64,
+) -> torch.Tensor:
+    """Load arbitrary photos (not CelebA) into a model-ready ``(N, 3, H, W)``
+    batch in ``[0, 1]``, for ``scripts/run_generalization.py``.
+
+    Unlike ``CelebAFacialAttributes`` — whose images arrive already aligned
+    and square from the ``img_align_celeba`` archive — a caller's own photos
+    can be any size or aspect ratio, so each is centre-cropped to a square
+    (the largest one that fits) before the same ``Resize`` used everywhere
+    else in the project. This is a crude stand-in for face alignment: it
+    keeps the pipeline dependency-free, but a photo where the face isn't
+    already roughly centred and dominant in the frame will resize poorly.
+    """
+    if not paths:
+        raise ValueError("need at least one image path")
+    from PIL import Image, ImageOps
+
+    to_tensor = transforms.ToTensor()
+    tensors = []
+    for p in paths:
+        img = Image.open(p)
+        # Phone photos carry an EXIF orientation tag rather than storing
+        # pixels pre-rotated; without this a portrait shot loaded sideways
+        # would get centre-cropped on the wrong axis.
+        img = ImageOps.exif_transpose(img).convert("RGB")
+        w, h = img.size
+        side = min(w, h)
+        left, top = (w - side) // 2, (h - side) // 2
+        img = img.crop((left, top, left + side, top + side))
+        img = img.resize((image_size, image_size), Image.BILINEAR)
+        tensors.append(to_tensor(img))
+    return torch.stack(tensors, dim=0)
