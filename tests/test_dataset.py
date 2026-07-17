@@ -11,12 +11,15 @@ from __future__ import annotations
 import pytest
 import torch
 
+from torch.utils.data import DataLoader, TensorDataset
+
 from lrad.dataset import (
     OOD_ATTRS,
     _resolve,
     _resolve_ood_attrs,
     _split_in_ood,
     load_generalization_images,
+    split_loader,
 )
 
 
@@ -118,3 +121,39 @@ def test_load_generalization_images_corrects_exif_orientation(tmp_path):
 
     out = load_generalization_images([path], image_size=64)
     assert out.shape == (1, 3, 64, 64)
+
+
+def _tensor_loader(n: int = 20, batch: int = 4) -> DataLoader:
+    return DataLoader(
+        TensorDataset(torch.arange(n).float().view(-1, 1)),
+        batch_size=batch, shuffle=False, num_workers=0,
+    )
+
+
+def test_split_loader_disjoint_and_exhaustive():
+    a, b = split_loader(_tensor_loader(), 7, seed=0)
+    va = torch.cat([x for (x,) in a]).ravel()
+    vb = torch.cat([x for (x,) in b]).ravel()
+    assert len(va) == 7 and len(vb) == 13
+    merged = torch.cat([va, vb])
+    assert set(merged.tolist()) == set(range(20))  # disjoint + exhaustive
+
+
+def test_split_loader_deterministic_and_seed_sensitive():
+    a1, _ = split_loader(_tensor_loader(), 7, seed=0)
+    a2, _ = split_loader(_tensor_loader(), 7, seed=0)
+    a3, _ = split_loader(_tensor_loader(), 7, seed=1)
+    v1 = torch.cat([x for (x,) in a1])
+    v2 = torch.cat([x for (x,) in a2])
+    v3 = torch.cat([x for (x,) in a3])
+    assert torch.equal(v1, v2)
+    assert not torch.equal(v1, v3)
+
+
+def test_split_loader_preserves_batch_size_and_validates():
+    a, b = split_loader(_tensor_loader(batch=4), 7, seed=0)
+    assert a.batch_size == 4 and b.batch_size == 4
+    with pytest.raises(ValueError):
+        split_loader(_tensor_loader(), 0)
+    with pytest.raises(ValueError):
+        split_loader(_tensor_loader(), 20)
