@@ -75,10 +75,12 @@ from lrad.plots import (  # noqa: E402
     plot_decomposition_auroc_bars,
     plot_ensemble_decomposition,
     plot_ensemble_score_hists,
+    plot_instance_all_models,
     plot_instance_summary,
     plot_mean_abs_bias,
     plot_mean_error_maps,
     plot_member_instance,
+    save_instance_raw_images,
     plot_min_error_maps,
     plot_per_block_breakdown,
     plot_recons_only,
@@ -166,13 +168,18 @@ def _write_instance_figures(
     slices it image by image. Each instance gets its own folder
     ``{prefix}_XX/`` holding one figure PER ENSEMBLE MEMBER —
     ``model_01.png`` … ``model_M.png``, that member's reconstruction +
-    error map — plus ``summary.png`` with the Bias / Mean-error / Min-error
-    maps and the smoothed-bias overlay. Returns the number of instances
+    error map — plus ``summary.png`` (Bias / Mean-error / Min-error maps
+    and the smoothed-bias overlay) and ``all_models.png`` (every member's
+    error overlay side by side with the Bias / Mean / Min overlays).
+    Bare single-image exports (original, bias overlay, raw maps — no
+    titles, axes or colorbars) go to the sibling folder
+    ``{out_dir}_raw/{prefix}_XX/``. Returns the number of instances
     written.
     """
     images_dev, recons = sample_block_recons(
         models, decoders_list, images, device, block,
     )
+    raw_root = out_dir.parent / f"{out_dir.name}_raw"
     n = images_dev.size(0)
     n_models = len(recons)
     for i in range(n):
@@ -194,6 +201,20 @@ def _write_instance_figures(
             overlay_power=overlay_power,
             title=f"{prefix} sample {i + 1} — block L{block}  "
                   f"({n_models}-model ensemble)",
+        )
+        plot_instance_all_models(
+            images_dev[i], recon_i,
+            inst_dir / "all_models.png",
+            sigma=sigma,
+            overlay_power=overlay_power,
+            title=f"{prefix} sample {i + 1} — every member's error overlay"
+                  f"  (block L{block})",
+        )
+        save_instance_raw_images(
+            images_dev[i], recon_i,
+            raw_root / f"{prefix}_{i + 1:02d}",
+            sigma=sigma,
+            overlay_power=overlay_power,
         )
     return n
 
@@ -520,7 +541,7 @@ def main() -> None:
         n_inst_ood = int(ecfg_v.get("n_instances_ood",
                                     ecfg_v.get("n_instances", 20)))
         inst_block = int(ecfg_v.get("instance_block", cmp_block))
-        overlay_sigma = float(ecfg_v.get("overlay_sigma", 3.0))
+        overlay_sigma = float(ecfg_v.get("overlay_sigma", 1.5))
         overlay_power = float(ecfg_v.get("overlay_power", 0.8))
         # A fresh, larger draw of faces; the seed offset keeps them distinct
         # from the small grid-figure samples gathered above.
