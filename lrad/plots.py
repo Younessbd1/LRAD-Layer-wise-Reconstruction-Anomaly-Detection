@@ -1423,3 +1423,223 @@ def plot_ensemble_score_hists(
     )
     fig.savefig(save_path, dpi=_SAVE_DPI, bbox_inches="tight")
     plt.close(fig)
+
+
+# ---------------------------------------------------------------------------
+# Raw per-instance image exports (no axes, no titles, no colorbars)
+# ---------------------------------------------------------------------------
+
+def _overlay_composite(
+    img_np: np.ndarray,
+    cam: np.ndarray,
+    overlay_power: float = 0.8,
+    cmap: str = "inferno",
+) -> np.ndarray:
+    """Alpha-composite a smoothed cam onto an image, exactly as the overlay
+    tiles render it (colour = cmap(cam), alpha = cam ** overlay_power), but
+    as a plain ``(H, W, 3)`` array suitable for ``plt.imsave``."""
+    rgba = plt.get_cmap(cmap)(np.clip(cam, 0.0, 1.0))[..., :3]
+    alpha = np.clip(cam, 0.0, 1.0) ** overlay_power
+    out = img_np * (1.0 - alpha[..., None]) + rgba * alpha[..., None]
+    return np.clip(out, 0.0, 1.0)
+
+
+def save_instance_raw_images(
+    image: torch.Tensor,
+    recons: Sequence[torch.Tensor],
+    out_dir: str | Path,
+    *,
+    sigma: float = 1.5,
+    overlay_power: float = 0.8,
+    vmax: float = 0.5,
+) -> None:
+    """Bare image files for ONE instance — no legend, axes or colorbars.
+
+    Writes into ``out_dir`` (created if needed), one standalone PNG each::
+
+        original.png       the input face
+        bias_overlay.png   smoothed-bias overlay composited on the face
+        bias.png           raw bias map, viridis on the shared [0, vmax]
+        mean_error.png     raw mean-error map, same scale
+        min_error.png      raw min-error map, autoscaled to its own range
+
+    Same derivations as :func:`plot_instance_summary` (via
+    :func:`_instance_summary_maps`), so these are pixel-identical to the
+    summary tiles — just without the figure chrome, ready for slides or a
+    paper's own layout.
+    """
+    out_dir = Path(out_dir)
+    out_dir.mkdir(parents=True, exist_ok=True)
+    img_np, bias, mean_err, min_err = _instance_summary_maps(image, recons)
+    cam = smooth_cam(bias, sigma=sigma)
+
+    plt.imsave(out_dir / "original.png", np.clip(img_np, 0.0, 1.0))
+    plt.imsave(
+        out_dir / "bias_overlay.png",
+        _overlay_composite(img_np, cam, overlay_power),
+    )
+    viridis = plt.get_cmap("viridis")
+    plt.imsave(out_dir / "bias.png",
+               viridis(np.clip(bias / vmax, 0.0, 1.0)))
+    plt.imsave(out_dir / "mean_error.png",
+               viridis(np.clip(mean_err / vmax, 0.0, 1.0)))
+    peak = float(min_err.max())
+    plt.imsave(out_dir / "min_error.png",
+               viridis(min_err / peak if peak > 1e-8 else min_err))
+
+
+def plot_instance_all_models(
+    image: torch.Tensor,
+    recons: Sequence[torch.Tensor],
+    save_path: str | Path,
+    *,
+    sigma: float = 1.5,
+    overlay_power: float = 0.8,
+    title: str | None = None,
+) -> None:
+    """Every member side by side for ONE image, as overlays.
+
+    Tiles: Original | one error overlay PER MEMBER (that member's squared
+    error, smoothed and composited like the bias overlay) | Bias overlay |
+    Mean-error overlay | Min-error overlay. The per-member tiles make the
+    disagreement visible (which members fail where); the last three tiles
+    are the ensemble summaries of the same maps.
+    """
+    img_np, bias, mean_err, min_err = _instance_summary_maps(image, recons)
+    recon_np = [_single_image(r) for r in recons]
+    member_maps = [_sq_error(img_np, rc) for rc in recon_np]
+
+    tiles: list[tuple[str, np.ndarray | None]] = [("Original", None)]
+    tiles += [
+        (f"$M_{{{m + 1}}}$", member_maps[m]) for m in range(len(recons))
+    ]
+    tiles += [
+        (r"Bias  $(x - \bar{f})^2$", bias),
+        ("Mean error", mean_err),
+        ("Min error", min_err),
+    ]
+
+    n = len(tiles)
+    ncols = int(np.ceil(n / 2)) if n > 7 else n
+    nrows = int(np.ceil(n / ncols))
+    fig, axes = plt.subplots(
+        nrows, ncols, figsize=(1.55 * ncols, 1.75 * nrows),
+        layout="constrained",
+    )
+    axes = np.atleast_1d(axes).ravel()
+    for ax, (name, mp) in zip(axes, tiles):
+        ax.imshow(img_np)
+        if mp is not None:
+            cam = smooth_cam(mp, sigma=sigma)
+            ax.imshow(cam, cmap="inferno",
+                      alpha=np.clip(cam, 0.0, 1.0) ** overlay_power)
+        _bare(ax)
+        ax.set_title(name, fontsize=_LABEL_FS - 2)
+    for ax in axes[n:]:
+        ax.axis("off")
+
+    if title:
+        fig.suptitle(title, fontsize=_TITLE_FS)
+    fig.savefig(save_path, dpi=_SAVE_DPI, bbox_inches="tight")
+    plt.close(fig)
+
+
+# ---------------------------------------------------------------------------
+# Fused-evaluation panel (per-signal AUROC bars + ROC + fused histograms)
+# ---------------------------------------------------------------------------
+
+def plot_fused_auroc_panel(
+    auroc: dict,
+    save_path: str | Path,
+    *,
+    fused_in: np.ndarray | None = None,
+    fused_ood: np.ndarray | None = None,
+    fused_key: str = "fused",
+    title: str | None = None,
+) -> None:
+    """Visual summary of a fused OOD evaluation (lrad.fusion).
+
+    ``auroc`` is the ``out["auroc"]`` mapping of ``evaluate_fused_ood`` /
+    ``evaluate_supervised_fusion`` — each entry holds at least ``auroc``
+    and, when present, ``fpr``/``tpr``. Three panels:
+
+      * left — horizontal AUROC bars, one per signal, fused entries in the
+        OOD accent colour, chance line at 0.5;
+      * middle — ROC curves of the fused entries plus the best single
+        signal, with the y = x chance diagonal;
+      * right — score histograms of ``fused_in`` vs ``fused_ood`` for
+        ``fused_key`` (panel omitted when the arrays are not given).
+    """
+    entries = {
+        k: v for k, v in auroc.items()
+        if isinstance(v, dict) and np.isfinite(v.get("auroc", float("nan")))
+    }
+    if not entries:
+        raise ValueError("no finite AUROC entries to plot")
+    fused_names = [k for k in entries if k.startswith("fused")]
+    signal_names = [k for k in entries if not k.startswith("fused")]
+
+    n_panels = 3 if fused_in is not None and fused_ood is not None else 2
+    fig, axes = plt.subplots(
+        1, n_panels, figsize=(4.4 * n_panels, 3.6), layout="constrained",
+    )
+
+    # --- AUROC bars ------------------------------------------------------
+    order = sorted(entries, key=lambda k: entries[k]["auroc"])
+    ys = np.arange(len(order))
+    vals = [entries[k]["auroc"] for k in order]
+    cols = [_C_OOD if k.startswith("fused") else _C_ID for k in order]
+    ax = axes[0]
+    ax.barh(ys, vals, color=cols, height=0.62)
+    ax.set_yticks(ys)
+    ax.set_yticklabels(order, fontsize=_TICK_FS)
+    ax.axvline(0.5, color="#888888", lw=0.8, ls="--")
+    for y, v in zip(ys, vals):
+        ax.text(v + 0.004, y, f"{v:.3f}", va="center", fontsize=7.5)
+    ax.set_xlim(0.45, min(1.0, max(vals) + 0.06))
+    ax.set_xlabel("OOD AUROC", fontsize=_LABEL_FS)
+    ax.set_title("Per-signal AUROC", fontsize=_LABEL_FS)
+    ax.tick_params(labelsize=_TICK_FS)
+
+    # --- ROC curves ------------------------------------------------------
+    ax = axes[1]
+    best_signal = (max(signal_names, key=lambda k: entries[k]["auroc"])
+                   if signal_names else None)
+    show = ([best_signal] if best_signal else []) + fused_names
+    palette = [_C_ACCENT, _C_OOD, _C_BIAS, _C_VARIANCE]
+    for k, c in zip(show, palette):
+        e = entries[k]
+        if "fpr" not in e or "tpr" not in e:
+            continue
+        ax.plot(e["fpr"], e["tpr"], color=c, lw=1.6,
+                label=f"{k}  ({e['auroc']:.3f})")
+    ax.plot([0, 1], [0, 1], color="#888888", lw=0.8, ls="--")
+    ax.set_xlabel("False positive rate", fontsize=_LABEL_FS)
+    ax.set_ylabel("True positive rate", fontsize=_LABEL_FS)
+    ax.set_title("ROC", fontsize=_LABEL_FS)
+    ax.tick_params(labelsize=_TICK_FS)
+    ax.legend(fontsize=8, loc="lower right")
+
+    # --- fused histograms ------------------------------------------------
+    if n_panels == 3:
+        ax = axes[2]
+        both = np.concatenate([fused_in, fused_ood])
+        bins = np.linspace(both.min(), both.max(), 40)
+        ax.hist(fused_in, bins=bins, alpha=0.6, density=True,
+                color=_C_ID, label=f"in-dist (n={fused_in.size})")
+        ax.hist(fused_ood, bins=bins, alpha=0.6, density=True,
+                color=_C_OOD, label=f"OOD (n={fused_ood.size})")
+        ax.set_xlabel(f"{fused_key} score", fontsize=_LABEL_FS)
+        ax.set_ylabel("Density", fontsize=_LABEL_FS)
+        au = entries.get(fused_key, {}).get("auroc")
+        ax.set_title(
+            f"{fused_key}" + (f"  AUROC = {au:.3f}" if au else ""),
+            fontsize=_LABEL_FS,
+        )
+        ax.tick_params(labelsize=_TICK_FS)
+        ax.legend(fontsize=8)
+
+    if title:
+        fig.suptitle(title, fontsize=_TITLE_FS)
+    fig.savefig(save_path, dpi=_SAVE_DPI, bbox_inches="tight")
+    plt.close(fig)
