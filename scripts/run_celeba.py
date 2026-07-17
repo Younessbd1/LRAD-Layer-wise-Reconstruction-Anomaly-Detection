@@ -330,6 +330,7 @@ def build_and_run(
             early_stop_min_epochs=tcfg.get("early_stop_min_epochs", 5),
             checkpoint_dir=(output_dir / "weights") if save_every_epoch
                            else None,
+            cutpaste=tcfg.get("cutpaste"),
         )
         logger.info(f"Training done in {time.time() - t0:.1f}s")
         torch.save(model.state_dict(), weights_path)
