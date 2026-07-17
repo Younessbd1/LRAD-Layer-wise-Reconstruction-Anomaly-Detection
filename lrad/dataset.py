@@ -45,7 +45,7 @@ import logging
 from typing import Sequence
 
 import torch
-from torch.utils.data import DataLoader, Dataset, random_split
+from torch.utils.data import DataLoader, Dataset, Subset, random_split
 from torchvision import datasets, transforms
 
 logger = logging.getLogger("celeba_ood")
@@ -272,6 +272,42 @@ def get_celeba_loaders(cfg: dict) -> dict:
         "ood_attr": "+".join(ood_names),
         "ood_attrs": ood_names,
     }
+
+
+def split_loader(
+    loader: DataLoader,
+    first_n: int,
+    seed: int = 0,
+) -> tuple[DataLoader, DataLoader]:
+    """Deterministically split a loader's dataset into two disjoint loaders.
+
+    A seeded permutation of the dataset assigns the first ``first_n``
+    examples to the first loader and the rest to the second — same seed,
+    same split, across runs and machines. Both loaders keep the parent's
+    batch size / workers / pinning and iterate WITHOUT shuffling. Used to
+    carve labelled calibration splits (e.g. a calibration half of the OOD
+    pool for the supervised fusion) that must stay disjoint from what is
+    evaluated.
+    """
+    ds = loader.dataset
+    n = len(ds)
+    if not 0 < first_n < n:
+        raise ValueError(f"first_n must be in (0, {n}), got {first_n}")
+    gen = torch.Generator().manual_seed(seed)
+    perm = torch.randperm(n, generator=gen).tolist()
+
+    def _mk(idx: list[int]) -> DataLoader:
+        return DataLoader(
+            Subset(ds, idx),
+            batch_size=loader.batch_size,
+            shuffle=False,
+            num_workers=loader.num_workers,
+            pin_memory=loader.pin_memory,
+            persistent_workers=(loader.num_workers > 0),
+            drop_last=False,
+        )
+
+    return _mk(perm[:first_n]), _mk(perm[first_n:])
 
 
 def load_generalization_images(
