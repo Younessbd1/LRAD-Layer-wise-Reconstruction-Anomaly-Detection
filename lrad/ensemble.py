@@ -35,17 +35,71 @@ used elsewhere in the project, so the three terms stay comparable.
 
 from __future__ import annotations
 
+import logging
+from pathlib import Path
 from typing import Sequence
 
 import numpy as np
 import torch
 import torch.nn as nn
+import yaml
 
 from .anomaly_score import _reduce_over_pixels, aggregate_anomaly_score
+from .decoder import build_decoders
 from .evaluate import _auroc_entry, collect_predictions
-from .model import FacialCNN
+from .model import FacialCNN, build_model
+
+logger = logging.getLogger("celeba_ood")
 
 TERMS: tuple[str, ...] = ("risk", "bias", "variance")
+
+
+def load_ensemble_members(
+    output_dir: Path, device: torch.device,
+) -> tuple[list[FacialCNN], list[nn.ModuleList], int]:
+    """Load every ``model_<i>/`` member written by ``scripts/run_ensemble.py``.
+
+    Each member directory holds its own resolved architecture
+    (``config.resolved.yaml``) and weights (``weights/model.pt`` +
+    ``weights/decoders.pt``). Returns ``(models, decoders_list,
+    image_size)`` with everything on ``device`` in eval mode. All members
+    must share the same input ``image_size``.
+    """
+    model_dirs = sorted(
+        (p for p in Path(output_dir).iterdir()
+         if p.is_dir() and p.name.startswith("model_")),
+        key=lambda p: int(p.name.split("_")[1]),
+    )
+    if not model_dirs:
+        raise FileNotFoundError(f"no model_* dirs found under {output_dir}")
+
+    models, decoders_list, image_size = [], [], None
+    for mdir in model_dirs:
+        with open(mdir / "config.resolved.yaml") as f:
+            mcfg = yaml.safe_load(f)
+        size = mcfg.get("dataset", {}).get("image_size", 64)
+        image_size = image_size or size
+        if size != image_size:
+            raise ValueError(
+                f"{mdir} was trained at image_size={size}, expected "
+                f"{image_size} — every member must share the input size."
+            )
+        model = build_model(mcfg).to(device).eval()
+        model.load_state_dict(
+            torch.load(mdir / "weights" / "model.pt", map_location=device),
+        )
+        decoders = build_decoders(model, image_size=image_size)
+        decoders = decoders.to(device).eval()
+        decoders.load_state_dict(
+            torch.load(mdir / "weights" / "decoders.pt", map_location=device),
+        )
+        models.append(model)
+        decoders_list.append(decoders)
+        logger.info(
+            f"loaded {mdir.name}  channels={model.channels}  "
+            f"kernel_size={model.kernel_size}"
+        )
+    return models, decoders_list, image_size
 
 # Predictive-uncertainty decomposition terms (classifier-head, not pixel).
 UNC_TERMS: tuple[str, ...] = ("total", "aleatoric", "epistemic")
