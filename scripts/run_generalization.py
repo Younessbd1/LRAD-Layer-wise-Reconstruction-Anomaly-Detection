@@ -33,17 +33,16 @@ import logging
 import sys
 from pathlib import Path
 
-import torch
-import yaml
-
 _ROOT = Path(__file__).resolve().parent.parent
 if str(_ROOT) not in sys.path:
     sys.path.insert(0, str(_ROOT))
 
 from lrad.dataset import load_generalization_images  # noqa: E402
-from lrad.decoder import build_decoders  # noqa: E402
-from lrad.ensemble import collect_eye_region_bias, sample_block_recons  # noqa: E402
-from lrad.model import build_model  # noqa: E402
+from lrad.ensemble import (  # noqa: E402
+    collect_eye_region_bias,
+    load_ensemble_members,
+    sample_block_recons,
+)
 from lrad.plots import plot_top_ood_glasses  # noqa: E402
 from lrad.utils import get_device  # noqa: E402
 
@@ -59,47 +58,6 @@ def _list_images(d: Path) -> list[Path]:
     if not files:
         raise FileNotFoundError(f"no images ({', '.join(IMG_EXTS)}) in {d}")
     return files
-
-
-def _load_ensemble(
-    output_dir: Path, device: torch.device,
-) -> tuple[list, list, int]:
-    """Load every ``model_<i>/`` member: its own architecture + weights."""
-    model_dirs = sorted(
-        (p for p in output_dir.iterdir()
-         if p.is_dir() and p.name.startswith("model_")),
-        key=lambda p: int(p.name.split("_")[1]),
-    )
-    if not model_dirs:
-        raise FileNotFoundError(f"no model_* dirs found under {output_dir}")
-
-    models, decoders_list, image_size = [], [], None
-    for mdir in model_dirs:
-        with open(mdir / "config.resolved.yaml") as f:
-            mcfg = yaml.safe_load(f)
-        size = mcfg.get("dataset", {}).get("image_size", 64)
-        image_size = image_size or size
-        if size != image_size:
-            raise ValueError(
-                f"{mdir} was trained at image_size={size}, expected "
-                f"{image_size} — every member must share the input size."
-            )
-        model = build_model(mcfg).to(device).eval()
-        model.load_state_dict(
-            torch.load(mdir / "weights" / "model.pt", map_location=device),
-        )
-        decoders = build_decoders(model, image_size=image_size)
-        decoders = decoders.to(device).eval()
-        decoders.load_state_dict(
-            torch.load(mdir / "weights" / "decoders.pt", map_location=device),
-        )
-        models.append(model)
-        decoders_list.append(decoders)
-        logger.info(
-            f"loaded {mdir.name}  channels={model.channels}  "
-            f"kernel_size={model.kernel_size}"
-        )
-    return models, decoders_list, image_size
 
 
 def main() -> None:
@@ -118,7 +76,7 @@ def main() -> None:
                     help="Conv block to reconstruct at. Default: the "
                          "deepest block (same default run_ensemble.py uses "
                          "for its instance figures).")
-    ap.add_argument("--sigma", type=float, default=3.0,
+    ap.add_argument("--sigma", type=float, default=1.5,
                     help="Gaussian blur sigma for the bias overlay.")
     ap.add_argument("--overlay-power", type=float, default=0.8,
                     help="Alpha falloff for the bias overlay.")
@@ -135,7 +93,7 @@ def main() -> None:
         )
 
     device = get_device()
-    models, decoders_list, image_size = _load_ensemble(
+    models, decoders_list, image_size = load_ensemble_members(
         args.output_dir, device,
     )
     n_blocks = len(models[0].channels)
