@@ -17,7 +17,9 @@
 # a full classifier + per-block ConvTranspose2d decoders), then runs the
 # bias/variance decomposition + every plot — including the per-instance
 # folders and top_ood_glasses.png — in that one run (there is no separate
-# eval/plot job any more). The current config does 10 models, each with its
+# eval/plot job any more). It finishes with the fused OOD scoring
+# (lrad.fusion, supervised calibration → fused_auroc.json) and the
+# localized pixel scoring (lrad.localized → localized_auroc.json). The current config does 10 models, each with its
 # OWN 5-block architecture (ensemble.member_variants: channel widths +
 # kernel size) and a 20 classifier + 25 decoder epoch schedule per model —
 # an architecturally diverse deep ensemble (no regularizer).
@@ -104,6 +106,32 @@ set +e
     --override dataset.root="$DATA_ROOT" dataset.download=false dataset.num_workers=4
 RC=$?
 set -e
+
+# --- Post-training evaluations (inference only, ~1 h total) ---------------
+# Fused OOD scoring (lrad.fusion): locfre + epistemic + energy, with the
+# supervised logistic calibration (train negatives + a dedicated OOD half,
+# split seed 42, evaluated on the OTHER half) — writes fused_auroc.json.
+# Localized pixel scoring (lrad.localized) — writes localized_auroc.json.
+# Both are rerunnable in minutes via scripts/oar_run_fused.sh if needed.
+if [[ $RC -eq 0 ]]; then
+    echo "--- fused scoring (lrad.fusion, supervised calibration) ---"
+    set +e
+    "$PYTHON" -u scripts/run_fused.py \
+        --output-dir "$OUTPUT_DIR" \
+        --supervised --blocks 1 2 3 \
+        --num-workers 4
+    RC_FUSED=$?
+    echo "--- localized pixel scoring (lrad.localized) ---"
+    "$PYTHON" -u scripts/run_localized.py \
+        --output-dir "$OUTPUT_DIR" \
+        --num-workers 4
+    RC_LOC=$?
+    set -e
+    [[ $RC_FUSED -ne 0 ]] && RC=$RC_FUSED
+    [[ $RC -eq 0 && $RC_LOC -ne 0 ]] && RC=$RC_LOC
+else
+    echo "training failed (rc=$RC) — skipping the post-training evaluations"
+fi
 
 echo "=== job ${OAR_JOB_ID} finished at $(date) with exit code ${RC} ==="
 exit "${RC}"
