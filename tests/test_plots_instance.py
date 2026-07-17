@@ -131,3 +131,46 @@ def test_plot_top_ood_glasses_rejects_mismatched_col_labels(tmp_path):
             images, recons_per_model, tmp_path / "bad.png",
             col_labels=["only one label"],
         )
+
+
+def test_save_instance_raw_images_writes_bare_pngs(tmp_path):
+    from lrad.plots import save_instance_raw_images
+    image = torch.rand(3, 16, 16)
+    recons = [torch.rand(3, 16, 16) for _ in range(3)]
+    out = tmp_path / "raw" / "OOD_01"
+    save_instance_raw_images(image, recons, out, sigma=1.5)
+    for name in ("original.png", "bias_overlay.png", "bias.png",
+                 "mean_error.png", "min_error.png"):
+        assert (out / name).exists(), name
+    # bare export: exactly image-sized pixels, no figure chrome
+    import matplotlib.image as mpimg
+    arr = mpimg.imread(out / "original.png")
+    assert arr.shape[0] == 16 and arr.shape[1] == 16
+
+
+def test_plot_instance_all_models_writes_png(tmp_path):
+    from lrad.plots import plot_instance_all_models
+    image = torch.rand(3, 16, 16)
+    recons = [torch.rand(3, 16, 16) for _ in range(4)]
+    path = tmp_path / "all_models.png"
+    plot_instance_all_models(image, recons, path, sigma=1.5,
+                             title="all members")
+    assert path.exists() and path.stat().st_size > 0
+
+
+def test_plot_fused_auroc_panel_writes_png(tmp_path):
+    from lrad.plots import plot_fused_auroc_panel
+    rng = np.random.RandomState(0)
+    fused_in, fused_ood = rng.rand(50), rng.rand(50) + 0.5
+    auroc = {
+        "locfre_b3": {"auroc": 0.78, "fpr": [0, 0.3, 1], "tpr": [0, 0.8, 1]},
+        "fused": {"auroc": 0.81, "fpr": [0, 0.2, 1], "tpr": [0, 0.85, 1]},
+        "bad": {"auroc": float("nan")},
+    }
+    path = tmp_path / "panel.png"
+    plot_fused_auroc_panel(auroc, path, fused_in=fused_in,
+                           fused_ood=fused_ood, title="fused eval")
+    assert path.exists() and path.stat().st_size > 0
+    with pytest.raises(ValueError):
+        plot_fused_auroc_panel({"x": {"auroc": float("nan")}},
+                               tmp_path / "no.png")
