@@ -62,6 +62,7 @@ class FacialCNN(nn.Module):
         n_gender: int = 2,
         input_size: int = 64,
         kernel_size: int = 3,
+        cutpaste_head: bool = False,
     ):
         super().__init__()
         if len(channels) < 2:
@@ -72,6 +73,7 @@ class FacialCNN(nn.Module):
         self.n_gender = n_gender
         self.input_size = input_size
         self.kernel_size = int(kernel_size)
+        self.cutpaste_head = bool(cutpaste_head)
 
         blocks: list[nn.Module] = []
         prev = in_channels
@@ -89,6 +91,11 @@ class FacialCNN(nn.Module):
         self.pool = nn.AdaptiveAvgPool2d((1, 1))
         self.head_gender = nn.Linear(prev, n_gender)
         self.head_attrs = nn.Linear(prev, n_attrs)
+        # Optional CutPaste pretext head: intact (0) vs altered (1). Off by
+        # default so checkpoints from runs without it keep loading cleanly.
+        self.head_cutpaste = (
+            nn.Linear(prev, 2) if self.cutpaste_head else None
+        )
 
         self._init_weights()
 
@@ -123,10 +130,13 @@ class FacialCNN(nn.Module):
 
     def _heads(self, feat: torch.Tensor) -> dict[str, torch.Tensor]:
         h = self.pool(feat).flatten(1)
-        return {
+        out = {
             "gender_logits": self.head_gender(h),
             "attr_logits": self.head_attrs(h),
         }
+        if self.head_cutpaste is not None:
+            out["cutpaste_logits"] = self.head_cutpaste(h)
+        return out
 
     def forward(self, x: torch.Tensor) -> dict[str, torch.Tensor]:
         feat, _ = self.forward_features(x)
@@ -149,6 +159,7 @@ def build_model(cfg: dict) -> FacialCNN:
         n_gender=mcfg.get("n_gender", 2),
         input_size=mcfg.get("input_size", dcfg.get("image_size", 64)),
         kernel_size=mcfg.get("kernel_size", 3),
+        cutpaste_head=mcfg.get("cutpaste_head", False),
     )
 
 
