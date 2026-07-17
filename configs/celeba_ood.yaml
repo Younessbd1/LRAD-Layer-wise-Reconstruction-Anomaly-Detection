@@ -110,7 +110,9 @@ evaluation:
   viz_seed: 1234
   n_instances_in: 20
   n_instances_ood: 20
-  overlay_sigma: 3
+  # sigma 1.5: tighter highlight — at 3 the blur spread the glasses blob
+  # into the cheeks; 1.5 keeps it on the frame while still smoothing noise.
+  overlay_sigma: 1.5
   overlay_power: 0.8
   n_top_ood: 10
 
