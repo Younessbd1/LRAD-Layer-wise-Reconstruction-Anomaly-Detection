@@ -1,645 +1,726 @@
-# MESURES — le rapport détaillé de toutes les mesures OOD du projet
+# MESURES — formulation mathématique de toutes les mesures OOD du projet
 
-*Dernière mise à jour : 18 juillet 2026 — couvre les runs `ensemble_20260707_152254_6754917` (baseline, 10 modèles 64 px), `ensemble_20260716_170930_6774881` (validation splits complets) et `gridsearch_6781780` (recherche d'hyperparamètres CutPaste).*
+*Dernière mise à jour : 18 juillet 2026 — couvre les runs `ensemble_20260707_152254_6754917` (baseline, 10 modèles 64 px), `ensemble_20260716_170930_6774881` (validation sur splits complets) et `gridsearch_6781780` (recherche d'hyperparamètres CutPaste).*
 
-Ce document explique **chaque mesure** calculée dans le projet : sa formule, son
-implémentation, son interprétation, et un **exemple numérique complet** à chaque
-fois. Il se lit de haut en bas : chaque section s'appuie sur les précédentes.
+Chaque section donne : la **définition formelle**, l'**interprétation**, et un
+**exemple numérique** entièrement calculé. Les équations sont en LaTeX
+(rendues par GitHub et l'aperçu Markdown de VSCode).
 
 ## Sommaire
 
-1. [Notation et vue d'ensemble](#1-notation-et-vue-densemble)
-2. [L'AUROC — la métrique de toutes les mesures](#2-lauroc)
+1. [Notation](#1-notation)
+2. [AUROC](#2-auroc)
 3. [Scores du classifieur : MSP et entropies](#3-scores-du-classifieur)
-4. [La décomposition Risque = Biais + Variance](#4-la-décomposition-risque--biais--variance)
-5. [Incertitude prédictive : totale / aléatoire / épistémique](#5-incertitude-prédictive)
-6. [L'énergie](#6-lénergie)
+4. [Décomposition Risque = Biais + Variance](#4-décomposition-risque--biais--variance)
+5. [Incertitude prédictive](#5-incertitude-prédictive)
+6. [Énergie](#6-énergie)
 7. [Score localisé : z-score par pixel + patch-max](#7-score-localisé)
-8. [locfre — l'erreur de features localisée](#8-locfre)
+8. [locfre — erreur de features localisée](#8-locfre)
 9. [Fusion par rang](#9-fusion-par-rang)
-10. [Fusion supervisée (régression logistique)](#10-fusion-supervisée)
-11. [CutPaste et le signal cutpaste_prob](#11-cutpaste)
-12. [Le grid search multi-métriques](#12-le-grid-search-multi-métriques)
+10. [Fusion supervisée](#10-fusion-supervisée)
+11. [CutPaste](#11-cutpaste)
+12. [Grid search multi-métriques](#12-grid-search-multi-métriques)
 13. [Historique des résultats](#13-historique-des-résultats)
-14. [Où vit chaque mesure dans le code](#14-où-vit-chaque-mesure-dans-le-code)
+14. [Carte du code](#14-carte-du-code)
 
 ---
 
-## 1. Notation et vue d'ensemble
+## 1. Notation
 
-- `x` : une image d'entrée `(3, H, W)`, pixels dans `[0, 1]`.
-- `M` : la taille de l'ensemble (10 modèles au run de référence, 8 pour cp128).
-- `f̂ᵐ(x)` : la reconstruction de `x` par les décodeurs du membre `m`
-  (un décodeur par bloc convolutif ; `f̂ᵐₖ` = reconstruction au bloc `k`).
-- `f̄(x) = (1/M) Σₘ f̂ᵐ(x)` : la reconstruction **moyenne** de l'ensemble
-  (le « consensus »).
-- `aⱼᵐ(x)` : les activations du bloc `j` du tronc du membre `m`.
-- **in-dist** : visages sans lunettes (label 0) ; **OOD** : visages avec
-  lunettes (label 1). L'objectif de chaque *score* est d'être **plus grand
-  sur les OOD**.
+| Symbole | Signification |
+| --- | --- |
+| $x \in [0,1]^{3\times H\times W}$ | image d'entrée (visage aligné CelebA) |
+| $M$ | taille de l'ensemble ($M{=}10$ au run de référence) |
+| $\hat f^{\,m}_k(x)$ | reconstruction de $x$ par les décodeurs du membre $m$ au bloc $k$ |
+| $\bar f_k(x) = \frac{1}{M}\sum_{m=1}^{M} \hat f^{\,m}_k(x)$ | reconstruction **consensus** de l'ensemble |
+| $a^m_j(x)$ | activations du bloc $j$ du tronc du membre $m$ |
+| $p^m(c\mid x)$ | probabilité softmax de la classe $c$ par le membre $m$ |
+| $y \in \{0,1\}$ | étiquette OOD : $0$ = in-distribution (sans lunettes), $1$ = OOD (lunettes) |
+| $s(x)$ | un *score* d'anomalie — par convention, **plus grand sur les OOD** |
 
-Le pipeline complet :
-
-```
-                    ┌── têtes classif ──► MSP, entropies, énergie, incertitudes   (§3, §5, §6)
-image ──► tronc ────┤
-                    ├── tête CutPaste ──► cutpaste_prob                            (§11)
-                    │
-                    └── activations ──► décodeurs ──► reconstructions
-                                                        │
-                          ┌─────────────────────────────┤
-                          ▼                             ▼
-              Risque = Biais + Variance        erreur de features (locfre)
-              + z-score + patch-max (§4, §7)          (§8)
-                          │                             │
-                          └───────────┬─────────────────┘
-                                      ▼
-                        FUSION (rang §9, supervisée §10) ──► score final
-```
-
-Chaque score produit **un scalaire par image**. On mesure sa qualité avec
-l'AUROC (§2) : on calcule le score sur toutes les images de `test_in` et de
-`test_ood`, et on regarde s'il classe bien les OOD au-dessus.
+Toute mesure du projet est un score $s : x \mapsto \mathbb{R}$, et sa qualité
+est jugée par l'AUROC (§2).
 
 ---
 
-## 2. L'AUROC
+## 2. AUROC
 
-### 2.1 Définition
+### 2.1 Définition probabiliste
 
-L'AUROC (*Area Under the ROC Curve*) d'un score `s` est :
+$$
+\mathrm{AUROC}(s) \;=\; \mathbb{P}\big(s(X_{\mathrm{ood}}) > s(X_{\mathrm{in}})\big)
+\;+\; \tfrac{1}{2}\,\mathbb{P}\big(s(X_{\mathrm{ood}}) = s(X_{\mathrm{in}})\big)
+$$
 
-```
-AUROC = P( s(X_ood) > s(X_in) )
-```
+où $X_{\mathrm{in}}$ et $X_{\mathrm{ood}}$ sont tirés uniformément dans les
+splits de test respectifs.
 
-la probabilité qu'une image OOD tirée au hasard reçoive un score **plus
-grand** qu'une image in-dist tirée au hasard. C'est un nombre entre 0 et 1 :
+**Interprétation.** C'est la probabilité qu'en tirant *une* image OOD et
+*une* image normale au hasard, le score classe l'OOD au-dessus. $0.5$ =
+hasard pur ; $1.0$ = séparation parfaite ; $<0.5$ = le score est informatif
+mais **inversé**. Il n'y a aucun seuil de décision : l'AUROC juge le
+classement tout entier.
 
-| AUROC | Lecture |
-|---|---|
-| 0.5 | le score est aléatoire — aucune information |
-| 0.64 | 64 paires sur 100 bien classées — signal faible |
-| 0.80 | signal exploitable |
-| 0.90+ | détecteur de qualité opérationnelle |
-| < 0.5 | le score est **inversé** (informatif mais dans le mauvais sens) |
+### 2.2 Estimateur empirique (statistique de Wilcoxon–Mann–Whitney)
 
-### 2.2 Le calcul par comptage de paires — exemple complet
+Avec $n$ images in-dist de scores $\{s_i^{\mathrm{in}}\}$ et $n'$ images OOD
+de scores $\{s_j^{\mathrm{ood}}\}$ :
 
-3 images normales (A, B, C) et 2 images OOD (D, E), score de chacune :
+$$
+\widehat{\mathrm{AUROC}}
+= \frac{1}{n\,n'} \sum_{i=1}^{n}\sum_{j=1}^{n'}
+\left[ \mathbf{1}\!\left\{ s_j^{\mathrm{ood}} > s_i^{\mathrm{in}} \right\}
++ \tfrac12\, \mathbf{1}\!\left\{ s_j^{\mathrm{ood}} = s_i^{\mathrm{in}} \right\} \right]
+$$
 
-| Image | Type | Score |
-|---|---|---|
-| A | in | 0.2 |
-| B | in | 0.5 |
-| C | in | 0.9 |
-| D | ood | 0.6 |
-| E | ood | 0.8 |
+**Interprétation.** On compte les paires bien ordonnées parmi les $n\,n'$
+paires possibles (une égalité vaut ½). C'est exactement la statistique $U$
+de Mann–Whitney normalisée : $\mathrm{AUROC} = U/(n\,n')$.
 
-On forme **toutes les paires** (in, ood) — il y en a `3 × 2 = 6` — et on
-compte celles où l'OOD gagne :
+**Exemple.** $n{=}3$ normales $s^{\mathrm{in}} = (0.2,\; 0.5,\; 0.9)$ et
+$n'{=}2$ OOD $s^{\mathrm{ood}} = (0.6,\; 0.8)$. Les $6$ comparaisons :
 
-```
-(A,D): 0.2 < 0.6 ✓     (A,E): 0.2 < 0.8 ✓
-(B,D): 0.5 < 0.6 ✓     (B,E): 0.5 < 0.8 ✓
-(C,D): 0.9 > 0.6 ✗     (C,E): 0.9 > 0.8 ✗
+$$
+\underbrace{0.2<0.6}_{\checkmark}\quad
+\underbrace{0.2<0.8}_{\checkmark}\quad
+\underbrace{0.5<0.6}_{\checkmark}\quad
+\underbrace{0.5<0.8}_{\checkmark}\quad
+\underbrace{0.9>0.6}_{\times}\quad
+\underbrace{0.9>0.8}_{\times}
+\qquad\Rightarrow\qquad
+\widehat{\mathrm{AUROC}} = \frac{4}{6} \approx 0.667
+$$
 
-AUROC = 4/6 ≈ 0.67
-```
+L'image normale à $0.9$ (p. ex. des cheveux mal reconstruits) coûte à elle
+seule 2 paires : c'est le mécanisme exact qui limitait le score p95 global
+à $0.638$.
 
-(En cas d'égalité exacte des deux scores, la paire compte pour ½.)
-Ici, l'image C — une normale au score anormalement haut, p. ex. un visage
-aux cheveux mal reconstruits — coûte à elle seule 2 paires. C'est
-**exactement** le mécanisme qui limitait le score p95 global à 0.64.
+### 2.3 Courbe ROC et équivalence
 
-### 2.3 La courbe ROC
+Pour un seuil $t$, on déclare « OOD » si $s(x) > t$ :
 
-Équivalence : pour chaque seuil `t`, on classe « OOD » toute image avec
-`s > t`, et on trace le point (taux de faux positifs, taux de vrais
-positifs) :
+$$
+\mathrm{TPR}(t) = \mathbb{P}\big(s(X_{\mathrm{ood}}) > t\big),
+\qquad
+\mathrm{FPR}(t) = \mathbb{P}\big(s(X_{\mathrm{in}}) > t\big)
+$$
 
-```
-TPR(t) = #{ood : s > t} / #ood        FPR(t) = #{in : s > t} / #in
-```
+La courbe ROC est le lieu $\{(\mathrm{FPR}(t),\,\mathrm{TPR}(t)) : t \in \mathbb{R}\}$, et
 
-En faisant varier `t` de +∞ à −∞ on obtient une courbe de (0,0) à (1,1) ;
-**l'aire sous cette courbe est l'AUROC** — les deux définitions coïncident.
-La diagonale `y = x` est le hasard. C'est ce que trace le panneau du milieu
-de `plots/fused_auroc.png`.
+$$
+\mathrm{AUROC} \;=\; \int_0^1 \mathrm{TPR}\;\mathrm{d}\,\mathrm{FPR}
+$$
 
-### 2.4 Propriétés importantes
+**Interprétation.** L'aire sous la courbe des compromis « détection vs
+fausses alarmes ». La diagonale $\mathrm{TPR}=\mathrm{FPR}$ est le hasard.
+C'est le panneau central de `plots/fused_auroc.png`.
 
-1. **Invariance monotone** : appliquer une fonction croissante au score
-   (`log`, `exp`, ×1000…) ne change pas l'AUROC — seul **l'ordre** compte.
-   C'est ce qui autorise la fusion par rang (§9).
-2. **Pas de seuil** : l'AUROC juge le classement entier, pas une décision.
-3. Dans le code : `sklearn.metrics.roc_auc_score(labels, scores)` avec
-   `labels = [0]*n_in + [1]*n_ood` — voir `_auroc_entry` dans
-   [lrad/evaluate.py](../lrad/evaluate.py).
+### 2.4 Propriété clé : invariance monotone
+
+Pour toute fonction strictement croissante $g$ :
+
+$$
+\mathrm{AUROC}(g \circ s) = \mathrm{AUROC}(s)
+$$
+
+**Interprétation.** Seul **l'ordre** des scores compte, jamais leur échelle.
+C'est ce qui autorise à remplacer un score par son rang (fusion §9) sans
+rien perdre.
 
 ---
 
 ## 3. Scores du classifieur
 
-Le classifieur a une tête *gender* (softmax 2 classes) et une tête *attrs*
-(6 sigmoïdes). L'intuition commune : **sur une image OOD, le modèle hésite**.
+Intuition commune : sur une image OOD, le classifieur **hésite** — sa
+distribution prédictive s'aplatit.
 
-### 3.1 MSP — Maximum Softmax Probability
+### 3.1 MSP (Maximum Softmax Probability)
 
-```
-score_msp(x) = 1 − max_c p(c|x)
-```
+Avec les logits $z \in \mathbb{R}^C$ de la tête gender et
+$p(c\mid x) = \mathrm{softmax}(z)_c = e^{z_c} / \sum_{c'} e^{z_{c'}}$ :
 
-Exemple : `p = (0.98, 0.02)` (très sûr) → `score = 0.02`.
-`p = (0.55, 0.45)` (hésite) → `score = 0.45`. Plus le modèle hésite,
-plus le score monte.
+$$
+s_{\mathrm{MSP}}(x) \;=\; 1 - \max_{c}\, p(c \mid x)
+$$
 
-### 3.2 Entropie de la tête gender (softmax)
+**Exemple.** $p = (0.98,\, 0.02) \Rightarrow s = 0.02$ (confiant, in-dist) ;
+$p = (0.55,\, 0.45) \Rightarrow s = 0.45$ (hésitant, suspect).
 
-```
-H(p) = − Σ_c p(c) · ln p(c)
-```
+### 3.2 Entropie de Shannon (tête gender)
 
-Exemple : `p = (0.9, 0.1)` → `H = −0.9·ln 0.9 − 0.1·ln 0.1 = 0.095 + 0.230
-= 0.325` nats. `p = (0.5, 0.5)` → `H = ln 2 ≈ 0.693` (le maximum).
-L'entropie mesure l'hésitation de façon plus fine que le MSP.
+$$
+\mathcal{H}(p) \;=\; -\sum_{c=1}^{C} p_c \ln p_c
+\qquad\in\; [0,\; \ln C]
+$$
 
-### 3.3 Entropie des attributs (Bernoulli)
+**Exemple.** $\mathcal{H}(0.9, 0.1) = -0.9\ln 0.9 - 0.1\ln 0.1 = 0.095 +
+0.230 = 0.325$ nats ; le maximum $\mathcal{H}(0.5,0.5) = \ln 2 \approx
+0.693$ est atteint à l'hésitation totale.
 
-Pour chaque attribut de probabilité `p` :
+**Interprétation.** Comme le MSP mais sensible à *toute* la distribution,
+pas seulement au maximum.
 
-```
-H_b(p) = −p·ln p − (1−p)·ln(1−p)
-```
+### 3.3 Entropie de Bernoulli des attributs — et sa forme stable
 
-moyennée sur les 6 attributs. **Piège numérique résolu dans le code** : en
-float32, `1 − 10⁻¹²` s'arrondit à `1.0`, donc un attribut saturé (`p = 1.0`)
-produisait `ln(0) = −∞` et un score NaN. La version stable calcule
-l'entropie **depuis les logits** : `H = p·softplus(−z) + (1−p)·softplus(z)`
-(voir `_bernoulli_entropy_logits` dans [lrad/evaluate.py](../lrad/evaluate.py)).
+Pour un attribut de probabilité $p = \sigma(z)$ (sigmoïde du logit $z$) :
 
-### 3.4 Résultats mesurés (run de référence, par membre)
+$$
+\mathcal{H}_b(p) = -p\ln p - (1-p)\ln(1-p)
+$$
 
-| Score | AUROC (meilleur membre / pire) |
-|---|---|
-| entropie gender | 0.79 / 0.45 |
-| MSP | 0.76 / 0.44 |
-| entropie attrs | ~0.50 partout (bruit pur) |
+Problème : en float32, $1 - 10^{-12}$ s'arrondit à $1.0$, donc un attribut
+saturé donne $\ln 0 = -\infty$ et un score NaN. On utilise l'identité
+$\ln p = -\mathrm{softplus}(-z)$ et $\ln(1-p) = -\mathrm{softplus}(z)$, d'où
+la forme **exacte et stable pour tout $z$** :
 
-Leçon : l'entropie attrs ne détecte rien (les 6 attributs restent
-prédictibles avec des lunettes) et **diluait** le score combiné — d'où le
-passage aux fusions qui pèsent chaque signal.
+$$
+\mathcal{H}_b\big(\sigma(z)\big)
+= \sigma(z)\,\mathrm{softplus}(-z) + \big(1-\sigma(z)\big)\,\mathrm{softplus}(z),
+\qquad \mathrm{softplus}(z) = \ln(1+e^{z})
+$$
+
+**Résultats mesurés** (run de référence) : entropie gender $0.45$–$0.79$
+selon le membre ; MSP $0.44$–$0.76$ ; entropie attrs $\approx 0.50$ (bruit
+pur — les 6 attributs restent prédictibles avec des lunettes), ce qui
+**diluait** le score combiné historique.
 
 ---
 
-## 4. La décomposition Risque = Biais + Variance
+## 4. Décomposition Risque = Biais + Variance
 
-### 4.1 Les formules
+### 4.1 Définitions
 
-Pour un bloc `k`, un pixel `i` (erreur L2 **sommée** sur les 3 canaux RGB,
-donc un pixel vit dans `[0, 3]`) :
+Au bloc $k$, au pixel $i$, l'erreur est la L2 au carré **sommée sur RGB**
+(un pixel vit donc dans $[0,3]$) :
 
-```
-Risque_k(x)[i]   = (1/M) Σₘ ( x[i] − f̂ᵐₖ(x)[i] )²     erreur moyenne des membres
-Biais_k(x)[i]    = ( x[i] − f̄ₖ(x)[i] )²               erreur du consensus
-Variance_k(x)[i] = (1/M) Σₘ ( f̂ᵐₖ(x)[i] − f̄ₖ(x)[i] )²  désaccord des membres
-```
+$$
+\mathrm{Risque}_k(x)[i] = \frac{1}{M}\sum_{m=1}^{M} \big( x[i] - \hat f^{\,m}_k(x)[i] \big)^2
+$$
 
-avec l'**identité algébrique exacte**, pixel par pixel :
+$$
+\mathrm{Biais}_k(x)[i] = \big( x[i] - \bar f_k(x)[i] \big)^2
+\qquad\qquad
+\mathrm{Variance}_k(x)[i] = \frac{1}{M}\sum_{m=1}^{M} \big( \hat f^{\,m}_k(x)[i] - \bar f_k(x)[i] \big)^2
+$$
 
-```
-Risque = Biais + Variance
-```
+### 4.2 L'identité exacte et sa preuve
 
-(vérifiée dans le code à ~2×10⁻⁷ près, le bruit float32).
+$$
+\boxed{\;\mathrm{Risque}_k(x)[i] \;=\; \mathrm{Biais}_k(x)[i] + \mathrm{Variance}_k(x)[i]\;}
+$$
 
-### 4.2 Exemple numérique
+*Preuve.* En posant $e_m = x[i] - \hat f^{\,m}_k(x)[i]$ et
+$\bar e = \frac1M \sum_m e_m = x[i] - \bar f_k(x)[i]$ :
 
-Un pixel, 3 modèles. La vraie valeur est `x = 0.8`. Les reconstructions :
-`f̂¹ = 0.5`, `f̂² = 0.6`, `f̂³ = 0.7`.
+$$
+\frac1M \sum_m e_m^2
+= \frac1M \sum_m \big( (e_m - \bar e) + \bar e \big)^2
+= \underbrace{\bar e^{\,2}}_{\mathrm{Biais}}
++ \underbrace{\frac1M \sum_m (e_m - \bar e)^2}_{\mathrm{Variance}}
++ \underbrace{\frac{2\bar e}{M} \sum_m (e_m - \bar e)}_{=\,0}
+\qquad\blacksquare
+$$
 
-```
-f̄ = (0.5 + 0.6 + 0.7)/3 = 0.6
+C'est la décomposition biais–variance classique, appliquée à l'ensemble
+comme approximation empirique de $\mathbb{E}_{\mathcal{D}}$ (l'espérance
+sur les entraînements). Le code la vérifie pixel par pixel : résidu
+$\approx 2\times 10^{-7}$ (bruit float32).
 
-Risque   = [(0.8−0.5)² + (0.8−0.6)² + (0.8−0.7)²]/3
-         = [0.09 + 0.04 + 0.01]/3          = 0.0467
-Biais    = (0.8 − 0.6)²                    = 0.04
-Variance = [(0.5−0.6)² + (0.6−0.6)² + (0.7−0.6)²]/3
-         = [0.01 + 0 + 0.01]/3             = 0.0067
+**Interprétation.** Le **Biais** est l'erreur *du consensus* — ce
+qu'*aucun* membre ne sait reconstruire, donc l'anomalie (les lunettes,
+absentes du train). La **Variance** est le *désaccord* entre membres —
+l'incertitude épistémique. Le **Risque** est le coût d'un membre moyen.
 
-Vérification : 0.04 + 0.0067 = 0.0467 ✓
-```
+**Exemple.** Un pixel, $M{=}3$, $x = 0.8$,
+$\hat f = (0.5,\, 0.6,\, 0.7)$, donc $\bar f = 0.6$ :
 
-Interprétation : le **Biais** est ce qu'aucun membre ne sait reconstruire
-(l'anomalie — des lunettes absentes du train) ; la **Variance** est là où
-les membres divergent (l'incertitude épistémique).
+$$
+\mathrm{Risque} = \tfrac{0.09 + 0.04 + 0.01}{3} = 0.0467,\qquad
+\mathrm{Biais} = (0.8-0.6)^2 = 0.04,\qquad
+\mathrm{Variance} = \tfrac{0.01 + 0 + 0.01}{3} = 0.0067
+$$
 
-### 4.3 Du pixel au score par image : mean / max / p95
+$$
+0.04 + 0.0067 = 0.0467\;\checkmark
+$$
 
-La carte `(H, W)` est réduite en un scalaire par :
+### 4.3 Réduction pixel → image
 
-- `mean` — sensible à toute l'image (dilue les anomalies locales) ;
-- `max` — le pixel le plus surprenant (sensible au bruit) ;
-- `p95` — le 95ᵉ percentile, compromis robuste. **C'était le score
-  historique** ; ses AUROC : biais 0.638, risque 0.636, variance 0.627.
+Une carte $A(x)\in\mathbb{R}^{H\times W}$ devient un scalaire par :
 
-**Pourquoi p95 plafonne** : les lunettes couvrent ~500 pixels sur 4096
-(64×64) ≈ 12 % de l'image dans le meilleur cas, souvent moins. Le p95
-regarde « les 5 % de pixels les pires » — or les cheveux et le fond
-fournissent déjà des milliers de pixels à erreur haute sur **chaque**
-visage normal. Le pic local des lunettes bouge à peine ce percentile
-(in_mean ≈ 0.95 vs ood_mean ≈ 1.10, +15 % seulement).
+$$
+s_{\mathrm{mean}}(x) = \frac{1}{HW}\sum_i A(x)[i],
+\qquad
+s_{\max}(x) = \max_i A(x)[i],
+\qquad
+s_{p95}(x) = Q_{0.95}\big(A(x)\big)
+$$
+
+où $Q_{0.95}$ est le quantile empirique à 95 %. Le score **historique** du
+projet était $s_{p95}(\mathrm{Biais})$ moyenné sur les blocs : AUROC $0.638$.
+
+**Pourquoi il plafonne.** Des lunettes couvrent $\lesssim 500$ pixels sur
+$64^2 = 4096$, soit $\lesssim 12\,\%$. Or $Q_{0.95}$ ne « voit » que les
+5 % de pixels les plus hauts — un budget que cheveux et fond épuisent sur
+*chaque* visage normal. Mesuré :
+$\mathbb{E}[s_{p95} \mid \mathrm{in}] \approx 0.95$ vs
+$\mathbb{E}[s_{p95} \mid \mathrm{ood}] \approx 1.10$ — un écart de 15 %
+seulement, très recouvrant.
 
 ---
 
 ## 5. Incertitude prédictive
 
-On applique la même décomposition aux **probabilités** des têtes de
-classification (pas aux pixels). Pour la tête gender :
+La même décomposition, appliquée aux **probabilités** des têtes. Pour une
+tête de prédictions $p^m$ :
 
-```
-Totale     = H( (1/M) Σₘ pᵐ )        entropie de la prédiction moyenne
-Aléatoire  = (1/M) Σₘ H(pᵐ)          moyenne des entropies individuelles
-Épistémique = Totale − Aléatoire      ≥ 0, par concavité de H
-```
+$$
+\mathrm{U}_{\mathrm{tot}}(x) = \mathcal{H}\!\Big( \frac1M \sum_{m} p^m(\cdot\mid x) \Big),
+\qquad
+\mathrm{U}_{\mathrm{al}}(x) = \frac1M \sum_{m} \mathcal{H}\big( p^m(\cdot\mid x) \big)
+$$
 
-### Exemple numérique (2 modèles)
+$$
+\boxed{\;\mathrm{U}_{\mathrm{ep}}(x) = \mathrm{U}_{\mathrm{tot}}(x) - \mathrm{U}_{\mathrm{al}}(x) \;\ge\; 0\;}
+$$
 
-**Cas 1 — les modèles sont d'accord et hésitent** (incertitude aléatoire) :
-`p¹ = (0.6, 0.4)`, `p² = (0.6, 0.4)`.
+La positivité vient de la concavité de $\mathcal{H}$ (inégalité de Jensen).
+$\mathrm{U}_{\mathrm{ep}}$ est exactement l'**information mutuelle**
+$I(y\,;\,m \mid x)$ entre la prédiction et l'identité du membre : elle est
+non nulle *si et seulement si* les membres prédisent différemment.
 
-```
-moyenne = (0.6, 0.4)      Totale     = H(0.6, 0.4) = 0.673
-                          Aléatoire  = [H(0.6,0.4) + H(0.6,0.4)]/2 = 0.673
-                          Épistémique = 0.673 − 0.673 = 0        ← désaccord nul
-```
+**Interprétation.**
 
-**Cas 2 — les modèles sont sûrs mais se contredisent** (épistémique) :
-`p¹ = (0.9, 0.1)`, `p² = (0.1, 0.9)`.
+- $\mathrm{U}_{\mathrm{al}}$ (aléatoire) : l'ambiguïté *intrinsèque* de
+  l'image, sur laquelle tous les membres s'accordent.
+- $\mathrm{U}_{\mathrm{ep}}$ (épistémique) : le *désaccord* — le manque de
+  connaissance. Sur une image OOD, chaque membre extrapole à sa façon
+  $\Rightarrow$ désaccord $\Rightarrow$ signal OOD.
 
-```
-moyenne = (0.5, 0.5)      Totale     = H(0.5, 0.5) = 0.693
-                          Aléatoire  = [H(0.9,0.1) + H(0.1,0.9)]/2 = 0.325
-                          Épistémique = 0.693 − 0.325 = 0.368     ← désaccord fort
-```
+**Exemple ($M{=}2$).**
 
-C'est **exactement** le signal OOD recherché : sur une image jamais vue,
-chaque membre extrapole différemment → ils se contredisent → l'épistémique
-monte. `unc_epistemic_combined` (gender + attrs) = **0.740 AUROC**, le
-meilleur signal individuel de l'ensemble de référence.
+*Cas 1 — d'accord mais hésitants* : $p^1 = p^2 = (0.6, 0.4)$.
+
+$$
+\mathrm{U}_{\mathrm{tot}} = \mathcal{H}(0.6,0.4) = 0.673,\quad
+\mathrm{U}_{\mathrm{al}} = 0.673
+\;\Rightarrow\; \mathrm{U}_{\mathrm{ep}} = 0
+$$
+
+*Cas 2 — sûrs mais contradictoires* : $p^1 = (0.9, 0.1)$, $p^2 = (0.1, 0.9)$.
+
+$$
+\bar p = (0.5, 0.5) \;\Rightarrow\; \mathrm{U}_{\mathrm{tot}} = \ln 2 = 0.693,\quad
+\mathrm{U}_{\mathrm{al}} = \mathcal{H}(0.9,0.1) = 0.325
+\;\Rightarrow\; \mathrm{U}_{\mathrm{ep}} = 0.368
+$$
+
+Même hésitation moyenne apparente, mais seule la contradiction (cas 2)
+produit de l'épistémique. Le score `unc_epistemic_combined` (gender +
+attrs) atteint $0.740$ — le meilleur signal individuel du run de référence.
 
 ---
 
-## 6. L'énergie
+## 6. Énergie
 
-Pour la tête gender de logits `(z₀, z₁)` :
+Pour les logits $z = (z_0, z_1)$ de la tête gender, moyennée sur l'ensemble :
 
-```
-E(x) = − log( e^{z₀} + e^{z₁} )        (− logsumexp, moyenné sur les membres)
-```
+$$
+E(x) \;=\; -\frac1M \sum_{m=1}^{M} \ln\!\Big( e^{z^m_0} + e^{z^m_1} \Big)
+\;=\; -\frac1M \sum_m \mathrm{logsumexp}\big(z^m\big)
+$$
 
-Intuition : sur une image d'entraînement, la bonne classe pousse son logit
-très haut → `logsumexp` grand → énergie très **négative**. Sur une image
-OOD, les logits restent petits → l'énergie **monte**.
+**Interprétation.** Un réseau entraîné pousse le logit de la vraie classe
+très haut sur ses données $\Rightarrow$ $\mathrm{logsumexp}$ grand
+$\Rightarrow$ énergie très négative. Sur une image OOD les logits restent
+petits $\Rightarrow$ l'énergie **monte**. Contrairement au MSP, l'énergie
+n'est pas normalisée par le softmax : elle garde l'information d'*amplitude*
+des logits, que la normalisation détruit.
 
-Exemple : logits `(8, −2)` (in-dist confiant) → `E ≈ −8.0`.
-Logits `(1.2, 0.8)` (OOD, mou) → `E = −log(e^{1.2}+e^{0.8}) ≈ −1.7`.
-`−1.7 > −8.0` → l'OOD score plus haut. ✓
+**Exemple.** In-dist confiant $z = (8, -2)$ :
+$E = -\ln(e^{8} + e^{-2}) \approx -8.0$. OOD mou $z = (1.2,\, 0.8)$ :
+$E = -\ln(e^{1.2} + e^{0.8}) \approx -1.70$. On a bien $-1.70 > -8.0$. ✓
 
-Mesuré : 0.72–0.73 sur l'ensemble de référence, et **jusqu'à 0.80 après
-entraînement CutPaste** (§12) — le pretext réorganise les features de sorte
-que les logits s'effondrent davantage sur les vraies occlusions.
+Mesuré : $0.72$–$0.73$ sur l'ensemble de référence — et jusqu'à **$0.80$**
+après entraînement CutPaste (§12), le pretext amplifiant l'effondrement des
+logits sur les vraies occlusions.
 
 ---
 
 ## 7. Score localisé
 
-Deux défauts du p95 global (§4.3) sont corrigés par deux transformations,
-appliquées **dans cet ordre** ([lrad/localized.py](../lrad/localized.py)) :
+Deux corrections successives du $s_{p95}$ global
+([lrad/localized.py](../lrad/localized.py)).
 
-### 7.1 Le z-score par pixel
+### 7.1 z-score par pixel
 
-Sur des images de référence in-dist (val, ou un slice du train), on estime
-**pour chaque position de pixel** `i` la moyenne et l'écart-type de la
-carte de biais :
+Sur $N_{\mathrm{ref}}$ images in-dist de référence (val, ou slice du
+train), on estime **par position** $i$ :
 
-```
-μ(i) = E_ref[ Biais(x)[i] ]        σ(i) = √Var_ref[ Biais(x)[i] ]
-z(x)[i] = ( Biais(x)[i] − μ(i) ) / max(σ(i), σ_min)      σ_min = 10⁻³
-```
+$$
+\mu(i) = \frac{1}{N_{\mathrm{ref}}} \sum_{r} \mathrm{Biais}(x_r)[i],
+\qquad
+\sigma(i) = \sqrt{ \frac{1}{N_{\mathrm{ref}}} \sum_r \mathrm{Biais}(x_r)[i]^2 - \mu(i)^2 }
+$$
 
-**Pourquoi ça marche** : CelebA est aligné — le pixel (30, 40) est toujours
-à peu près le même endroit du visage. Les cheveux/fond ont un μ élevé → ils
-ne dominent plus ; la zone des yeux, toujours bien reconstruite (σ minuscule),
-transforme le moindre écart en z énorme. On obtient l'effet « région des
-yeux » **sans jamais coder la région**.
+$$
+z(x)[i] \;=\; \frac{ \mathrm{Biais}(x)[i] - \mu(i) }{ \max\big(\sigma(i),\, \sigma_{\min}\big) },
+\qquad \sigma_{\min} = 10^{-3}
+$$
 
-Exemple : pixel du fond : `biais = 0.9`, `μ = 0.85`, `σ = 0.3` →
-`z = 0.17` (banal). Pixel de l'œil : `biais = 0.25`, `μ = 0.05`,
-`σ = 0.02` → `z = 10` (très anormal). Le fond avait une erreur brute
-**4× plus grande**, mais c'est l'œil qui ressort. C'est toute l'idée.
+**Interprétation.** CelebA étant aligné, chaque position de pixel a une
+sémantique stable. $\mu(i)$ neutralise les zones *structurellement* mal
+reconstruites (cheveux, fond) ; $\sigma(i)$ **amplifie** les zones
+d'ordinaire faciles (le visage aligné) : un petit écart y devient un $z$
+énorme. Le plancher $\sigma_{\min}$ empêche le bruit float d'exploser aux
+positions quasi déterministes. C'est l'effet « région des yeux » obtenu
+*sans jamais coder de région*.
 
-### 7.2 Le patch-max multi-échelle
+**Exemple.** Pixel de fond : $\mathrm{Biais} = 0.9$, $\mu = 0.85$,
+$\sigma = 0.3 \Rightarrow z = 0.17$ (banal). Pixel d'œil :
+$\mathrm{Biais} = 0.25$, $\mu = 0.05$, $\sigma = 0.02 \Rightarrow z = 10$.
+L'erreur brute du fond était $3.6\times$ plus grande — mais c'est l'œil qui
+domine après normalisation.
 
-Sur la carte z-scorée : average-pooling avec des fenêtres de 4, 8 et 16 px
-(stride = fenêtre/2, donc chevauchantes), maximum spatial, puis maximum sur
-les 3 échelles :
+### 7.2 Patch-max multi-échelle
 
-```
-score(x) = max_taille max_position  moyenne_fenêtre( z(x) )
-```
+Sur la carte $z$, pour des fenêtres carrées $W_k(u)$ de côté
+$k \in \mathcal{K} = \{4, 8, 16\}$ centrées en $u$ (stride $k/2$,
+chevauchantes) :
 
-**Pourquoi** : une anomalie localisée *n'importe où* remplit exactement une
-fenêtre → le max la capte, qu'elle soit sur les yeux, un chapeau ou une
-main. Un pixel isolé bruité est écrasé par la moyenne de sa fenêtre. Le
-test unitaire clé (`tests/test_localized.py`) plante une tache de 3.5 % des
-pixels : elle est **invisible pour le p95** (< 5 %) et **détectée par le
-patch-max**.
+$$
+s_{\mathrm{loc}}(x) \;=\; \max_{k \in \mathcal{K}}\; \max_{u}\;
+\frac{1}{k^2} \sum_{i \in W_k(u)} z(x)[i]
+$$
 
-Résultat : biais 0.638 → **0.686** sur splits complets. Mieux, mais
-l'espace pixel reste limité par le flou des décodeurs → §8.
+**Interprétation.** La moyenne intra-fenêtre écrase le bruit d'un pixel
+isolé ; le max spatial capte une anomalie localisée **où qu'elle soit** ;
+le max sur les échelles rend le score robuste à la taille inconnue de
+l'anomalie. Test unitaire clé : une tache couvrant 3.5 % des pixels est
+invisible pour $Q_{0.95}$ (car $3.5\% < 5\%$) mais sature une fenêtre du
+patch-max.
+
+**Résultat** : biais $0.638 \rightarrow 0.686$ (splits complets). Le
+plafond restant vient du flou des décodeurs $\Rightarrow$ §8.
 
 ---
 
 ## 8. locfre
 
-*Localized Feature Reconstruction Error* — le meilleur signal individuel
-(**0.779** sur splits complets). [lrad/feature_error.py](../lrad/feature_error.py).
+*Localized Feature Reconstruction Error* — le meilleur signal individuel :
+$0.779$ ([lrad/feature_error.py](../lrad/feature_error.py)).
 
-### 8.1 La construction, étape par étape
+### 8.1 Construction
 
-1. Chaque membre reconstruit l'image au bloc **le plus profond** ; on prend
-   le consensus `f̄(x)`. Point crucial : les décodeurs n'ont vu que des
-   visages sans lunettes → **`f̄(x)` est un visage sans lunettes**, même si
-   `x` en porte. La reconstruction « efface » l'anomalie.
-2. On ré-encode `f̄(x)` dans le tronc de chaque membre → activations
-   `aⱼᵐ(f̄(x))`.
-3. Carte d'erreur par position spatiale `u` du bloc `j` (les vecteurs de
-   canaux sont normalisés L2, notés `ĉ`) :
+Soit $k_d$ le bloc le plus profond et
+$\bar f(x) = \frac1M \sum_m \hat f^{\,m}_{k_d}(x)$ le consensus. En notant
+$\hat c(v) = v / \lVert v \rVert_2$ la normalisation L2 du vecteur de
+canaux, la carte d'erreur au bloc $j$, à la position spatiale $u$ :
 
-```
-locfre_j(x)[u] = (1/M) Σₘ ‖ ĉ(aⱼᵐ(x)[u]) − ĉ(aⱼᵐ(f̄(x))[u]) ‖²
-```
+$$
+\ell_j(x)[u] \;=\; \frac{1}{M} \sum_{m=1}^{M}
+\Big\lVert\, \hat c\big(a^m_j(x)[u]\big) \;-\; \hat c\big(a^m_j(\bar f(x))[u]\big) \Big\rVert_2^2
+$$
 
-4. z-score par position contre des stats de référence in-dist (comme §7.1),
-   puis patch-max (fenêtres 2/4/8 adaptées à la résolution du bloc).
+puis z-score par position (comme §7.1) et patch-max (fenêtres $\{2,4,8\}$
+adaptées à la résolution du bloc). Blocs par défaut : $j \in \{1, 3\}$
+(texture fine $16{\times}16$ / sémantique $4{\times}4$ — les plus forts et
+complémentaires).
 
-### 8.2 Pourquoi c'est plus fort que le pixel
+### 8.2 Relation avec le cosinus et bornes
 
-L'erreur **pixel** compare des couleurs : le flou du décodeur crée une
-erreur de fond énorme partout, qui noie l'anomalie. L'erreur **features**
-compare des *concepts* : la normalisation L2 par canal ignore le contraste
-et le flou, mais un objet **sémantiquement absent** de la reconstruction
-(les lunettes) change la direction du vecteur d'activations → distance
-forte, exactement à la position de l'objet.
+Pour des vecteurs unitaires, $\lVert \hat u - \hat v \rVert^2 =
+2\,(1 - \cos\theta)$, donc :
 
-Exemple conceptuel à une position sur les yeux : `x` porte des lunettes →
-le vecteur d'activations pointe vers « monture, verre, reflet ». `f̄(x)`
-montre des yeux nus → le vecteur pointe vers « œil, sourcil, peau ». Ces
-deux directions unitaires sont quasi orthogonales → `‖·‖² ≈ 2` (le max est
-4). Sur un visage sans lunettes, les deux vecteurs coïncident → ≈ 0.
+$$
+\ell_j(x)[u] \;\in\; [0,\, 4],
+\qquad
+\ell_j = 0 \iff \text{mêmes directions},\quad
+\ell_j = 4 \iff \text{directions opposées}
+$$
 
-Les blocs 1 (16×16, texture fine) et 3 (4×4, sémantique) sont les plus
-forts et complémentaires — d'où `blocks = (1, 3)` par défaut.
+**Interprétation — pourquoi ça bat l'espace pixel.** Les décodeurs, entraînés
+sur des visages sans lunettes, produisent un $\bar f(x)$ **sans lunettes**
+même quand $x$ en porte : la reconstruction *efface l'anomalie*. L'erreur
+pixel compare des couleurs et se noie dans le flou du décodeur ; l'erreur
+de *features normalisées* ignore le contraste et le flou (invariance
+d'échelle de $\hat c$) mais détecte un objet **sémantiquement absent** : à
+la position des lunettes, $a_j(x)$ pointe vers « monture/verre/reflet » et
+$a_j(\bar f(x))$ vers « œil/sourcil/peau » — deux directions quasi
+orthogonales, $\cos\theta \approx 0 \Rightarrow \ell \approx 2$, alors
+qu'un visage nu donne $\cos\theta \approx 1 \Rightarrow \ell \approx 0$.
 
 ---
 
 ## 9. Fusion par rang
 
-Les signaux (locfre 0.78, épistémique 0.74, énergie 0.72…) se trompent sur
-des **images différentes**. La fusion la plus simple qui ne demande aucune
-calibration : remplacer chaque score par son **rang normalisé** dans le pool
-d'évaluation, puis moyenner :
+Soit $S$ signaux $s_1, \dots, s_S$ évalués sur les $N = n + n'$ images du
+pool de test. Le rang $r_s(x) \in \{0, \dots, N-1\}$ est la position de
+$x$ dans le tri croissant du signal $s$. La fusion (poids $w_s \ge 0$,
+uniformes par défaut) :
 
-```
-fused(x) = (1/S) Σ_s  rang_s(x) / (N−1)
-```
+$$
+F(x) \;=\; \frac{1}{\sum_s w_s} \sum_{s=1}^{S} w_s\, \frac{r_s(x)}{N-1}
+$$
 
-### Exemple complet
+**Interprétation.** Par l'invariance monotone (§2.4), remplacer $s$ par son
+rang ne change pas son AUROC individuelle — mais rend les signaux
+**commensurables** ($r/(N{-}1) \in [0,1]$ pour tous), là où une moyenne des
+scores bruts serait dominée par l'échelle du plus grand. Aucune étiquette
+ni calibration n'est utilisée : la fusion reste totalement non supervisée.
+Les erreurs des signaux étant faites sur des images *différentes*, la
+moyenne des rangs les compense.
 
-4 images (2 in : A, B ; 2 ood : C, D), 2 signaux :
+**Exemple ($N{=}4$ : in $=\{A,B\}$, ood $=\{C,D\}$, $S{=}2$).**
 
-| Image | s₁ (locfre) | rang₁ | s₂ (énergie) | rang₂ | fused |
-|---|---|---|---|---|---|
-| A (in) | 1.2 | 0/3 = 0.00 | −8.1 | 1/3 = 0.33 | 0.17 |
-| B (in) | 3.0 | 2/3 = 0.67 | −9.0 | 0/3 = 0.00 | 0.33 |
-| C (ood) | 2.1 | 1/3 = 0.33 | −5.0 | 3/3 = 1.00 | 0.67 |
-| D (ood) | 4.5 | 3/3 = 1.00 | −6.2 | 2/3 = 0.67 | 0.83 |
+$$
+\begin{array}{c|cc|cc|c}
+ & s_1 & r_1/3 & s_2 & r_2/3 & F \\ \hline
+A\ (\mathrm{in})  & 1.2 & 0    & -8.1 & 1/3 & 0.17 \\
+B\ (\mathrm{in})  & 3.0 & 2/3  & -9.0 & 0   & 0.33 \\
+C\ (\mathrm{ood}) & 2.1 & 1/3  & -5.0 & 1   & 0.67 \\
+D\ (\mathrm{ood}) & 4.5 & 1    & -6.2 & 2/3 & 0.83 \\
+\end{array}
+$$
 
-Chaque signal seul fait une erreur (s₁ classe B au-dessus de C ; s₂ classe
-A au-dessus de B, peu importe) — mais le **fused** classe parfaitement :
-`{A, B} < {C, D}` → AUROC = 1.0. Les erreurs des signaux ne coïncident pas,
-la moyenne des rangs les annule.
+$s_1$ se trompe ($B$ au-dessus de $C$), $s_2$ aussi (ordre interne),
+mais $F$ ordonne parfaitement $\{A,B\} < \{C,D\}$ :
+$\mathrm{AUROC}(F) = 1$ alors qu'aucun signal seul n'y arrive.
 
-Pourquoi les rangs et pas les scores bruts ? Parce que locfre vit dans
-`[0, 20]`, l'énergie dans `[−12, −1]` : une moyenne brute serait dominée
-par l'échelle, pas par l'information. Le rang est sans échelle (§2.4).
-
-Recette validée : `locfre_b1 + locfre_b3 + épistémique + énergie`
-(+ `cutpaste_prob` si les modèles ont la tête §11) → **0.803** splits
-complets, sans aucune donnée OOD ni étiquette.
+**Recette validée** : $\{\ell_1,\, \ell_3,\, \mathrm{U}_{\mathrm{ep}},\, E\}$
+($+\ \mathrm{cutpaste\_prob}$ si disponible, §11) $\Rightarrow$ **0.803**
+sur splits complets.
 
 ---
 
 ## 10. Fusion supervisée
 
-La fusion par rang pèse tout également. Une **régression logistique**
-apprend les poids sur des exemples étiquetés :
+### 10.1 Modèle
 
-```
-fused_sup(x) = Σ_s w_s · (score_s(x) − μ_s)/σ_s + b
-```
+Chaque signal est z-normalisé avec les statistiques de **calibration**
+$(\mu_s, \sigma_s)$, puis combiné linéairement :
 
-les `w_s` maximisant la séparation in/ood sur un jeu de **calibration**.
+$$
+F_{\sup}(x) \;=\; \sum_{s=1}^{S} w_s\, \frac{s(x) - \mu_s}{\sigma_s} \;+\; b
+$$
 
-### 10.1 Le protocole anti-fuite (crucial)
+Les poids minimisent la log-vraisemblance négative de la régression
+logistique sur le jeu de calibration $\{(x_i, y_i)\}$ :
 
-```
-pool OOD (13 193)  ──split seed 42──►  moitié A (6 596)  → CALIBRATION (label 1)
-                                       moitié B (6 597)  → ÉVALUATION seulement
-train in-dist      ──slice────────►    6 596 négatifs    → CALIBRATION (label 0)
-test_in (18 941)   ────────────────►   jamais touché     → ÉVALUATION seulement
-```
+$$
+(w^\star, b^\star) \;=\; \arg\min_{w,b}\;
+\sum_i \Big[ -y_i \ln \sigma\big(F_{\sup}(x_i)\big) - (1-y_i) \ln\big(1 - \sigma(F_{\sup}(x_i))\big) \Big]
+$$
+
+avec $\sigma(t) = 1/(1+e^{-t})$. $F_{\sup}(x)$ est le logit de
+$\mathbb{P}(\mathrm{OOD} \mid x)$ estimé.
+
+### 10.2 Protocole anti-fuite
+
+$$
+\underbrace{\text{pool OOD } (13\,193)}_{\text{split seed }42}
+\;\longrightarrow\;
+\begin{cases}
+\text{moitié A } (6\,596) & \to \text{calibration } (y{=}1) \\
+\text{moitié B } (6\,597) & \to \text{évaluation seulement}
+\end{cases}
+$$
+
+$$
+\text{train in-dist} \to 6\,596 \text{ négatifs de calibration } (y{=}0),
+\qquad
+\text{test\_in } (18\,941) \to \text{évaluation seulement}
+$$
 
 L'AUROC finale est mesurée sur `test_in` vs **moitié B** — des images que
-la régression n'a jamais vues. Le split est fait par
-`split_loader` ([lrad/dataset.py](../lrad/dataset.py)) : permutation seedée,
-déterministe, disjointe.
+la régression n'a jamais vues. Split déterministe par permutation seedée
+(`split_loader`, [lrad/dataset.py](../lrad/dataset.py)).
 
-### 10.2 Les poids appris (run 6774881) et leur lecture
+### 10.3 Poids appris (run 6774881) et lecture
 
-```
-unc_epistemic_combined  +6.26   ← le signal porteur
-ens_msp_gender          +2.40
-locfre_b3               +0.95
-locfre_b1               +0.37
-ens_energy_gender       +0.48
-unc_epistemic_gender    −4.44   ← corrections de redondance
-unc_total_combined      −2.46
-```
+$$
+w \approx
+\begin{cases}
++6.26 & \mathrm{U}_{\mathrm{ep}}^{\mathrm{comb}} \\
++2.40 & \mathrm{MSP}^{\mathrm{ens}} \\
++0.95 & \ell_3 \\
++0.48 & E \\
+-4.44 & \mathrm{U}_{\mathrm{ep}}^{\mathrm{gender}} \\
+-2.46 & \mathrm{U}_{\mathrm{tot}}^{\mathrm{comb}}
+\end{cases}
+$$
 
-Les poids **négatifs** sont l'avantage clé sur la fusion par rang :
-épistémique *combined* et épistémique *gender* sont très corrélés ; la
-régression garde l'un à fond et **soustrait** l'autre pour ne conserver que
-l'information non redondante — ce qu'une moyenne ne peut pas faire.
-Résultat : **0.810** vs 0.803 (rang). Le prix : il faut ~quelques milliers
-d'exemples OOD étiquetés, et les poids sont spécialisés « lunettes ».
+**Interprétation.** Les poids **négatifs** sont l'avantage décisif sur la
+moyenne des rangs : $\mathrm{U}_{\mathrm{ep}}^{\mathrm{comb}}$ et
+$\mathrm{U}_{\mathrm{ep}}^{\mathrm{gender}}$ sont très corrélés, la
+régression garde l'un ($+6.26$) et **soustrait** l'autre ($-4.44$) pour ne
+retenir que l'information non redondante — une décorrélation qu'aucune
+moyenne pondérée positive ne peut réaliser. Gain : $0.810$ vs $0.803$.
+Coût : des exemples OOD étiquetés, et des poids spécialisés « lunettes ».
 
 ---
 
 ## 11. CutPaste
 
-Tout ce qui précède est *post-hoc* (les modèles n'ont jamais rien appris
-sur les occlusions). CutPaste ([lrad/cutpaste.py](../lrad/cutpaste.py))
-attaque l'entraînement lui-même, **sans aucune donnée OOD réelle**.
+Tout ce qui précède est *post-hoc*. CutPaste modifie **l'entraînement**
+pour apprendre le concept « quelque chose recouvre le visage », sans donnée
+OOD réelle ([lrad/cutpaste.py](../lrad/cutpaste.py)).
 
-### 11.1 L'augmentation
+### 11.1 Augmentation
 
-Pendant l'entraînement, chaque image du batch est altérée avec probabilité
-`prob` : un rectangle est découpé dans une image **donneuse** (l'image
-suivante du batch — donc de la vraie texture de visage) et collé à une
-position aléatoire. Deux formes :
+Chaque image du batch est altérée avec probabilité $p$. Un rectangle est
+découpé dans une image **donneuse** (l'image suivante du batch — donc de la
+vraie texture faciale) et collé à une position aléatoire. Forme *patch* :
+aire relative $\alpha \sim \mathcal{U}(\alpha_{\min}, \alpha_{\max})$ et
+aspect $\rho \sim \mathcal{U}(\rho_{\min}, \rho_{\max})$ donnent
 
-- **patch** : aire `∈ area_range` × l'image (ex. 5–15 %), ratio d'aspect
-  `∈ aspect_range` ;
-- **scar** : sliver fin (2–8 px × 10–45 % de l'image), horizontal ou
-  vertical — mélangés par `scar_prob`.
+$$
+h = \sqrt{\alpha H W \rho},
+\qquad
+w = \sqrt{\alpha H W / \rho}
+$$
 
-Exemple avec `area_range = [0.05, 0.15]` sur du 64×64 : aire tirée 10 % →
-410 px² ; aspect tiré 2.0 → `h = √(410×2) ≈ 29`, `w = √(410/2) ≈ 14` →
-un rectangle 29×14 collé quelque part. C'est, en gros, la taille d'une
-paire de lunettes.
+Forme *scar* : sliver de $2$–$8$ px $\times$ $10$–$45\,\%$ du côté, dans
+une orientation aléatoire ; mélange contrôlé par $p_{\mathrm{scar}}$.
 
-### 11.2 La tête pretext et la perte
+**Exemple.** $64{\times}64$, $\alpha = 0.10$, $\rho = 2$ :
+$h = \sqrt{0.1 \cdot 4096 \cdot 2} \approx 29$,
+$w = \sqrt{0.1 \cdot 4096 / 2} \approx 14$ — un rectangle $29 \times 14$,
+l'ordre de grandeur d'une paire de lunettes.
 
-Le modèle reçoit une 3ᵉ tête binaire (`model.cutpaste_head: true`) qui
-prédit *intact (0) vs altéré (1)*. La perte totale d'un batch :
+### 11.2 Perte d'entraînement
 
-```
-L = CE_gender(intacts) + 2·BCE_attrs(intacts) + w_cp · CE_cutpaste(tout le batch)
-```
+Une 3ᵉ tête binaire prédit *intact* ($\tilde y = 0$) vs *altéré*
+($\tilde y = 1$). Avec $\mathcal{I}$ l'ensemble des images restées
+intactes du batch :
 
-Les pertes supervisées ne portent que sur les images **intactes** (un patch
-peut occulter les sourcils dont dépendent les labels) ; la perte pretext
-porte sur tout. `w_cp` = `loss_weight` (le grid search a montré que 0.5
-vaut mieux que 2 — trop de pretext dégrade le reste, §12).
+$$
+\mathcal{L} \;=\;
+\underbrace{\mathcal{L}_{\mathrm{CE}}^{\mathrm{gender}}(\mathcal{I})}_{\text{supervisé}}
++ \lambda_a\, \underbrace{\mathcal{L}_{\mathrm{BCE}}^{\mathrm{attrs}}(\mathcal{I})}_{\text{supervisé}}
++ w_{cp}\, \underbrace{\mathcal{L}_{\mathrm{CE}}^{cp}(\text{batch entier})}_{\text{pretext}}
+$$
 
-### 11.3 Le signal à l'évaluation
+**Interprétation.** Les pertes supervisées sont restreintes à $\mathcal{I}$
+car un patch peut occulter les sourcils dont dépendent les labels ; la
+perte pretext couvre tout le batch. $w_{cp}$ règle l'équilibre — le grid
+search (§12) montre que $w_{cp} = 0.5$ bat $2.0$ : trop de pretext dégrade
+les autres signaux.
 
-```
-cutpaste_prob(x) = (1/M) Σₘ P_m(altéré | x)
-```
+### 11.3 Signal à l'évaluation
 
-Le modèle n'a vu que des patchs synthétiques, mais « quelque chose recouvre
-le visage » **généralise** : de vraies lunettes font monter P(altéré).
-Mesuré au grid search : jusqu'à **0.746** AUROC pour un seul petit modèle.
-Le signal s'ajoute automatiquement aux deux fusions quand les membres
-portent la tête.
+$$
+s_{cp}(x) \;=\; \frac{1}{M} \sum_{m=1}^{M} \mathbb{P}_m\big(\text{altéré} \mid x\big)
+$$
+
+**Interprétation.** Entraîné uniquement sur des collages synthétiques, le
+concept *généralise* aux occlusions réelles : de vraies lunettes font
+monter $\mathbb{P}(\text{altéré})$. Mesuré : jusqu'à $0.746$ pour un seul
+petit modèle. Le signal entre automatiquement dans les deux fusions
+(§9–§10) quand les membres portent la tête.
 
 ---
 
-## 12. Le grid search multi-métriques
+## 12. Grid search multi-métriques
 
-[scripts/run_gridsearch.py](../scripts/run_gridsearch.py) — comment choisir
-les hyperparamètres CutPaste **sans** entraîner 30 ensembles complets.
+Comment choisir les hyperparamètres CutPaste **sans** entraîner 30
+ensembles complets ([scripts/run_gridsearch.py](../scripts/run_gridsearch.py)).
 
-### 12.1 La grille et son élagage
+### 12.1 Espace de recherche et élagage
 
-```
-scar_prob   ∈ {0, 0.5, 1.0}     forme des patchs
-area_range  ∈ {(2–8 %), (5–15 %)}   taille des boîtes
-prob        ∈ {0.3, 0.5}        fraction du batch altérée
-loss_weight ∈ {0.5, 1.0, 2.0}   poids de la perte pretext
-```
+$$
+\Theta = \underbrace{\{0,\, 0.5,\, 1\}}_{p_{\mathrm{scar}}}
+\times \underbrace{\{(0.02, 0.08),\, (0.05, 0.15)\}}_{(\alpha_{\min}, \alpha_{\max})}
+\times \underbrace{\{0.3,\, 0.5\}}_{p}
+\times \underbrace{\{0.5,\, 1,\, 2\}}_{w_{cp}}
+\qquad |\Theta| = 36
+$$
 
-Produit brut : 36 configs. **Élagage** : quand `scar_prob = 1.0` (scars
-uniquement), `area_range` n'est jamais lu → les configs qui ne diffèrent
-que par lui sont identiques ; on n'en garde qu'une → **30 configs**.
+Élagage : si $p_{\mathrm{scar}} = 1$ (scars uniquement), $\alpha$ n'est
+jamais lu — les configs qui ne diffèrent que par lui sont identiques ; on
+n'en garde qu'une : $|\Theta'| = 30$.
 
-### 12.2 Ce que fait chaque config (≈ 18 min sur 2080 Ti)
+### 12.2 Procédure par config $\theta$ (≈ 18 min / 2080 Ti)
 
-1. **Même seed pour toutes** — elles ne diffèrent que par les boutons
-   CutPaste, pas par l'init ni l'ordre des batchs (comparaison propre).
-2. Entraîne le classifieur **6 epochs** (vs 20 en vrai) avec la tête
-   pretext, un checkpoint par epoch.
-3. Recharge chaque checkpoint et mesure l'AUROC cutpaste par epoch → la
-   courbe `gridsearch_epochs.png` (répond à « combien d'epochs ? » sans en
-   faire une dimension de grille — gratuit).
-4. Entraîne les décodeurs **8 epochs** (vs 25) — nécessaires pour mesurer
-   les signaux de reconstruction.
-5. Évalue **5 AUROC** sur des splits de test plafonnés (~5 000 images/côté) :
-   `cutpaste`, `bias_p95` (§4), `locfre_b3` (§8), `energy` (§6), et
-   **`fused`** = fusion par rang des 4 (l'épistémique est exclue : avec un
-   seul modèle elle vaut identiquement 0).
-6. **La sélection se fait sur `fused`** : c'est le score final du projet,
-   donc on choisit les hyperparamètres qui optimisent *l'ensemble du
-   stack*, pas une métrique isolée — c'était la demande.
+1. **Graine commune** : toutes les configs partagent seed, init et ordre
+   des batchs — la comparaison isole les boutons CutPaste.
+2. Classifieur : 6 epochs (vs 20), un checkpoint/epoch ; chaque checkpoint
+   est réévalué pour la courbe $\mathrm{AUROC}_{cp}(\text{epoch})$
+   (`gridsearch_epochs.png`) — le budget d'epochs se lit gratuitement, sans
+   dimension de grille supplémentaire.
+3. Décodeurs : 8 epochs (vs 25) — nécessaires aux signaux de reconstruction.
+4. Cinq AUROC sur splits plafonnés (~5 000 images/côté) : $s_{cp}$,
+   $s_{p95}(\mathrm{Biais})$, $\ell_3$, $E$, et leur fusion par rang
+   ($\mathrm{U}_{\mathrm{ep}}$ exclue : avec $M{=}1$ elle est identiquement
+   nulle).
+5. **Sélection** :
 
-### 12.3 Pourquoi des schedules courts suffisent
+$$
+\theta^\star = \arg\max_{\theta \in \Theta'}\;
+\mathrm{AUROC}\Big( F_\theta \Big),
+\qquad F_\theta = \text{fusion par rang de } \{s_{cp},\, s_{p95},\, \ell_3,\, E\}
+$$
 
-On ne cherche pas la performance absolue, on cherche un **classement** de
-configs. L'hypothèse (standard) : si la config X bat la config Y à 6
-epochs, elle la bat aussi à 20. Le risque de mauvais classement existe mais
-il est faible entre configs proches, et le coût est divisé par ~5.
+**Interprétation.** On optimise le *score final du projet* (la fusion), pas
+une métrique isolée — c'est ce qui protège les autres signaux : une
+sélection sur $s_{cp}$ seul aurait pu choisir une config qui détruit
+l'énergie sans qu'on le voie.
 
-### 12.4 Les résultats (job 6781780) et leur lecture
+**Hypothèse des schedules courts** : le *classement* des configs à 6+8
+epochs prédit celui à 20+25. On ne lit jamais les valeurs absolues d'un
+schedule court comme finales — seulement l'ordre.
 
-| Rang | Config | fused | cutpaste | bias | locfre | energy |
-|---|---|---|---|---|---|---|
-| 1 | box, 5–15 %, p=.5, w=.5 | **0.827** | 0.746 | 0.634 | 0.760 | 0.803 |
-| 2 | box, 5–15 %, p=.5, w=1 | 0.822 | 0.676 | 0.638 | 0.752 | 0.806 |
-| … | | | | | | |
-| 30 | scar-only, p=.5, w=.5 | 0.659 | 0.592 | 0.639 | 0.758 | 0.406 |
+### 12.3 Résultats (job 6781780)
 
-Lectures :
+$$
+\theta^\star : \quad p_{\mathrm{scar}} = 0,\quad \alpha \in (0.05,\, 0.15),\quad p = 0.5,\quad w_{cp} = 0.5
+\qquad \Rightarrow \qquad \mathrm{AUROC}(F_{\theta^\star}) = 0.827
+$$
 
-- **Gros patchs sans scar gagnent** (rangs 1-2-3-5) : un gros rectangle de
-  texture ressemble plus à une vraie occlusion qu'un trait fin.
-- **`bias_p95` est plat (~0.64 partout)** : les décodeurs s'entraînent sur
-  des reconstructions propres quelle que soit l'augmentation — c'est le
-  128 px qui doit l'aider, pas CutPaste. Le grid le **prouve** au lieu de
-  le supposer.
-- **L'énergie varie de 0.41 à 0.80 selon la config** : la découverte
-  majeure. Le pretext restructure le tronc au point de transformer un
-  signal existant. C'est pour ça qu'il fallait une sélection
-  multi-métriques : une config choisie sur `cutpaste` seul aurait pu tuer
-  l'énergie sans qu'on le voie.
-- 0.827 avec **un seul** modèle court à 64 px > 0.810 de l'ensemble complet
-  de 10 → l'ensemble 128 px final part de très haut.
+| Enseignement | Preuve dans la grille |
+| --- | --- |
+| Gros patchs sans scar $\gg$ scars | rangs 1-2-3-5 tous à $p_{\mathrm{scar}}{=}0$ ; scar-only dernier (0.659) |
+| $w_{cp} = 2$ nuit | les configs $w_{cp}{=}2$ peuplent le bas du tableau |
+| $s_{p95}$ insensible à CutPaste ($\approx 0.64$ partout) | c'est le 128 px qui devra l'aider, pas l'augmentation |
+| L'énergie dépend fortement du pretext | $E$ varie de $0.41$ à $0.80$ selon $\theta$ |
+| Le supervisé ne souffre pas | gender\_acc $\ge 0.978$ partout |
+
+Et $0.827$ avec **un seul** modèle court à 64 px dépasse déjà les $0.810$
+de l'ensemble complet de 10 — d'où l'objectif $0.85$–$0.90$ du run final.
 
 ---
 
 ## 13. Historique des résultats
 
-Splits complets sauf mention. La progression, mesure par mesure :
+Splits complets sauf mention contraire :
 
 | Étape | Score | AUROC |
-|---|---|---|
-| Baseline historique | biais p95 global (§4) | 0.638 |
-| + incertitude | épistémique combined (§5) | 0.740 |
-| + localisation | z-score pixel + patch-max (§7) | 0.686 |
-| + espace features | locfre_b3 (§8) | 0.779 |
-| + fusion | rang à 4 signaux (§9) | **0.803** |
+| --- | --- | --- |
+| Baseline historique | $s_{p95}(\mathrm{Biais})$ (§4) | 0.638 |
+| + incertitude | $\mathrm{U}_{\mathrm{ep}}^{\mathrm{comb}}$ (§5) | 0.740 |
+| + localisation | z-score + patch-max (§7) | 0.686 |
+| + espace features | $\ell_3$ (§8) | 0.779 |
+| + fusion | rang, 4 signaux (§9) | **0.803** |
 | + supervision | logistique calibrée (§10) | **0.810** |
-| + CutPaste (grid, 1 modèle court, sous-échantillon) | fused (§12) | **0.827** |
-| ensemble 8×128 px + CutPaste (job à lancer) | fused | objectif 0.85–0.90 |
+| + CutPaste (grid, 1 modèle court, sous-échantillon) | $F_{\theta^\star}$ (§12) | **0.827** |
+| ensemble $8 \times 128$ px + CutPaste (à lancer) | fusion complète | objectif 0.85–0.90 |
 
 ---
 
-## 14. Où vit chaque mesure dans le code
+## 14. Carte du code
 
 | Mesure | Module | Script d'évaluation |
-|---|---|---|
-| AUROC / ROC | `lrad/evaluate.py` (`_auroc_entry`, `ood_auroc`) | tous |
-| MSP, entropies | `lrad/evaluate.py` (`collect_predictions`) | `run_celeba.py` |
-| Risque/Biais/Variance | `lrad/ensemble.py` (`decomposition_maps`) | `run_ensemble.py` |
-| Incertitudes | `lrad/ensemble.py` (`_uncertainty_scores`) | `run_ensemble.py` |
-| z-score + patch-max | `lrad/localized.py` | `run_localized.py` |
-| locfre | `lrad/feature_error.py` | `run_fused.py` |
-| énergie, cutpaste_prob | `lrad/fusion.py` (`collect_fusion_signals`) | `run_fused.py` |
-| fusion rang / supervisée | `lrad/fusion.py` | `run_fused.py --supervised` |
-| CutPaste | `lrad/cutpaste.py` + `lrad/train.py` | (entraînement) |
-| grid search | — | `run_gridsearch.py` |
+| --- | --- | --- |
+| AUROC / ROC (§2) | `lrad/evaluate.py` (`_auroc_entry`, `ood_auroc`) | tous |
+| MSP, entropies (§3) | `lrad/evaluate.py` (`collect_predictions`) | `run_celeba.py` |
+| Risque/Biais/Variance (§4) | `lrad/ensemble.py` (`decomposition_maps`) | `run_ensemble.py` |
+| Incertitudes (§5) | `lrad/ensemble.py` (`_uncertainty_scores`) | `run_ensemble.py` |
+| z-score + patch-max (§7) | `lrad/localized.py` | `run_localized.py` |
+| locfre (§8) | `lrad/feature_error.py` | `run_fused.py` |
+| énergie (§6), $s_{cp}$ (§11) | `lrad/fusion.py` (`collect_fusion_signals`) | `run_fused.py` |
+| fusion rang (§9) / supervisée (§10) | `lrad/fusion.py` | `run_fused.py --supervised` |
+| CutPaste (§11) | `lrad/cutpaste.py` + `lrad/train.py` | (entraînement) |
+| grid search (§12) | — | `run_gridsearch.py` |
 
 Jobs OAR : `oar_run_gridsearch.sh` (24 h), `oar_run_cutpaste128.sh` (48 h,
 gruss), `oar_run_fused.sh` (4 h, éval seule sur checkpoints existants).
