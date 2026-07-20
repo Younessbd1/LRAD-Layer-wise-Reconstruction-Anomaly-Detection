@@ -1,0 +1,230 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1460" height="800" viewBox="0 0 1460 800" font-family="Inter, Helvetica, Arial, sans-serif">
+  <defs>
+    <marker id="ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#6b7684"/>
+    </marker>
+    <style>
+      .ttl  { font-size: 21px; font-weight: 700; fill: #14203a; }
+      .sub  { font-size: 12.5px; fill: #5c6b81; }
+      .bt   { font-size: 12.5px; font-weight: 700; fill: #14203a; }
+      .bl   { font-size: 11px; fill: #33445e; }
+      .shape{ font-size: 11px; font-weight: 600; fill: #a85c22; font-family: ui-monospace, Menlo, monospace; }
+      .act  { font-size: 11px; font-weight: 600; fill: #4a7fc1; font-family: ui-monospace, Menlo, monospace; }
+      .note { font-size: 11px; fill: #6b7684; }
+      .sec  { font-size: 12px; font-weight: 700; fill: #8a94a6; letter-spacing: .08em; }
+      .hdr  { font-size: 11.5px; font-weight: 700; fill: #8a94a6; }
+    </style>
+  </defs>
+  <rect width="1460" height="800" fill="#ffffff"/>
+
+  <text class="ttl" x="30" y="38">Pipeline « décodeur » — un BlockDecoder par bloc de convolution (membre 0)</text>
+  <text class="sub" x="30" y="60">lrad/decoder.py · lrad/train.py:train_decoders — classifieur GELÉ, 25 époques, Adam 1e-3, perte = Σₖ MSE(dₖ(aₖ), x) · 1 615 391 paramètres au total</text>
+
+  <!-- column headers -->
+  <text class="hdr" x="30"   y="98">ACTIVATION D’ENTRÉE</text>
+  <text class="hdr" x="258"  y="98">ÉTAGES ×2 : ConvTranspose2d(4×4, stride 2, pad 1) → BN → ReLU   (canaux divisés par 2, plancher 16)</text>
+  <text class="hdr" x="1104" y="98">TÊTE</text>
+  <text class="hdr" x="1292" y="98">SORTIE</text>
+  <line x1="30" y1="108" x2="1430" y2="108" stroke="#dfe4ec" stroke-width="1"/>
+
+  <!-- ============ ROW 0 ============ -->
+  <g transform="translate(0,120)">
+    <rect x="30" y="0" width="212" height="70" rx="8" fill="#e8f0fb" stroke="#4a7fc1" stroke-width="1.6"/>
+    <text class="bt"  x="46" y="24">a₀  — bloc 1</text>
+    <text class="act" x="46" y="45">32 × 64 × 64</text>
+    <text class="note" x="46" y="62">n_up = log₂(128/64) = 1</text>
+    <path d="M 242 35 L 268 35" stroke="#6b7684" stroke-width="1.5" marker-end="url(#ar)" fill="none"/>
+
+    <rect x="272" y="0" width="196" height="70" rx="8" fill="#fdeee4" stroke="#d98246" stroke-width="1.6"/>
+    <text class="bt"  x="288" y="24">ConvT  32 → 16</text>
+    <text class="shape" x="288" y="45">16 × 128 × 128</text>
+    <text class="note" x="288" y="62">BN + ReLU</text>
+    <path d="M 468 35 L 1098 35" stroke="#6b7684" stroke-width="1.5" stroke-dasharray="3 4" marker-end="url(#ar)" fill="none"/>
+
+    <rect x="1102" y="0" width="176" height="70" rx="8" fill="#f6f2fb" stroke="#8b63b8" stroke-width="1.6"/>
+    <text class="bt" x="1118" y="24">Conv 1×1 → 3</text>
+    <text class="bl" x="1118" y="45">Sigmoïde</text>
+    <text class="note" x="1118" y="62">sortie ∈ [0,1]</text>
+    <path d="M 1278 35 L 1300 35" stroke="#6b7684" stroke-width="1.5" marker-end="url(#ar)" fill="none"/>
+
+    <rect x="1304" y="0" width="126" height="70" rx="8" fill="#f4f7fc" stroke="#8fa6c4" stroke-width="1.5"/>
+    <text class="bt"  x="1367" y="28" text-anchor="middle">f̂₀(x)</text>
+    <text class="shape" x="1367" y="48" text-anchor="middle">3×128×128</text>
+    <text class="note" x="1367" y="63" text-anchor="middle">8 275 par.</text>
+  </g>
+
+  <!-- ============ ROW 1 ============ -->
+  <g transform="translate(0,212)">
+    <rect x="30" y="0" width="212" height="70" rx="8" fill="#e8f0fb" stroke="#4a7fc1" stroke-width="1.6"/>
+    <text class="bt"  x="46" y="24">a₁  — bloc 2</text>
+    <text class="act" x="46" y="45">64 × 32 × 32</text>
+    <text class="note" x="46" y="62">n_up = 2</text>
+    <path d="M 242 35 L 268 35" stroke="#6b7684" stroke-width="1.5" marker-end="url(#ar)" fill="none"/>
+
+    <rect x="272" y="0" width="196" height="70" rx="8" fill="#fdeee4" stroke="#d98246" stroke-width="1.6"/>
+    <text class="bt"  x="288" y="24">ConvT  64 → 32</text>
+    <text class="shape" x="288" y="45">32 × 64 × 64</text>
+    <text class="note" x="288" y="62">BN + ReLU</text>
+    <path d="M 468 35 L 490 35" stroke="#6b7684" stroke-width="1.5" marker-end="url(#ar)" fill="none"/>
+
+    <rect x="494" y="0" width="196" height="70" rx="8" fill="#fdeee4" stroke="#d98246" stroke-width="1.6"/>
+    <text class="bt"  x="510" y="24">ConvT  32 → 16</text>
+    <text class="shape" x="510" y="45">16 × 128 × 128</text>
+    <text class="note" x="510" y="62">BN + ReLU</text>
+    <path d="M 690 35 L 1098 35" stroke="#6b7684" stroke-width="1.5" stroke-dasharray="3 4" marker-end="url(#ar)" fill="none"/>
+
+    <rect x="1102" y="0" width="176" height="70" rx="8" fill="#f6f2fb" stroke="#8b63b8" stroke-width="1.6"/>
+    <text class="bt" x="1118" y="24">Conv 1×1 → 3</text>
+    <text class="bl" x="1118" y="45">Sigmoïde</text>
+    <path d="M 1278 35 L 1300 35" stroke="#6b7684" stroke-width="1.5" marker-end="url(#ar)" fill="none"/>
+
+    <rect x="1304" y="0" width="126" height="70" rx="8" fill="#f4f7fc" stroke="#8fa6c4" stroke-width="1.5"/>
+    <text class="bt"  x="1367" y="28" text-anchor="middle">f̂₁(x)</text>
+    <text class="shape" x="1367" y="48" text-anchor="middle">3×128×128</text>
+    <text class="note" x="1367" y="63" text-anchor="middle">41 107 par.</text>
+  </g>
+
+  <!-- ============ ROW 2 ============ -->
+  <g transform="translate(0,304)">
+    <rect x="30" y="0" width="212" height="70" rx="8" fill="#e8f0fb" stroke="#4a7fc1" stroke-width="1.6"/>
+    <text class="bt"  x="46" y="24">a₂  — bloc 3</text>
+    <text class="act" x="46" y="45">128 × 16 × 16</text>
+    <text class="note" x="46" y="62">n_up = 3</text>
+    <path d="M 242 35 L 268 35" stroke="#6b7684" stroke-width="1.5" marker-end="url(#ar)" fill="none"/>
+
+    <rect x="272" y="0" width="196" height="70" rx="8" fill="#fdeee4" stroke="#d98246" stroke-width="1.6"/>
+    <text class="bt"  x="288" y="24">ConvT  128 → 64</text>
+    <text class="shape" x="288" y="45">64 × 32 × 32</text>
+    <text class="note" x="288" y="62">BN + ReLU</text>
+    <path d="M 468 35 L 490 35" stroke="#6b7684" stroke-width="1.5" marker-end="url(#ar)" fill="none"/>
+
+    <rect x="494" y="0" width="196" height="70" rx="8" fill="#fdeee4" stroke="#d98246" stroke-width="1.6"/>
+    <text class="bt"  x="510" y="24">ConvT  64 → 32</text>
+    <text class="shape" x="510" y="45">32 × 64 × 64</text>
+    <text class="note" x="510" y="62">BN + ReLU</text>
+    <path d="M 690 35 L 712 35" stroke="#6b7684" stroke-width="1.5" marker-end="url(#ar)" fill="none"/>
+
+    <rect x="716" y="0" width="196" height="70" rx="8" fill="#fdeee4" stroke="#d98246" stroke-width="1.6"/>
+    <text class="bt"  x="732" y="24">ConvT  32 → 16</text>
+    <text class="shape" x="732" y="45">16 × 128 × 128</text>
+    <text class="note" x="732" y="62">BN + ReLU</text>
+    <path d="M 912 35 L 1098 35" stroke="#6b7684" stroke-width="1.5" stroke-dasharray="3 4" marker-end="url(#ar)" fill="none"/>
+
+    <rect x="1102" y="0" width="176" height="70" rx="8" fill="#f6f2fb" stroke="#8b63b8" stroke-width="1.6"/>
+    <text class="bt" x="1118" y="24">Conv 1×1 → 3</text>
+    <text class="bl" x="1118" y="45">Sigmoïde</text>
+    <path d="M 1278 35 L 1300 35" stroke="#6b7684" stroke-width="1.5" marker-end="url(#ar)" fill="none"/>
+
+    <rect x="1304" y="0" width="126" height="70" rx="8" fill="#f4f7fc" stroke="#8fa6c4" stroke-width="1.5"/>
+    <text class="bt"  x="1367" y="28" text-anchor="middle">f̂₂(x)</text>
+    <text class="shape" x="1367" y="48" text-anchor="middle">3×128×128</text>
+    <text class="note" x="1367" y="63" text-anchor="middle">172 307 par.</text>
+  </g>
+
+  <!-- ============ ROW 3 ============ -->
+  <g transform="translate(0,396)">
+    <rect x="30" y="0" width="212" height="70" rx="8" fill="#e8f0fb" stroke="#4a7fc1" stroke-width="1.6"/>
+    <text class="bt"  x="46" y="24">a₃  — bloc 4</text>
+    <text class="act" x="46" y="45">256 × 8 × 8</text>
+    <text class="note" x="46" y="62">n_up = 4</text>
+    <path d="M 242 35 L 268 35" stroke="#6b7684" stroke-width="1.5" marker-end="url(#ar)" fill="none"/>
+
+    <rect x="272" y="0" width="196" height="70" rx="8" fill="#fdeee4" stroke="#d98246" stroke-width="1.6"/>
+    <text class="bt"  x="288" y="24">ConvT  256 → 128</text>
+    <text class="shape" x="288" y="45">128 × 16 × 16</text>
+    <text class="note" x="288" y="62">BN + ReLU</text>
+    <path d="M 468 35 L 490 35" stroke="#6b7684" stroke-width="1.5" marker-end="url(#ar)" fill="none"/>
+
+    <rect x="494" y="0" width="196" height="70" rx="8" fill="#fdeee4" stroke="#d98246" stroke-width="1.6"/>
+    <text class="bt"  x="510" y="24">ConvT  128 → 64</text>
+    <text class="shape" x="510" y="45">64 × 32 × 32</text>
+    <text class="note" x="510" y="62">BN + ReLU</text>
+    <path d="M 690 35 L 712 35" stroke="#6b7684" stroke-width="1.5" marker-end="url(#ar)" fill="none"/>
+
+    <rect x="716" y="0" width="196" height="70" rx="8" fill="#fdeee4" stroke="#d98246" stroke-width="1.6"/>
+    <text class="bt"  x="732" y="24">ConvT  64 → 32</text>
+    <text class="shape" x="732" y="45">32 × 64 × 64</text>
+    <text class="note" x="732" y="62">BN + ReLU</text>
+    <path d="M 912 35 L 934 35" stroke="#6b7684" stroke-width="1.5" marker-end="url(#ar)" fill="none"/>
+
+    <rect x="938" y="0" width="156" height="70" rx="8" fill="#fdeee4" stroke="#d98246" stroke-width="1.6"/>
+    <text class="bt"  x="952" y="24">ConvT 32 → 16</text>
+    <text class="shape" x="952" y="45">16 × 128²</text>
+    <text class="note" x="952" y="62">BN + ReLU</text>
+    <path d="M 1094 35 L 1098 35" stroke="#6b7684" stroke-width="1.5" marker-end="url(#ar)" fill="none"/>
+
+    <rect x="1102" y="0" width="176" height="70" rx="8" fill="#f6f2fb" stroke="#8b63b8" stroke-width="1.6"/>
+    <text class="bt" x="1118" y="24">Conv 1×1 → 3</text>
+    <text class="bl" x="1118" y="45">Sigmoïde</text>
+    <path d="M 1278 35 L 1300 35" stroke="#6b7684" stroke-width="1.5" marker-end="url(#ar)" fill="none"/>
+
+    <rect x="1304" y="0" width="126" height="70" rx="8" fill="#f4f7fc" stroke="#8fa6c4" stroke-width="1.5"/>
+    <text class="bt"  x="1367" y="28" text-anchor="middle">f̂₃(x)</text>
+    <text class="shape" x="1367" y="48" text-anchor="middle">3×128×128</text>
+    <text class="note" x="1367" y="63" text-anchor="middle">696 851 par.</text>
+  </g>
+
+  <!-- ============ ROW 4 ============ -->
+  <g transform="translate(0,488)">
+    <rect x="30" y="0" width="212" height="70" rx="8" fill="#e8f0fb" stroke="#4a7fc1" stroke-width="1.6"/>
+    <text class="bt"  x="46" y="24">a₄  — bloc 5  (le plus profond)</text>
+    <text class="act" x="46" y="45">256 × 8 × 8</text>
+    <text class="note" x="46" y="62">n_up = 4</text>
+    <path d="M 242 35 L 268 35" stroke="#6b7684" stroke-width="1.5" marker-end="url(#ar)" fill="none"/>
+
+    <rect x="272" y="0" width="196" height="70" rx="8" fill="#fdeee4" stroke="#d98246" stroke-width="1.6"/>
+    <text class="bt"  x="288" y="24">ConvT  256 → 128</text>
+    <text class="shape" x="288" y="45">128 × 16 × 16</text>
+    <text class="note" x="288" y="62">BN + ReLU</text>
+    <path d="M 468 35 L 490 35" stroke="#6b7684" stroke-width="1.5" marker-end="url(#ar)" fill="none"/>
+
+    <rect x="494" y="0" width="196" height="70" rx="8" fill="#fdeee4" stroke="#d98246" stroke-width="1.6"/>
+    <text class="bt"  x="510" y="24">ConvT  128 → 64</text>
+    <text class="shape" x="510" y="45">64 × 32 × 32</text>
+    <text class="note" x="510" y="62">BN + ReLU</text>
+    <path d="M 690 35 L 712 35" stroke="#6b7684" stroke-width="1.5" marker-end="url(#ar)" fill="none"/>
+
+    <rect x="716" y="0" width="196" height="70" rx="8" fill="#fdeee4" stroke="#d98246" stroke-width="1.6"/>
+    <text class="bt"  x="732" y="24">ConvT  64 → 32</text>
+    <text class="shape" x="732" y="45">32 × 64 × 64</text>
+    <text class="note" x="732" y="62">BN + ReLU</text>
+    <path d="M 912 35 L 934 35" stroke="#6b7684" stroke-width="1.5" marker-end="url(#ar)" fill="none"/>
+
+    <rect x="938" y="0" width="156" height="70" rx="8" fill="#fdeee4" stroke="#d98246" stroke-width="1.6"/>
+    <text class="bt"  x="952" y="24">ConvT 32 → 16</text>
+    <text class="shape" x="952" y="45">16 × 128²</text>
+    <text class="note" x="952" y="62">BN + ReLU</text>
+    <path d="M 1094 35 L 1098 35" stroke="#6b7684" stroke-width="1.5" marker-end="url(#ar)" fill="none"/>
+
+    <rect x="1102" y="0" width="176" height="70" rx="8" fill="#f6f2fb" stroke="#8b63b8" stroke-width="1.6"/>
+    <text class="bt" x="1118" y="24">Conv 1×1 → 3</text>
+    <text class="bl" x="1118" y="45">Sigmoïde</text>
+    <path d="M 1278 35 L 1300 35" stroke="#6b7684" stroke-width="1.5" marker-end="url(#ar)" fill="none"/>
+
+    <rect x="1304" y="0" width="126" height="70" rx="8" fill="#f4f7fc" stroke="#8fa6c4" stroke-width="1.5"/>
+    <text class="bt"  x="1367" y="28" text-anchor="middle">f̂₄(x)</text>
+    <text class="shape" x="1367" y="48" text-anchor="middle">3×128×128</text>
+    <text class="note" x="1367" y="63" text-anchor="middle">696 851 par.</text>
+  </g>
+
+  <line x1="30" y1="588" x2="1430" y2="588" stroke="#dfe4ec" stroke-width="1"/>
+
+  <!-- Usage box -->
+  <rect x="30" y="606" width="682" height="106" rx="8" fill="#f9fbfd" stroke="#8fa6c4" stroke-width="1.4"/>
+  <text class="bt" x="46" y="628">À quoi servent les 5 reconstructions</text>
+  <text class="bl" x="46" y="650">• f̂ₖ de chaque membre m  →  décomposition Risque = Biais + Variance par pixel (lrad/ensemble.py)</text>
+  <text class="bl" x="46" y="669">• f̄₄ = moyenne des 8 membres au bloc le plus profond  →  entrée ré-encodée du signal locfre (feature_error.py)</text>
+  <text class="bl" x="46" y="688">• f̂ₖ d’un seul membre  →  figures per_block_breakdown / fusion_overlay du dossier model_i/plots/</text>
+  <text class="bl" x="46" y="705">• f̄ₖ  →  carte de biais (x − f̄ₖ)², classement des visages à lunettes par biais péri-oculaire</text>
+
+  <rect x="728" y="606" width="702" height="106" rx="8" fill="#f9fbfd" stroke="#8fa6c4" stroke-width="1.4"/>
+  <text class="bt" x="744" y="628">Perte de reconstruction — membre 0, échelle réelle du run</text>
+  <text class="bl" x="744" y="650">MSE par bloc, époque 1  → [0.00340, 0.00539, 0.00769, 0.01174, 0.02017]</text>
+  <text class="bl" x="744" y="669">MSE par bloc, époque 25 → [0.00043, 0.00150, 0.00327, 0.00532, 0.01124]</text>
+  <text class="note" x="744" y="691">Plus le bloc est profond, plus la reconstruction est floue : l’information spatiale a été</text>
+  <text class="note" x="744" y="706">détruite par les MaxPool. C’est exactement ce plancher d’erreur qui limite le score pixel.</text>
+
+  <text class="sec" x="30" y="748">NOTES DE FIDÉLITÉ AU CODE</text>
+  <text class="note" x="30" y="770">• ConvTranspose2d(4×4, stride 2, padding 1) double H et W exactement, sans ambiguïté de taille de sortie — d’où le choix de ce noyau plutôt que 3×3 ou 2×2.</text>
+  <text class="note" x="30" y="790">• Le nombre de canaux est divisé par 2 à chaque étage avec un plancher min_channels = 16 ; d’où 32→16 et non 32→16→8. Le classifieur reste gelé (requires_grad = False).</text>
+</svg>
