@@ -1,0 +1,206 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1560" height="1020" viewBox="0 0 1560 1020" font-family="Inter, Helvetica, Arial, sans-serif">
+  <defs>
+    <marker id="ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#6b7684"/>
+    </marker>
+    <marker id="arp" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#8b63b8"/>
+    </marker>
+    <style>
+      .ttl  { font-size: 22px; font-weight: 700; fill: #14203a; }
+      .sub  { font-size: 12.5px; fill: #5c6b81; }
+      .st   { font-size: 12px; font-weight: 700; fill: #8a94a6; letter-spacing: .08em; }
+      .bt   { font-size: 13px; font-weight: 700; fill: #14203a; }
+      .bs   { font-size: 12px; font-weight: 700; fill: #14203a; }
+      .bl   { font-size: 11px; fill: #33445e; }
+      .note { font-size: 10.5px; fill: #6b7684; }
+      .mono { font-size: 11px; font-weight: 600; font-family: ui-monospace, Menlo, monospace; }
+      .au   { font-size: 12.5px; font-weight: 700; font-family: ui-monospace, Menlo, monospace; }
+    </style>
+  </defs>
+  <rect width="1560" height="1020" fill="#ffffff"/>
+
+  <text class="ttl" x="30" y="38">Pipeline LRAD complet — run cp128_20260719_060210_6782570</text>
+  <text class="sub" x="30" y="60">CelebA 128 px · ensemble profond de 8 membres à architectures distinctes · OOD = attribut Eyeglasses · A40, ≈10 h 34 min au total</text>
+
+  <!-- ================= ÉTAPE 1 : DONNÉES ================= -->
+  <text class="st" x="30" y="100">① DONNÉES  ·  lrad/dataset.py</text>
+  <rect x="30" y="112" width="300" height="196" rx="10" fill="#f4f7fc" stroke="#8fa6c4" stroke-width="1.6"/>
+  <text class="bt" x="46" y="136">CelebA « all » — 202 599 visages</text>
+  <text class="bl" x="46" y="158">Partition par l’attribut Eyeglasses :</text>
+  <text class="mono" x="46" y="178" fill="#4a7fc1">in-dist  = 189 406   (sans lunettes)</text>
+  <text class="mono" x="46" y="196" fill="#c0553f">ood      =  13 193   (avec lunettes)</text>
+  <line x1="46" y1="208" x2="314" y2="208" stroke="#dfe4ec"/>
+  <text class="bl" x="46" y="228">Découpe du pool in-dist (seed 42, ratio 0.9 / 0 / 0.1) :</text>
+  <text class="mono" x="46" y="248" fill="#4a7fc1">train   = 170 465</text>
+  <text class="mono" x="46" y="265" fill="#4a7fc1">val     =       0   → pas d’early stopping</text>
+  <text class="mono" x="46" y="282" fill="#4a7fc1">test_in =  18 941</text>
+  <text class="note" x="46" y="300">Étiquettes : Male + 6 attributs (4 péri-oculaires)</text>
+
+  <path d="M 330 210 L 372 210" stroke="#6b7684" stroke-width="1.8" marker-end="url(#ar)" fill="none"/>
+
+  <!-- ================= ÉTAPE 2 : ENSEMBLE ================= -->
+  <text class="st" x="376" y="100">② ENSEMBLE PROFOND  ·  scripts/run_ensemble.py</text>
+  <rect x="376" y="112" width="330" height="196" rx="10" fill="#eef4fc" stroke="#4a7fc1" stroke-width="1.8"/>
+  <text class="bt" x="392" y="136">8 membres indépendants, seeds 42 … 49</text>
+
+  <rect x="392" y="148" width="298" height="52" rx="7" fill="#ffffff" stroke="#8fa6c4" stroke-width="1.2"/>
+  <text class="bs" x="404" y="168">Étape A — classifieur (20 ép., Adam 3e-4)</text>
+  <text class="bl" x="404" y="188">L = CE_genre + 2·BCE_attrs + 0.5·CE_cutpaste</text>
+
+  <rect x="392" y="206" width="298" height="52" rx="7" fill="#ffffff" stroke="#d98246" stroke-width="1.2"/>
+  <text class="bs" x="404" y="226">Étape B — 5 décodeurs (25 ép., Adam 1e-3)</text>
+  <text class="bl" x="404" y="246">classifieur gelé · L = Σₖ MSE(dₖ(aₖ), x)</text>
+
+  <text class="note" x="392" y="276">Diversité = graine + ordre SGD + ARCHITECTURE :</text>
+  <text class="note" x="392" y="292">member_variants change channels et kernel_size (3 ou 5)</text>
+
+  <path d="M 706 210 L 748 210" stroke="#6b7684" stroke-width="1.8" marker-end="url(#ar)" fill="none"/>
+
+  <!-- ================= ÉTAPE 3 : SORTIES PAR IMAGE ================= -->
+  <text class="st" x="752" y="100">③ CE QUE CHAQUE MEMBRE PRODUIT SUR UNE IMAGE DE TEST</text>
+  <rect x="752" y="112" width="778" height="196" rx="10" fill="#fafbfd" stroke="#c8d2e0" stroke-width="1.5"/>
+
+  <rect x="768" y="132" width="240" height="72" rx="7" fill="#eaf6ec" stroke="#4d9b62" stroke-width="1.4"/>
+  <text class="bs" x="782" y="152">Sorties des têtes</text>
+  <text class="mono" x="782" y="172" fill="#33445e">p_g ∈ ℝ²  ·  p_a ∈ ℝ⁶</text>
+  <text class="mono" x="782" y="190" fill="#33445e">z_g (logits)  ·  P(altéré|x)</text>
+
+  <rect x="1020" y="132" width="240" height="72" rx="7" fill="#fdeee4" stroke="#d98246" stroke-width="1.4"/>
+  <text class="bs" x="1034" y="152">Reconstructions par bloc</text>
+  <text class="mono" x="1034" y="172" fill="#33445e">f̂ₖᵐ(x), k = 0…4</text>
+  <text class="note" x="1034" y="190">chacune 3×128×128, sigmoïde</text>
+
+  <rect x="1272" y="132" width="242" height="72" rx="7" fill="#e8f0fb" stroke="#4a7fc1" stroke-width="1.4"/>
+  <text class="bs" x="1286" y="152">Activations du tronc</text>
+  <text class="mono" x="1286" y="172" fill="#33445e">aₖᵐ(x), k = 0…4</text>
+  <text class="note" x="1286" y="190">et aₖᵐ(f̄₄) après ré-encodage</text>
+
+  <rect x="768" y="216" width="746" height="76" rx="7" fill="#ffffff" stroke="#8fa6c4" stroke-width="1.3"/>
+  <text class="bs" x="782" y="236">Agrégation d’ensemble — la brique commune à tous les scores</text>
+  <text class="mono" x="782" y="258" fill="#33445e">f̄ₖ(x) = (1/M) Σₘ f̂ₖᵐ(x)          Risqueₖ = (1/M) Σₘ ‖x − f̂ₖᵐ‖²   (somme RVB, ∈ [0,3])</text>
+  <text class="mono" x="782" y="278" fill="#33445e">Biaisₖ = ‖x − f̄ₖ‖²                Varianceₖ = (1/M) Σₘ ‖f̂ₖᵐ − f̄ₖ‖²      →  Risque = Biais + Variance</text>
+
+  <!-- arrows down to signals -->
+  <path d="M 200 308 L 200 356" stroke="#8b63b8" stroke-width="1.6" marker-end="url(#arp)" fill="none"/>
+  <path d="M 540 308 L 540 356" stroke="#8b63b8" stroke-width="1.6" marker-end="url(#arp)" fill="none"/>
+  <path d="M 1140 308 L 1140 356" stroke="#8b63b8" stroke-width="1.6" marker-end="url(#arp)" fill="none"/>
+
+  <!-- ================= ÉTAPE 4 : FAMILLES DE SIGNAUX ================= -->
+  <text class="st" x="30" y="348">④ FAMILLES DE SIGNAUX OOD  —  chacune donne un scalaire par image, « grand = plus OOD »</text>
+
+  <!-- S1 -->
+  <rect x="30" y="364" width="292" height="188" rx="10" fill="#f6f2fb" stroke="#8b63b8" stroke-width="1.6"/>
+  <text class="bt" x="46" y="388" fill="#6a4590">A. Décomposition pixel (p95)</text>
+  <text class="note" x="46" y="404">lrad/ensemble.py · lrad/anomaly_score.py</text>
+  <text class="bl" x="46" y="426">Réduit chaque carte (B,H,W) au 95ᵉ centile</text>
+  <text class="bl" x="46" y="443">des pixels, puis moyenne uniforme des 5 blocs.</text>
+  <line x1="46" y1="454" x2="306" y2="454" stroke="#e2dcec"/>
+  <text class="au" x="46" y="476" fill="#c0553f">Biais       AUROC 0.6237</text>
+  <text class="au" x="46" y="496" fill="#33445e">Risque      AUROC 0.6310</text>
+  <text class="au" x="46" y="516" fill="#33445e">Variance    AUROC 0.6431</text>
+  <text class="note" x="46" y="538">Ligne de base — plancher d’erreur des décodeurs flous</text>
+
+  <!-- S2 -->
+  <rect x="338" y="364" width="292" height="188" rx="10" fill="#f6f2fb" stroke="#8b63b8" stroke-width="1.6"/>
+  <text class="bt" x="354" y="388" fill="#6a4590">B. Score localisé (z + patch-max)</text>
+  <text class="note" x="354" y="404">lrad/localized.py · scripts/run_localized.py</text>
+  <text class="bl" x="354" y="426">1. μ, σ par pixel ajustés sur 5 120 images train</text>
+  <text class="bl" x="354" y="443">2. z = (carte − μ)/max(σ, 1e-3)</text>
+  <text class="bl" x="354" y="460">3. max des avg-pool 4/8/16 px (stride s/2)</text>
+  <line x1="354" y1="470" x2="614" y2="470" stroke="#e2dcec"/>
+  <text class="au" x="354" y="492" fill="#33445e">z-Risque agrégé   AUROC 0.7016</text>
+  <text class="au" x="354" y="512" fill="#33445e">z-Variance agrégé AUROC 0.6936</text>
+  <text class="au" x="354" y="532" fill="#33445e">z-Biais agrégé    AUROC 0.6802</text>
+
+  <!-- S3 -->
+  <rect x="646" y="364" width="292" height="188" rx="10" fill="#f6f2fb" stroke="#8b63b8" stroke-width="1.6"/>
+  <text class="bt" x="662" y="388" fill="#6a4590">C. locfre — erreur de features</text>
+  <text class="note" x="662" y="404">lrad/feature_error.py</text>
+  <text class="bl" x="662" y="426">1. f̄₄ = reconstruction consensus (bloc 5)</text>
+  <text class="bl" x="662" y="443">2. ré-encodage de f̄₄ par chaque membre</text>
+  <text class="bl" x="662" y="460">3. ‖â_j(x) − â_j(f̄₄)‖² sur vecteurs unitaires</text>
+  <text class="bl" x="662" y="477">4. z-score + patch-max 2/4/8</text>
+  <line x1="662" y1="487" x2="922" y2="487" stroke="#e2dcec"/>
+  <text class="au" x="662" y="509" fill="#c0553f">locfre_b3   AUROC 0.7898</text>
+  <text class="au" x="662" y="529" fill="#33445e">locfre_b1   0.7838   ·   b2   0.7735</text>
+
+  <!-- S4 -->
+  <rect x="954" y="364" width="278" height="188" rx="10" fill="#f6f2fb" stroke="#8b63b8" stroke-width="1.6"/>
+  <text class="bt" x="970" y="388" fill="#6a4590">D. Incertitude prédictive</text>
+  <text class="note" x="970" y="404">lrad/ensemble.py:_uncertainty_scores</text>
+  <text class="mono" x="970" y="426" fill="#33445e">Total = H(mean p_m)</text>
+  <text class="mono" x="970" y="444" fill="#33445e">Aléa. = mean H(p_m)</text>
+  <text class="mono" x="970" y="462" fill="#33445e">Épist. = Total − Aléa. = IM</text>
+  <line x1="970" y1="472" x2="1216" y2="472" stroke="#e2dcec"/>
+  <text class="au" x="970" y="494" fill="#33445e">épist. attrs      0.7036</text>
+  <text class="au" x="970" y="514" fill="#33445e">épist. combiné    0.5383</text>
+  <text class="au" x="970" y="534" fill="#8a94a6">épist. genre      0.4587  (&lt; 0.5)</text>
+
+  <!-- S5 -->
+  <rect x="1248" y="364" width="282" height="188" rx="10" fill="#f6f2fb" stroke="#8b63b8" stroke-width="1.6"/>
+  <text class="bt" x="1264" y="388" fill="#6a4590">E. Signaux de têtes</text>
+  <text class="note" x="1264" y="404">lrad/evaluate.py · lrad/fusion.py</text>
+  <text class="mono" x="1264" y="426" fill="#33445e">MSP    = 1 − max p_g</text>
+  <text class="mono" x="1264" y="444" fill="#33445e">Énergie = −log Σ exp(z_g)</text>
+  <text class="mono" x="1264" y="462" fill="#33445e">CutPaste = P(altéré | x)</text>
+  <line x1="1264" y1="472" x2="1514" y2="472" stroke="#e2dcec"/>
+  <text class="au" x="1264" y="494" fill="#33445e">énergie genre     0.7387</text>
+  <text class="au" x="1264" y="514" fill="#33445e">P(altéré)         0.6918</text>
+  <text class="au" x="1264" y="534" fill="#8a94a6">MSP genre         0.5025</text>
+
+  <!-- funnel arrows -->
+  <path d="M 176 552 L 620 606" stroke="#8b63b8" stroke-width="1.4" marker-end="url(#arp)" fill="none" opacity=".6"/>
+  <path d="M 484 552 L 660 606" stroke="#8b63b8" stroke-width="1.4" marker-end="url(#arp)" fill="none" opacity=".6"/>
+  <path d="M 792 552 L 760 606" stroke="#8b63b8" stroke-width="1.6" marker-end="url(#arp)" fill="none"/>
+  <path d="M 1093 552 L 860 606" stroke="#8b63b8" stroke-width="1.6" marker-end="url(#arp)" fill="none"/>
+  <path d="M 1389 552 L 900 606" stroke="#8b63b8" stroke-width="1.6" marker-end="url(#arp)" fill="none"/>
+
+  <!-- ================= ÉTAPE 5 : FUSION ================= -->
+  <text class="st" x="30" y="600">⑤ FUSION  ·  scripts/run_fused.py --supervised  ·  lrad/fusion.py</text>
+
+  <rect x="440" y="612" width="640" height="46" rx="8" fill="#fff8f2" stroke="#d98246" stroke-width="1.5"/>
+  <text class="bs" x="456" y="632" fill="#a85c22">Protocole de découpe honnête (seed 42, ood_cal_frac = 0.5)</text>
+  <text class="note" x="456" y="650">calibration : 6 596 négatifs pris dans TRAIN + 6 596 positifs OOD  ·  évaluation : 18 941 test_in vs 6 597 OOD restants  ·  stats locfre : le reste de train (5 120 images)</text>
+
+  <rect x="30" y="676" width="480" height="150" rx="10" fill="#f0f6f2" stroke="#4d9b62" stroke-width="1.7"/>
+  <text class="bt" x="46" y="700">Fusion par rang — SANS étiquettes</text>
+  <text class="bl" x="46" y="722">Chaque signal est remplacé par son rang normalisé</text>
+  <text class="mono" x="46" y="742" fill="#33445e">r(s)ᵢ = rang(sᵢ) / (N − 1) ∈ [0,1]</text>
+  <text class="mono" x="46" y="760" fill="#33445e">fusion = (1/6) Σ r(s)   sur 6 signaux</text>
+  <text class="note" x="46" y="780">locfre_b1, b2, b3 · épist. combiné · énergie genre · P(altéré)</text>
+  <text class="au" x="46" y="806" fill="#c0553f">AUROC  0.8120</text>
+
+  <rect x="530" y="676" width="550" height="150" rx="10" fill="#f0f6f2" stroke="#4d9b62" stroke-width="1.7"/>
+  <text class="bt" x="546" y="700">Fusion supervisée — régression logistique sur 10 signaux</text>
+  <text class="mono" x="546" y="722" fill="#33445e">x̃ⱼ = (xⱼ − μⱼ)/σⱼ      score = Σⱼ wⱼ x̃ⱼ + b   (logit de P(OOD))</text>
+  <text class="bl" x="546" y="744">Poids appris les plus forts :</text>
+  <text class="mono" x="546" y="764" fill="#33445e">MSP genre +2.76 · unc_total_genre −2.78 · épist. genre −1.91</text>
+  <text class="mono" x="546" y="782" fill="#33445e">énergie genre +1.22 · épist. combiné +1.05 · locfre_b1 +0.78</text>
+  <text class="au" x="546" y="808" fill="#c0553f">AUROC  0.8838</text>
+
+  <path d="M 1080 750 L 1128 750" stroke="#6b7684" stroke-width="1.8" marker-end="url(#ar)" fill="none"/>
+
+  <!-- ================= ÉTAPE 6 : ÉVALUATION ================= -->
+  <text class="st" x="1132" y="600">⑥ MÉTRIQUE</text>
+  <rect x="1132" y="612" width="398" height="214" rx="10" fill="#f4f7fc" stroke="#8fa6c4" stroke-width="1.6"/>
+  <text class="bt" x="1148" y="636">AUROC — sklearn.roc_auc_score</text>
+  <text class="bl" x="1148" y="658">label 0 = test_in, label 1 = test_ood ; on empile</text>
+  <text class="bl" x="1148" y="675">les scores et on lit l’aire sous la courbe ROC.</text>
+  <text class="mono" x="1148" y="700" fill="#33445e">AUROC = P( score(OOD) &gt; score(ID) )</text>
+  <text class="note" x="1148" y="720">= probabilité qu’une paire (OOD, ID) tirée au hasard</text>
+  <text class="note" x="1148" y="736">soit classée dans le bon ordre. 0.5 = hasard.</text>
+  <line x1="1148" y1="750" x2="1514" y2="750" stroke="#dfe4ec"/>
+  <text class="bs" x="1148" y="772">Résultat de tête du run</text>
+  <text class="au" x="1148" y="796" fill="#c0553f">0.8838  (fusion supervisée)</text>
+  <text class="note" x="1148" y="814">contre 0.6237 pour le biais pixel p95 → +0.26</text>
+
+  <!-- ================= FOOTER ================= -->
+  <line x1="30" y1="854" x2="1530" y2="854" stroke="#dfe4ec" stroke-width="1"/>
+  <text class="st" x="30" y="878">MISES EN GARDE DE LECTURE</text>
+  <text class="note" x="30" y="900">• Les AUROC des colonnes A–B sont mesurées sur les 13 193 images OOD ; celles des colonnes C–E et des fusions sur les 6 597 OOD restants après la découpe de calibration. Les deux ne sont pas strictement comparables.</text>
+  <text class="note" x="30" y="920">• La fusion supervisée voit des étiquettes OOD à la calibration : c’est une borne supérieure optimiste par rapport à un détecteur réellement déployé, qui n’aurait accès qu’à la fusion par rang (0.8120).</text>
+  <text class="note" x="30" y="940">• Le membre 0 (seed 42) s’évalue à 63.0 % de précision genre alors qu’il atteint 99.5 % à l’entraînement — voir la section « anomalie du membre 0 » du rapport. Il tire l’ensemble vers le bas.</text>
+  <text class="note" x="30" y="960">• Aucun split de validation (val_ratio = 0) : pas d’early stopping, les poids de la dernière époque sont conservés, et les statistiques de référence sont prélevées sur train, jamais sur test_in.</text>
+  <text class="note" x="30" y="988">Fichiers sources : lrad/{dataset,model,cutpaste,train,decoder,anomaly_score,ensemble,localized,feature_error,fusion,evaluate,plots}.py · scripts/{run_ensemble,run_localized,run_fused}.py</text>
+</svg>
