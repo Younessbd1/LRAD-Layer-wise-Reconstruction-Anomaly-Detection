@@ -274,6 +274,39 @@ def get_celeba_loaders(cfg: dict) -> dict:
     }
 
 
+def gather_samples(
+    loader: DataLoader,
+    n: int,
+    *,
+    seed: int | None = None,
+) -> torch.Tensor:
+    """Return ``n`` images from a (non-shuffled) loader.
+
+    With ``seed=None`` the call is backwards compatible: the first ``n``
+    images are returned. With a seed, ``n`` images are drawn uniformly at
+    random from the entire underlying dataset (reproducible), which gives
+    visually-varied picks and lets us show samples beyond the loader's
+    first batch.
+    """
+    if seed is None:
+        chunks: list[torch.Tensor] = []
+        have = 0
+        for batch in loader:
+            chunks.append(batch[0])
+            have += batch[0].size(0)
+            if have >= n:
+                break
+        return torch.cat(chunks, dim=0)[:n]
+
+    ds = loader.dataset
+    total = len(ds)
+    n = min(n, total)
+    gen = torch.Generator().manual_seed(int(seed))
+    idx = torch.randperm(total, generator=gen)[:n].tolist()
+    imgs = [ds[i][0] for i in idx]
+    return torch.stack(imgs, dim=0)
+
+
 def split_loader(
     loader: DataLoader,
     first_n: int,
