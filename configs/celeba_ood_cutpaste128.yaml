@@ -14,9 +14,9 @@
 #      below are the grid-search defaults — override with the winners of
 #      scripts/run_gridsearch.py once it has run.
 #
-# Cost control vs the base config: 128 px costs ~4x per image, so the
-# ensemble drops to 8 members (first 8 variants) and batch_size to 128.
-# Submit with scripts/oar_run_cutpaste128.sh.
+# Cost control vs the base config: 128 px costs ~4x per image, so
+# batch_size drops to 128. The ensemble keeps the full 10 members (one
+# architecture variant each). Submit with scripts/oar_run_cutpaste128.sh.
 # ---------------------------------------------------------------------------
 
 experiment:
@@ -79,7 +79,7 @@ evaluation:
   n_top_ood: 10
 
 ensemble:
-  size: 8
+  size: 10
   base_seed: 42
   agg: p95
   member_variants:
@@ -91,3 +91,5 @@ ensemble:
     - {channels: [32, 64, 128, 256, 256], kernel_size: 5}   # baseline, large RF
     - {channels: [64, 96, 160, 224, 288], kernel_size: 3}   # flat progression
     - {channels: [24, 64, 128, 192, 256], kernel_size: 5}   # narrow late, large RF
+    - {channels: [48, 64, 96, 192, 384], kernel_size: 3}    # heavy head + tail
+    - {channels: [32, 48, 112, 224, 336], kernel_size: 5}   # steep growth, large RF
