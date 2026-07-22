@@ -63,15 +63,13 @@ import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import torch
+import yaml
 
 _ROOT = Path(__file__).resolve().parent.parent
-_SCRIPTS = Path(__file__).resolve().parent
-for _p in (str(_ROOT), str(_SCRIPTS)):
-    if _p not in sys.path:
-        sys.path.insert(0, _p)
+if str(_ROOT) not in sys.path:
+    sys.path.insert(0, str(_ROOT))
 
-from run_celeba import apply_overrides, load_config  # noqa: E402
-
+from lrad.config import apply_overrides, load_config  # noqa: E402
 from lrad.dataset import get_celeba_loaders  # noqa: E402
 from lrad.decoder import build_decoders  # noqa: E402
 from lrad.ensemble import block_reconstructions  # noqa: E402
@@ -156,7 +154,8 @@ def _plot_sigma(
 ) -> None:
     """sigma(e) curves — one line per (split, block)."""
     fig, ax = plt.subplots(figsize=(7.2, 4.6), constrained_layout=True)
-    styles = {"in": ("-o", "#377eb8"), "ood": ("--s", "#e41a1c")}
+    # Same fixed role colours as lrad.plots: ID blue, OOD vermillion.
+    styles = {"in": ("-o", "#0072B2"), "ood": ("--s", "#D55E00")}
     for split, per_block in sigma.items():
         fmt, color = styles.get(split, ("-", None))
         blocks = sorted(per_block.keys())
@@ -218,12 +217,22 @@ def main() -> None:
 
     # Classifiers are FIXED at their full schedule (simple variant — see
     # module docstring); only the decoder weights change with the epoch.
-    image_size = cfg.get("dataset", {}).get("image_size", 64)
+    # Each member is rebuilt from its OWN resolved config: with
+    # ensemble.member_variants the members have different channel widths /
+    # kernel sizes, and a base-config skeleton would reject their weights.
     models, decoders_list = [], []
     for m_dir in members:
-        model = build_model(cfg).to(device).eval()
+        resolved = m_dir / "config.resolved.yaml"
+        if resolved.exists():
+            with open(resolved) as f:
+                mcfg = yaml.safe_load(f)
+        else:
+            mcfg = cfg  # pre-variant run: every member shares the base model
+        image_size = mcfg.get("dataset", {}).get("image_size", 64)
+        model = build_model(mcfg).to(device).eval()
         model.load_state_dict(
-            torch.load(m_dir / "weights" / "model.pt", map_location=device),
+            torch.load(m_dir / "weights" / "model.pt", map_location=device,
+                       weights_only=True),
         )
         models.append(model)
         decoders_list.append(
@@ -240,7 +249,9 @@ def main() -> None:
     for e in epochs:
         for m_dir, decoders in zip(members, decoders_list):
             ckpt = m_dir / "weights" / f"decoders_ep{e}.pt"
-            decoders.load_state_dict(torch.load(ckpt, map_location=device))
+            decoders.load_state_dict(
+                torch.load(ckpt, map_location=device, weights_only=True),
+            )
             decoders.eval()
         for split, loader in splits.items():
             res = compute_sigma(models, decoders_list, loader, device, blocks)
