@@ -1,10 +1,10 @@
-"""Shape/contract tests for the raw error + reduction utilities.
+"""Shape/contract tests for the pixel → scalar reduction utilities.
 
 The OOD anomaly itself (bias = risk − variance) is an ensemble quantity
 and is covered by ``tests/test_ensemble.py``. This file only checks the
 low-level helpers that survived the removal of the sigma-whitening path:
-``_per_pixel_errors``, ``_reduce_over_pixels`` and
-``aggregate_anomaly_score``.
+``_reduce_over_pixels`` and ``aggregate_anomaly_score``, exercised on
+real per-block reconstruction-error maps.
 """
 
 from __future__ import annotations
@@ -14,7 +14,6 @@ import pytest
 import torch
 
 from lrad.anomaly_score import (
-    _per_pixel_errors,
     _reduce_over_pixels,
     aggregate_anomaly_score,
 )
@@ -31,18 +30,15 @@ def setup():
     model = FacialCNN(channels=(4, 8), input_size=IMG).eval()
     decoders = build_decoders(model, image_size=IMG).eval()
     images = torch.rand(10, 3, IMG, IMG)
-    errs = _per_pixel_errors(model, decoders, images)
+    # RGB-summed squared reconstruction error per block, same convention
+    # as the ensemble decomposition (a pixel lives in [0, 3]).
+    with torch.no_grad():
+        _, acts = model.forward_features(images)
+        errs = {
+            k: ((images - dec(acts[k])) ** 2).sum(dim=1)
+            for k, dec in enumerate(decoders)
+        }
     return model, decoders, images, errs
-
-
-def test_per_pixel_error_shapes(setup):
-    _, _, images, errs = setup
-    assert set(errs.keys()) == set(range(N_BLOCKS))
-    for k in range(N_BLOCKS):
-        e = errs[k]
-        assert e.shape == (images.shape[0], IMG, IMG)
-        assert torch.isfinite(e).all()
-        assert (e >= 0).all()  # |x - recon| is non-negative
 
 
 @pytest.mark.parametrize("agg", ["mean", "max", "p95"])
