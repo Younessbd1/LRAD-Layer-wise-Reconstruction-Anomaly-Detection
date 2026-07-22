@@ -10,15 +10,17 @@ Implements the LRAD note end to end:
      init and the SGD shuffle order — an architecturally diverse deep
      ensemble, not MC-Dropout.
   2. Write the full per-model results into ``model_<i>/`` (the usual
-     plots + summary, one set per model — "the results x5").
+     plots + summary, one set per member).
   3. Form the ensemble-mean reconstruction ``E_D[f_hat]`` and decompose
      the per-block reconstruction risk into Bias + Variance, with the
      exact per-pixel identity ``Risk = Bias + Variance``.
   4. Write the decomposition plots + summary into ``ensemble/``. Scoring
      the *mean* reconstruction isolates the Bias term (item 5 of the
      note); the Variance term doubles as an epistemic-uncertainty OOD
-     score. The runner also ranks the OOD eyeglasses faces by eye-region
-     bias and writes the top-N to ``plots/top_ood_glasses.png``.
+     score. The runner also relates each member's architecture to its own
+     detection AUROC (``architecture_effect.png`` + ``architectures.svg``)
+     and ranks the OOD eyeglasses faces by eye-region bias
+     (``plots/top_ood_glasses.png``).
 
 Usage:
     python scripts/run_ensemble.py --config configs/celeba_ood.yaml
@@ -49,16 +51,20 @@ for _p in (str(_ROOT), str(_SCRIPTS)):
     if _p not in sys.path:
         sys.path.insert(0, _p)
 
-from run_celeba import (  # noqa: E402  (path set up just above)
-    _gather_samples,
-    _to_jsonable,
-    apply_overrides,
-    build_and_run,
-    load_config,
-)
+from run_celeba import build_and_run  # noqa: E402  (path set up just above)
 
-from lrad.dataset import CELEBA_ATTRS, get_celeba_loaders  # noqa: E402
+from lrad.arch_diagram import (  # noqa: E402
+    render_ensemble_svg,
+    resolve_member_configs,
+)
+from lrad.config import apply_overrides, load_config, to_jsonable  # noqa: E402
+from lrad.dataset import (  # noqa: E402
+    CELEBA_ATTRS,
+    gather_samples,
+    get_celeba_loaders,
+)
 from lrad.ensemble import (  # noqa: E402
+    TERMS,
     collect_eye_region_bias,
     evaluate_ensemble_decomposition,
     evaluate_ensemble_uncertainty,
@@ -70,6 +76,7 @@ from lrad.ensemble import (  # noqa: E402
     sample_quantile_min_error_maps,
 )
 from lrad.plots import (  # noqa: E402
+    plot_architecture_effect,
     plot_bias_variance_vs_block,
     plot_bias_variance_vs_percentile,
     plot_decomposition_auroc_bars,
@@ -80,22 +87,22 @@ from lrad.plots import (  # noqa: E402
     plot_mean_abs_bias,
     plot_mean_error_maps,
     plot_member_instance,
-    save_instance_raw_images,
     plot_min_error_maps,
     plot_per_block_breakdown,
     plot_recons_only,
     plot_score_comparison,
     plot_top_ood_glasses,
     plot_variance_heatmaps,
+    save_instance_raw_images,
 )
 from lrad.utils import get_device, seed_everything, setup_logging  # noqa: E402
 
 logger = logging.getLogger("celeba_ood")
 
-TERMS = ("risk", "bias", "variance")
 
-
-def _per_model_record(seed: int, results: dict, variant: dict) -> dict:
+def _per_model_record(
+    seed: int, results: dict, variant: dict, n_params: int,
+) -> dict:
     """Compact per-model summary: architecture, gender accuracy + the
     classifier OOD AUROCs."""
     auroc = results.get("auroc", {})
@@ -108,46 +115,11 @@ def _per_model_record(seed: int, results: dict, variant: dict) -> dict:
         "seed": seed,
         "channels": list(variant.get("channels", [])),
         "kernel_size": variant.get("kernel_size"),
+        "n_params": int(n_params),
         "gender_acc": results.get("accuracy", {}).get("gender"),
-        "auroc_msp": _au("score_msp"),
         "auroc_entropy_gender": _au("score_entropy_gender"),
-        "auroc_entropy_combined": _au("score_entropy_combined"),
+        "auroc_entropy_attrs": _au("score_entropy_attrs"),
     }
-
-
-def _member_configs(cfg: dict, size: int) -> list[dict]:
-    """One resolved config per ensemble member.
-
-    ``ensemble.member_variants`` is a list of model overrides
-    (``{channels, kernel_size}``); member ``i`` gets variant ``i`` (cycled
-    when the ensemble outgrows the list). Every variant must keep the same
-    number of conv blocks so the per-block decomposition stays aligned
-    across members. Without variants every member shares ``cfg['model']``
-    (the historical behaviour).
-    """
-    import copy
-
-    variants = cfg.get("ensemble", {}).get("member_variants") or []
-    n_blocks = len(cfg.get("model", {}).get("channels",
-                                            (32, 64, 128, 256, 256)))
-    member_cfgs: list[dict] = []
-    for i in range(size):
-        mc = copy.deepcopy(cfg)
-        if variants:
-            var = variants[i % len(variants)]
-            channels = list(var.get("channels",
-                                    mc["model"].get("channels")))
-            if len(channels) != n_blocks:
-                raise ValueError(
-                    f"member_variants[{i % len(variants)}] has "
-                    f"{len(channels)} blocks, expected {n_blocks} — the "
-                    "per-block decomposition needs the same block count "
-                    "in every member."
-                )
-            mc["model"]["channels"] = channels
-            mc["model"]["kernel_size"] = int(var.get("kernel_size", 3))
-        member_cfgs.append(mc)
-    return member_cfgs
 
 
 def _write_instance_figures(
@@ -217,6 +189,287 @@ def _write_instance_figures(
             overlay_power=overlay_power,
         )
     return n
+
+
+def _write_grid_figures(
+    models,
+    decoders_list,
+    loaders: dict,
+    decomp: dict,
+    agg_au: dict,
+    per_model: list[dict],
+    member_cfgs: list[dict],
+    eval_cfg: dict,
+    ens_dir: Path,
+    device,
+    *,
+    size: int,
+    agg: str,
+    cmp_block: int,
+) -> float:
+    """All sample-grid ensemble figures + the architecture-effect views.
+
+    Draws a small reproducible ID + OOD sample, renders every map-grid
+    figure (decomposition, mean/min/quantile error, score comparison),
+    the AUROC bars/histograms/curves computed on the full test loaders,
+    the architecture-effect panels and the member-architecture SVG.
+    Returns the max |Risk − Bias − Variance| residual on the sampled
+    faces — a cheap end-to-end sanity check of the decomposition.
+    """
+    plot_dir = ens_dir / "plots"
+    blocks = decomp["blocks"]
+    n_viz_in = int(eval_cfg.get(
+        "n_viz_in_samples", eval_cfg.get("n_viz_samples", 4),
+    ))
+    n_viz_ood = int(eval_cfg.get(
+        "n_viz_ood_samples", eval_cfg.get("n_viz_samples", 4),
+    ))
+    viz_seed = eval_cfg.get("viz_seed")
+    samples_in = gather_samples(
+        loaders["test_in"], n_viz_in, seed=viz_seed,
+    )
+    samples_ood = gather_samples(
+        loaders["test_ood"], n_viz_ood,
+        seed=(viz_seed + 1) if viz_seed is not None else None,
+    )
+    all_images = torch.cat([samples_in, samples_ood], dim=0)
+    row_labels = (
+        [f"ID  {i + 1}" for i in range(samples_in.size(0))]
+        + [f"OOD {i + 1}" for i in range(samples_ood.size(0))]
+    )
+
+    maps = sample_decomposition(models, decoders_list, all_images, device)
+    residual = identity_residual(maps)
+    logger.info(
+        f"Risk = Bias + Variance identity — max abs residual on "
+        f"{all_images.size(0)} samples ({n_viz_in} ID + {n_viz_ood} "
+        f"OOD): {residual:.2e}"
+    )
+
+    plot_ensemble_decomposition(
+        all_images, maps, plot_dir / "ensemble_decomposition.png",
+        row_labels=row_labels,
+        title=f"Per-block Risk | Bias | Variance  ({size}-model ensemble)",
+    )
+    plot_decomposition_auroc_bars(
+        decomp["per_block_auroc"], plot_dir / "decomposition_auroc.png",
+        block_labels=[f"Block {k}" for k in blocks],
+        aggregated=agg_au,
+        title="Per-block OOD AUROC — Risk / Bias / Variance",
+    )
+    plot_ensemble_score_hists(
+        decomp["scores_in"]["aggregated"], decomp["scores_ood"]["aggregated"],
+        plot_dir / "ensemble_score_hists.png",
+        auroc=agg_au,
+        title=f"Ensemble decomposition scores (agg='{agg}')",
+    )
+
+    # How the architecture (channel widths, kernel size) shapes each
+    # member's own bias detection, across the whole ensemble.
+    plot_architecture_effect(
+        [
+            {
+                "member": i + 1,
+                "channels": rec["channels"],
+                "kernel_size": rec["kernel_size"],
+                "n_params": rec["n_params"],
+                "auroc": rec["auroc_recon"],
+                "auroc_per_block": rec["auroc_recon_per_block"],
+            }
+            for i, rec in enumerate(per_model)
+        ],
+        plot_dir / "architecture_effect.png",
+        title=f"Architecture vs OOD bias detection  "
+              f"({size}-model ensemble, agg='{agg}')",
+    )
+
+    # Structured SVG of every member's architecture (blocks, channels,
+    # kernels, spatial sizes, params) — one lane per member.
+    render_ensemble_svg(
+        member_cfgs, ens_dir / "architectures.svg", per_model=per_model,
+    )
+    logger.info(
+        f"Member architecture diagram → {ens_dir / 'architectures.svg'}"
+    )
+
+    # Item 5 of the note: results on the ensemble-mean reconstruction.
+    # (x - E_D[f_hat])² is exactly the Bias view of the error.
+    mean_recons = [maps[k]["mean_recon"] for k in blocks]
+    plot_per_block_breakdown(
+        all_images, mean_recons, plot_dir / "mean_recon_breakdown.png",
+        row_labels=row_labels,
+        title="Ensemble-mean reconstruction — Original | Err Lk | Recon Lk "
+              "(error = Bias term, (x − f̄)²)",
+    )
+    plot_recons_only(
+        all_images, mean_recons, plot_dir / "mean_recons_only.png",
+        row_labels=row_labels,
+        title="Per-block ensemble-mean reconstructions  E_D[f_hat]",
+    )
+
+    # (x − f̄)² per block (bias-only view).
+    plot_mean_abs_bias(
+        all_images, mean_recons, plot_dir / "mean_abs_bias.png",
+        row_labels=row_labels,
+        title="Ensemble bias  (x − f̄)²  per conv block  "
+              f"({size}-model ensemble)",
+    )
+    # Variance heatmaps on OOD (and ID for reference), overlaid.
+    plot_variance_heatmaps(
+        samples_ood,
+        {k: {"variance": maps[k]["variance"][n_viz_in:]} for k in blocks},
+        plot_dir / "variance_heatmaps_ood.png",
+        row_labels=[f"OOD {i + 1}" for i in range(samples_ood.size(0))],
+        title="Ensemble variance heatmap — OOD samples",
+    )
+    plot_variance_heatmaps(
+        all_images, maps,
+        plot_dir / "variance_heatmaps_all.png",
+        row_labels=row_labels,
+        title="Ensemble variance heatmap — ID + OOD samples",
+    )
+
+    # Per-block mean over models of the squared error map
+    # (mean_m (x − f̂^m)²): the average of the per-model error maps,
+    # pixel by pixel — exactly the Risk term, displayed per block.
+    err_maps = sample_mean_error_maps(
+        models, decoders_list, all_images, device,
+    )
+    plot_mean_error_maps(
+        all_images, err_maps, plot_dir / "mean_error_maps.png",
+        row_labels=row_labels,
+        title="Ensemble-averaged error  mean_m (x − f̂^m)²  per conv block  "
+              f"({size}-model ensemble)",
+    )
+
+    # Same view but the per-pixel *minimum* over models
+    # (min_m (x − f̂^m)²): error of the best member, pixel by pixel.
+    min_err_maps = sample_min_error_maps(
+        models, decoders_list, all_images, device,
+    )
+    plot_min_error_maps(
+        all_images, min_err_maps, plot_dir / "min_error_maps.png",
+        row_labels=row_labels,
+        title="Ensemble best-member error  min_m (x − f̂^m)²  per conv block  "
+              f"({size}-model ensemble)",
+    )
+
+    # Comparative score maps at ONE reconstruction depth: Bias (error of
+    # the mean prediction) | Risk (mean of the errors) | min of the errors
+    # | robust quantile-min (k-th smallest error). Columns keep their OWN
+    # colour scales — the scores are not identically distributed.
+    cmp_k = int(eval_cfg.get("score_comparison_k", 3))
+    qmin_err_maps = sample_quantile_min_error_maps(
+        models, decoders_list, all_images, device, k=cmp_k,
+    )
+    plot_score_comparison(
+        all_images,
+        [
+            ("Bias  (x − f̄)²", maps[cmp_block]["bias"]),
+            ("Risk  mean_m", maps[cmp_block]["risk"]),
+            ("min_m", min_err_maps[cmp_block]),
+            (f"{cmp_k}-th smallest", qmin_err_maps[cmp_block]),
+        ],
+        plot_dir / "score_comparison.png",
+        row_labels=row_labels,
+        title=f"Score comparison at block {cmp_block}  "
+              f"(per-column colour scales, {size}-model ensemble)",
+    )
+
+    # Bias/Variance evolution curves (full test loaders).
+    plot_bias_variance_vs_block(
+        decomp["scores_in"]["per_block"],
+        decomp["scores_ood"]["per_block"],
+        plot_dir / "bias_variance_vs_block.png",
+        blocks=blocks,
+    )
+    plot_bias_variance_vs_percentile(
+        {t: decomp["scores_in"]["aggregated"][t] for t in TERMS},
+        {t: decomp["scores_ood"]["aggregated"][t] for t in TERMS},
+        plot_dir / "bias_variance_vs_percentile.png",
+    )
+
+    logger.info(
+        "Wrote ensemble plots: ensemble_decomposition.png, "
+        "decomposition_auroc.png, ensemble_score_hists.png, "
+        "architecture_effect.png, mean_recon_breakdown.png, "
+        "mean_recons_only.png, mean_abs_bias.png, "
+        "variance_heatmaps_ood.png, variance_heatmaps_all.png, "
+        "mean_error_maps.png, min_error_maps.png, "
+        "score_comparison.png, bias_variance_vs_block.png, "
+        "bias_variance_vs_percentile.png"
+    )
+    return residual
+
+
+def _write_top_ood_figures(
+    models,
+    decoders_list,
+    loaders: dict,
+    ens_dir: Path,
+    device,
+    *,
+    block: int,
+    n_top: int,
+    sigma: float,
+    overlay_power: float,
+    size: int,
+) -> None:
+    """Rank the FULL OOD test set — restricted to faces that actually carry
+    the Eyeglasses attribute — by how strongly AND how locally the bias
+    (x − f̄)² lights up in the eye region (see ``collect_eye_region_bias``).
+    The winners are rendered as one figure (Original / Bias / Overlay per
+    column, rank order) and the ranking is recorded in
+    ``top_ood_glasses.json``."""
+    ood_ds = loaders["test_ood"].dataset
+    eye_idx = CELEBA_ATTRS.index("Eyeglasses")
+    glasses_mask = (
+        ood_ds.base.attr[list(ood_ds.indices), eye_idx]
+        .to(torch.bool).numpy()
+    )
+    if not glasses_mask.any():
+        logger.info(
+            "No Eyeglasses faces in the OOD split — skipping the "
+            "top-OOD-glasses figure."
+        )
+        return
+
+    eye_scores = collect_eye_region_bias(
+        models, decoders_list, loaders["test_ood"], device, block=block,
+    )
+    score = np.where(glasses_mask, eye_scores["score"], -np.inf)
+    n_top = min(n_top, int(glasses_mask.sum()))
+    top_idx = np.argsort(score)[::-1][:n_top]
+    top_images = torch.stack(
+        [ood_ds[int(j)][0] for j in top_idx], dim=0,
+    )
+    top_dev, top_recons = sample_block_recons(
+        models, decoders_list, top_images, device, block,
+    )
+    plot_top_ood_glasses(
+        top_dev, top_recons,
+        ens_dir / "plots" / "top_ood_glasses.png",
+        sigma=sigma, overlay_power=overlay_power,
+        title=f"Top {n_top} OOD eyeglasses faces — eye-region bias "
+              f"(block L{block}, {size}-model ensemble)",
+    )
+    top_record = [
+        {
+            "rank": r + 1,
+            "ood_dataset_index": int(j),
+            "celeba_index": int(ood_ds.indices[int(j)]),
+            "score": float(eye_scores["score"][int(j)]),
+            "eye_mean_bias": float(eye_scores["eye_mean"][int(j)]),
+            "global_mean_bias": float(eye_scores["global_mean"][int(j)]),
+        }
+        for r, j in enumerate(top_idx)
+    ]
+    with open(ens_dir / "top_ood_glasses.json", "w") as f:
+        json.dump(top_record, f, indent=2)
+    logger.info(
+        f"Top {n_top} OOD eyeglasses faces (eye-region bias, block "
+        f"L{block}) → top_ood_glasses.png; ranking in top_ood_glasses.json"
+    )
 
 
 def main() -> None:
@@ -302,7 +555,7 @@ def main() -> None:
     # --- Train / load the ensemble ---------------------------------------
     # Each member gets its own architecture from ensemble.member_variants
     # (cycled if size exceeds the list) on top of its own seed.
-    member_cfgs = _member_configs(cfg, size)
+    member_cfgs = resolve_member_configs(cfg, size)
 
     models: list = []
     decoders_list: list = []
@@ -337,7 +590,10 @@ def main() -> None:
         # remaining models train; moved back as a group for decomposition.
         models.append(model.to("cpu").eval())
         decoders_list.append(decoders.to("cpu").eval())
-        per_model.append(_per_model_record(seed, results, mcfg))
+        per_model.append(_per_model_record(
+            seed, results, mcfg,
+            sum(p.numel() for p in model.parameters()),
+        ))
 
     logger.info(
         f"All {size} models ready in {time.time() - t_ensemble:.1f}s"
@@ -350,11 +606,11 @@ def main() -> None:
     models = [m.to(device).eval() for m in models]
     decoders_list = [d.to(device).eval() for d in decoders_list]
 
-    deb = evaluate_ensemble_decomposition(
+    decomp = evaluate_ensemble_decomposition(
         models, decoders_list, loaders, device, agg=agg,
     )
-    blocks = deb["blocks"]
-    auroc = deb["auroc"]
+    blocks = decomp["blocks"]
+    auroc = decomp["auroc"]
 
     agg_au = {t: auroc[f"score_{t}_aggregated"].get("auroc") for t in TERMS}
     logger.info(
@@ -372,6 +628,20 @@ def main() -> None:
             for t in TERMS
         )
         logger.info(f"  block {k}:  {row}")
+
+    # Per-member reconstruction-error AUROC (each architecture alone) —
+    # the y-axis of the architecture-effect analysis. Folded into the
+    # per_model records so summary.json carries architecture + detection
+    # side by side.
+    logger.info("Per-member recon-error AUROC (architecture effect):")
+    for i, (rec, mau) in enumerate(zip(per_model, decomp["member_auroc"])):
+        rec["auroc_recon"] = mau["aggregated"]
+        rec["auroc_recon_per_block"] = list(mau["per_block"])
+        logger.info(
+            f"  model {i}: channels={rec['channels']} "
+            f"k={rec['kernel_size']} params={rec['n_params']:,}  "
+            f"AUROC={mau['aggregated']:.4f}"
+        )
 
     # --- Predictive-uncertainty decomposition (classifier heads) ----------
     # The variance-based OOD signal that actually works on this occlusion
@@ -393,175 +663,44 @@ def main() -> None:
 
     # --- Plots ------------------------------------------------------------
     if not args.no_plots:
-        plot_dir = ens_dir / "plots"
-        ecfg_v = cfg.get("evaluation", {})
-        n_viz_in = int(ecfg_v.get(
-            "n_viz_in_samples", ecfg_v.get("n_viz_samples", 4),
-        ))
-        n_viz_ood = int(ecfg_v.get(
-            "n_viz_ood_samples", ecfg_v.get("n_viz_samples", 4),
-        ))
-        viz_seed = ecfg_v.get("viz_seed")
-        samples_in = _gather_samples(
-            loaders["test_in"], n_viz_in, seed=viz_seed,
-        )
-        samples_ood = _gather_samples(
-            loaders["test_ood"], n_viz_ood,
-            seed=(viz_seed + 1) if viz_seed is not None else None,
-        )
-        all_images = torch.cat([samples_in, samples_ood], dim=0)
-        row_labels = (
-            [f"ID  {i + 1}" for i in range(samples_in.size(0))]
-            + [f"OOD {i + 1}" for i in range(samples_ood.size(0))]
+        eval_cfg = cfg.get("evaluation", {})
+        cmp_block = int(eval_cfg.get("score_comparison_block", blocks[-1]))
+        residual = _write_grid_figures(
+            models, decoders_list, loaders, decomp, agg_au, per_model,
+            member_cfgs, eval_cfg, ens_dir, device,
+            size=size, agg=agg, cmp_block=cmp_block,
         )
 
-        maps = sample_decomposition(models, decoders_list, all_images, device)
-        residual = identity_residual(maps)
-        logger.info(
-            f"Risk = Bias + Variance identity — max abs residual on "
-            f"{all_images.size(0)} samples ({n_viz_in} ID + {n_viz_ood} "
-            f"OOD): {residual:.2e}"
-        )
-
-        plot_ensemble_decomposition(
-            all_images, maps, plot_dir / "ensemble_decomposition.png",
-            row_labels=row_labels,
-            title=f"Per-block Risk | Bias | Variance  ({size}-model ensemble)",
-        )
-        plot_decomposition_auroc_bars(
-            deb["per_block_auroc"], plot_dir / "decomposition_auroc.png",
-            block_labels=[f"Block {k}" for k in blocks],
-            aggregated=agg_au,
-            title="Per-block OOD AUROC — Risk / Bias / Variance",
-        )
-        plot_ensemble_score_hists(
-            deb["scores_in"]["aggregated"], deb["scores_ood"]["aggregated"],
-            plot_dir / "ensemble_score_hists.png",
-            auroc=agg_au,
-            title=f"Ensemble decomposition scores (agg='{agg}')",
-        )
-
-        # Item 5 of the note: results on the ensemble-mean reconstruction.
-        # (x - E_D[f_hat])² is exactly the Bias view of the error.
-        mean_recons = [maps[k]["mean_recon"] for k in blocks]
-        plot_per_block_breakdown(
-            all_images, mean_recons, plot_dir / "mean_recon_breakdown.png",
-            row_labels=row_labels,
-            title="Ensemble-mean reconstruction — Original | Err Lk | Recon Lk "
-                  "(error = Bias term, (x − f̄)²)",
-        )
-        plot_recons_only(
-            all_images, mean_recons, plot_dir / "mean_recons_only.png",
-            row_labels=row_labels,
-            title="Per-block ensemble-mean reconstructions  E_D[f_hat]",
-        )
-
-        # --- New plots requested by the user ---------------------------
-        # (x − f̄)² per block (bias-only view).
-        plot_mean_abs_bias(
-            all_images, mean_recons, plot_dir / "mean_abs_bias.png",
-            row_labels=row_labels,
-            title="Ensemble bias  (x − f̄)²  per conv block  "
-                  f"({size}-model ensemble)",
-        )
-        # Variance heatmaps on OOD (and ID for reference), overlaid.
-        plot_variance_heatmaps(
-            samples_ood,
-            {k: {"variance": maps[k]["variance"]
-                 [n_viz_in:]} for k in blocks},
-            plot_dir / "variance_heatmaps_ood.png",
-            row_labels=[f"OOD {i + 1}" for i in range(samples_ood.size(0))],
-            title="Ensemble variance heatmap — OOD samples",
-        )
-        plot_variance_heatmaps(
-            all_images, maps,
-            plot_dir / "variance_heatmaps_all.png",
-            row_labels=row_labels,
-            title="Ensemble variance heatmap — ID + OOD samples",
-        )
-
-        # Per-block mean over models of the squared error map
-        # (mean_m (x − f̂^m)²): the average of the per-model error maps,
-        # pixel by pixel — exactly the Risk term, displayed per block.
-        err_maps = sample_mean_error_maps(
-            models, decoders_list, all_images, device,
-        )
-        plot_mean_error_maps(
-            all_images, err_maps, plot_dir / "mean_error_maps.png",
-            row_labels=row_labels,
-            title="Ensemble-averaged error  mean_m (x − f̂^m)²  per conv block  "
-                  f"({size}-model ensemble)",
-        )
-
-        # Same view but the per-pixel *minimum* over models
-        # (min_m (x − f̂^m)²): error of the best member, pixel by pixel.
-        min_err_maps = sample_min_error_maps(
-            models, decoders_list, all_images, device,
-        )
-        plot_min_error_maps(
-            all_images, min_err_maps, plot_dir / "min_error_maps.png",
-            row_labels=row_labels,
-            title="Ensemble best-member error  min_m (x − f̂^m)²  per conv block  "
-                  f"({size}-model ensemble)",
-        )
-
-        # Comparative score maps at ONE reconstruction depth (the deepest
-        # block by default; evaluation.score_comparison_block overrides):
-        # Bias (error of the mean prediction) | Risk (mean of the errors) |
-        # min of the errors | robust quantile-min (k-th smallest error,
-        # k = evaluation.score_comparison_k, default 3). Columns keep their
-        # OWN colour scales — the scores are not identically distributed.
-        cmp_block = int(ecfg_v.get("score_comparison_block", blocks[-1]))
-        cmp_k = int(ecfg_v.get("score_comparison_k", 3))
-        qmin_err_maps = sample_quantile_min_error_maps(
-            models, decoders_list, all_images, device, k=cmp_k,
-        )
-        plot_score_comparison(
-            all_images,
-            [
-                ("Bias  (x − f̄)²", maps[cmp_block]["bias"]),
-                ("Risk  mean_m", maps[cmp_block]["risk"]),
-                ("min_m", min_err_maps[cmp_block]),
-                (f"{cmp_k}-th smallest", qmin_err_maps[cmp_block]),
-            ],
-            plot_dir / "score_comparison.png",
-            row_labels=row_labels,
-            title=f"Score comparison at block {cmp_block}  "
-                  f"(per-column colour scales, {size}-model ensemble)",
-        )
-
-        # --- Per-instance figures: one face at a time -------------------
-        # For a couple of dozen ID and OOD faces, write a standalone figure
-        # showing every member's reconstruction and error, the bias / mean /
-        # min summary, and the smoothed bias overlaid on the face. Same
-        # reconstruction depth as the score comparison; the overlay's sigma
-        # and alpha falloff are display-only knobs.
-        n_inst_in = int(ecfg_v.get("n_instances_in",
-                                   ecfg_v.get("n_instances", 20)))
-        n_inst_ood = int(ecfg_v.get("n_instances_ood",
-                                    ecfg_v.get("n_instances", 20)))
-        inst_block = int(ecfg_v.get("instance_block", cmp_block))
-        overlay_sigma = float(ecfg_v.get("overlay_sigma", 1.5))
-        overlay_power = float(ecfg_v.get("overlay_power", 0.8))
+        # Per-instance figures: one face at a time, every member's
+        # reconstruction + error, at the score-comparison depth. The
+        # overlay's sigma and alpha falloff are display-only knobs.
+        n_inst_in = int(eval_cfg.get("n_instances_in",
+                                     eval_cfg.get("n_instances", 20)))
+        n_inst_ood = int(eval_cfg.get("n_instances_ood",
+                                      eval_cfg.get("n_instances", 20)))
+        inst_block = int(eval_cfg.get("instance_block", cmp_block))
+        overlay_sigma = float(eval_cfg.get("overlay_sigma", 1.5))
+        overlay_power = float(eval_cfg.get("overlay_power", 0.8))
+        viz_seed = eval_cfg.get("viz_seed")
         # A fresh, larger draw of faces; the seed offset keeps them distinct
-        # from the small grid-figure samples gathered above.
-        inst_in = _gather_samples(
+        # from the small grid-figure samples.
+        inst_in = gather_samples(
             loaders["test_in"], n_inst_in,
             seed=(viz_seed + 100) if viz_seed is not None else None,
         )
-        inst_ood = _gather_samples(
+        inst_ood = gather_samples(
             loaders["test_ood"], n_inst_ood,
             seed=(viz_seed + 101) if viz_seed is not None else None,
         )
         n_in_done = _write_instance_figures(
             models, decoders_list, inst_in, device,
-            plot_dir / "instances_in",
+            ens_dir / "plots" / "instances_in",
             block=inst_block, prefix="ID",
             sigma=overlay_sigma, overlay_power=overlay_power,
         )
         n_ood_done = _write_instance_figures(
             models, decoders_list, inst_ood, device,
-            plot_dir / "instances_ood",
+            ens_dir / "plots" / "instances_ood",
             block=inst_block, prefix="OOD",
             sigma=overlay_sigma, overlay_power=overlay_power,
         )
@@ -572,88 +711,12 @@ def main() -> None:
             f"sigma={overlay_sigma:g}, overlay_power={overlay_power:g})"
         )
 
-        # --- Top OOD faces where the glasses are best detected ----------
-        # Rank the FULL OOD test set, restricted to faces that actually
-        # carry the Eyeglasses attribute, by how strongly AND how locally
-        # the bias (x − f̄)² lights up in the eye region (see
-        # collect_eye_region_bias). The winners are rendered as one figure
-        # (Original / Bias / Overlay per column, rank order) and their
-        # ranking is recorded in top_ood_glasses.json.
-        n_top = int(ecfg_v.get("n_top_ood", 10))
-        ood_ds = loaders["test_ood"].dataset
-        eye_idx = CELEBA_ATTRS.index("Eyeglasses")
-        glasses_mask = (
-            ood_ds.base.attr[list(ood_ds.indices), eye_idx]
-            .to(torch.bool).numpy()
-        )
-        if not glasses_mask.any():
-            logger.info(
-                "No Eyeglasses faces in the OOD split — skipping the "
-                "top-OOD-glasses figure."
-            )
-        else:
-            eye_scores = collect_eye_region_bias(
-                models, decoders_list, loaders["test_ood"], device,
-                block=inst_block,
-            )
-            score = np.where(glasses_mask, eye_scores["score"], -np.inf)
-            n_top = min(n_top, int(glasses_mask.sum()))
-            top_idx = np.argsort(score)[::-1][:n_top]
-            top_images = torch.stack(
-                [ood_ds[int(j)][0] for j in top_idx], dim=0,
-            )
-            top_dev, top_recons = sample_block_recons(
-                models, decoders_list, top_images, device, inst_block,
-            )
-            plot_top_ood_glasses(
-                top_dev, top_recons,
-                plot_dir / "top_ood_glasses.png",
-                sigma=overlay_sigma, overlay_power=overlay_power,
-                title=f"Top {n_top} OOD eyeglasses faces — eye-region bias "
-                      f"(block L{inst_block}, {size}-model ensemble)",
-            )
-            top_record = [
-                {
-                    "rank": r + 1,
-                    "ood_dataset_index": int(j),
-                    "celeba_index": int(ood_ds.indices[int(j)]),
-                    "score": float(eye_scores["score"][int(j)]),
-                    "eye_mean_bias": float(eye_scores["eye_mean"][int(j)]),
-                    "global_mean_bias": float(
-                        eye_scores["global_mean"][int(j)]
-                    ),
-                }
-                for r, j in enumerate(top_idx)
-            ]
-            with open(ens_dir / "top_ood_glasses.json", "w") as f:
-                json.dump(top_record, f, indent=2)
-            logger.info(
-                f"Top {n_top} OOD eyeglasses faces (eye-region bias, block "
-                f"L{inst_block}) → top_ood_glasses.png; ranking in "
-                "top_ood_glasses.json"
-            )
-
-        # Bias/Variance evolution curves (full test loaders).
-        plot_bias_variance_vs_block(
-            deb["scores_in"]["per_block"],
-            deb["scores_ood"]["per_block"],
-            plot_dir / "bias_variance_vs_block.png",
-            blocks=blocks,
-        )
-        plot_bias_variance_vs_percentile(
-            {t: deb["scores_in"]["aggregated"][t] for t in TERMS},
-            {t: deb["scores_ood"]["aggregated"][t] for t in TERMS},
-            plot_dir / "bias_variance_vs_percentile.png",
-        )
-
-        logger.info(
-            "Wrote ensemble plots: ensemble_decomposition.png, "
-            "decomposition_auroc.png, ensemble_score_hists.png, "
-            "mean_recon_breakdown.png, mean_recons_only.png, "
-            "mean_abs_bias.png, variance_heatmaps_ood.png, "
-            "variance_heatmaps_all.png, mean_error_maps.png, "
-            "min_error_maps.png, score_comparison.png, "
-            "bias_variance_vs_block.png, bias_variance_vs_percentile.png"
+        _write_top_ood_figures(
+            models, decoders_list, loaders, ens_dir, device,
+            block=inst_block,
+            n_top=int(eval_cfg.get("n_top_ood", 10)),
+            sigma=overlay_sigma, overlay_power=overlay_power,
+            size=size,
         )
     else:
         residual = None
@@ -670,16 +733,16 @@ def main() -> None:
         "decomposition_auroc": {
             "aggregated": agg_au,
             "per_block": {
-                t: _to_jsonable(deb["per_block_auroc"][t]) for t in TERMS
+                t: to_jsonable(decomp["per_block_auroc"][t]) for t in TERMS
             },
         },
         # Headline OOD score: the Bias term (bias = risk − variance).
-        "anomaly_auroc": _to_jsonable(deb["anomaly_auroc"]),
+        "anomaly_auroc": to_jsonable(decomp["anomaly_auroc"]),
         # Predictive-uncertainty decomposition (classifier heads). The
         # epistemic term is the ensemble's predictive variance (mutual
         # information) — the OOD signal that works on this occlusion task.
         "uncertainty_auroc": {
-            "epistemic": _to_jsonable(unc["epistemic_auroc"]),
+            "epistemic": to_jsonable(unc["epistemic_auroc"]),
             "by_head": {
                 head: {
                     t: unc["auroc"][head][t].get("auroc")
@@ -690,7 +753,7 @@ def main() -> None:
         },
     }
     with open(ens_dir / "summary.json", "w") as f:
-        json.dump(_to_jsonable(summary), f, indent=2)
+        json.dump(to_jsonable(summary), f, indent=2)
     logger.info(f"Ensemble summary written to {ens_dir / 'summary.json'}")
     logger.info("All done.")
 
