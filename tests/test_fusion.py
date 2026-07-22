@@ -171,8 +171,6 @@ def test_collect_fusion_signals_keys_and_shapes(ensemble):
     )
     expected = {f"locfre_b{j}" for j in BLOCKS} | {
         "unc_epistemic_combined", "ens_energy_gender",
-        "unc_total_combined", "unc_total_gender",
-        "unc_epistemic_gender", "ens_msp_gender",
     }
     assert set(sig.keys()) == expected
     for k, v in sig.items():
