@@ -202,6 +202,17 @@ def test_evaluate_ensemble_decomposition(setup):
         assert out["scores_in"]["aggregated"][t].shape == (10,)
         assert out["scores_ood"]["aggregated"][t].shape == (7,)
         assert np.isfinite(out["scores_in"]["aggregated"][t]).all()
+    # Per-member reconstruction-error scores + AUROC (architecture effect).
+    assert len(out["member_auroc"]) == N_MODELS
+    for m in range(N_MODELS):
+        mau = out["member_auroc"][m]
+        assert 0.0 <= mau["aggregated"] <= 1.0
+        assert len(mau["per_block"]) == N_BLOCKS
+        assert out["scores_in"]["per_member"]["aggregated"][m].shape == (10,)
+        assert out["scores_ood"]["per_member"]["aggregated"][m].shape == (7,)
+        for k in range(N_BLOCKS):
+            assert (out["scores_in"]["per_member"]["per_block"][m][k].shape
+                    == (10,))
 
 
 def test_collect_eye_region_bias_shapes_and_score(setup):
