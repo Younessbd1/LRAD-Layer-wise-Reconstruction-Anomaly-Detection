@@ -1,17 +1,18 @@
 """Evaluation: per-attribute accuracy on in-dist + OOD AUROC.
 
-Two flavors of OOD score, computed from the trained classifier's outputs
+Two per-head OOD scores, computed from the trained classifier's outputs
 on each test image:
 
-  * ``msp``     — 1 - max softmax probability of the gender head.
-                 Confident predictions (close to 0/1) get a low OOD score;
-                 confused predictions (close to 0.5) get a high OOD score.
+  * ``entropy_gender`` — H(gender_softmax): the gender head hesitates.
+  * ``entropy_attrs``  — mean over attrs of the Bernoulli entropy
+                 H(sigmoid(z_i)): the attribute heads hesitate. Four of
+                 the six attrs are eye-region traits, so this is the head
+                 signal that actually fires when glasses occlude the eyes.
 
-  * ``entropy`` — combined predictive entropy across both heads:
-                 H(gender_softmax) + mean over attrs of Bernoulli entropy
-                 H(sigmoid(z_i)). High entropy means the model is uncertain
-                 about *every* facial trait — exactly the signal we want
-                 when sunglasses occlude the face.
+The historical ``msp`` (1 − max softmax prob, rank-equivalent to the
+gender entropy) and the summed ``entropy_combined`` (dominated by its
+weaker gender term on this task) were dropped — both scored at or below
+the per-head entropies on the ensemble runs.
 
 AUROC is computed by combining in-distribution (label=0) and OOD
 (label=1) scores into a single (score, label) array and feeding it to
@@ -36,10 +37,10 @@ logger = logging.getLogger("celeba_ood")
 # Clamp floor for probabilities. 1e-12 is *unsafe* in float32: 1.0 - 1e-12
 # rounds back to 1.0, so a saturated probability (p == 1.0, common once the
 # attribute heads train to high confidence) survives the clamp, making
-# (1 - p).log() == -inf and 0 * -inf == NaN — which is exactly what poisoned
-# score_entropy_combined. Keep this floor only for the legacy
-# probability-based helper; the entropy actually used now is computed from
-# logits, which is stable regardless of saturation.
+# (1 - p).log() == -inf and 0 * -inf == NaN — which used to poison the
+# entropy scores. Keep this floor only for the legacy probability-based
+# helper; the entropy actually used now is computed from logits, which is
+# stable regardless of saturation.
 _EPS = 1e-7
 
 
@@ -112,14 +113,10 @@ def collect_predictions(
     gender_probs = F.softmax(gender_logits, dim=-1)
     attr_probs = torch.sigmoid(attr_logits)
 
-    msp = gender_probs.max(dim=-1).values
-    score_msp = (1.0 - msp).numpy()
-
     h_gender = _softmax_entropy(gender_logits)
     # Stable logit-based Bernoulli entropy — robust to saturated attribute
     # heads (p == 1.0 in float32), which used to make this score all-NaN.
     h_attrs = _bernoulli_entropy_logits(attr_logits).mean(dim=-1)
-    score_entropy_combined = (h_gender + h_attrs).numpy()
     score_entropy_gender = h_gender.numpy()
     score_entropy_attrs = h_attrs.numpy()
 
@@ -131,10 +128,8 @@ def collect_predictions(
         "gender_targets": gender_targets.numpy(),
         "attr_targets": attr_targets.numpy(),
         "is_ood": is_ood.numpy().astype(np.int64),
-        "score_msp": score_msp,
         "score_entropy_gender": score_entropy_gender,
         "score_entropy_attrs": score_entropy_attrs,
-        "score_entropy_combined": score_entropy_combined,
     }
 
 
@@ -164,10 +159,8 @@ def ood_auroc(preds_in: dict, preds_ood: dict) -> dict:
     """AUROC for several OOD-score definitions, using preds_in as
     label=0 and preds_ood as label=1."""
     score_keys = (
-        "score_msp",
         "score_entropy_gender",
         "score_entropy_attrs",
-        "score_entropy_combined",
     )
     n_in = preds_in["is_ood"].shape[0]
     n_ood = preds_ood["is_ood"].shape[0]
@@ -202,16 +195,16 @@ def evaluate(
     preds_in = collect_predictions(model, loaders["test_in"], device)
     logger.info(
         f"  test_in size = {preds_in['is_ood'].shape[0]}, "
-        f"OOD score (combined entropy) mean = "
-        f"{preds_in['score_entropy_combined'].mean():.4f}"
+        f"OOD score (attr entropy) mean = "
+        f"{preds_in['score_entropy_attrs'].mean():.4f}"
     )
 
     logger.info(f"Collecting predictions on test_ood ({ood_label})...")
     preds_ood = collect_predictions(model, loaders["test_ood"], device)
     logger.info(
         f"  test_ood size = {preds_ood['is_ood'].shape[0]}, "
-        f"OOD score (combined entropy) mean = "
-        f"{preds_ood['score_entropy_combined'].mean():.4f}"
+        f"OOD score (attr entropy) mean = "
+        f"{preds_ood['score_entropy_attrs'].mean():.4f}"
     )
 
     accuracy = per_attribute_accuracy(preds_in, loaders["attr_targets"])
@@ -224,10 +217,8 @@ def evaluate(
 
     logger.info(f"OOD AUROC (in-dist vs {ood_label}):")
     for k in (
-        "score_msp",
         "score_entropy_gender",
         "score_entropy_attrs",
-        "score_entropy_combined",
     ):
         v = auroc[k]
         if "auroc" in v and v["auroc"] == v["auroc"]:  # not NaN
