@@ -156,12 +156,6 @@ def collect_fusion_signals(
     }
     out["unc_epistemic_combined"] = unc["combined"]["epistemic"]
     out["ens_energy_gender"] = np.concatenate(energy_chunks)
-    # Extra head scores — not part of the validated rank-fusion recipe, but
-    # nearly free here and useful features for the supervised fusion.
-    out["unc_total_combined"] = unc["combined"]["total"]
-    out["unc_total_gender"] = unc["gender"]["total"]
-    out["unc_epistemic_gender"] = unc["gender"]["epistemic"]
-    out["ens_msp_gender"] = 1.0 - g.mean(axis=0).max(axis=1)
     if cp_chunks:
         out["cutpaste_prob"] = np.concatenate(cp_chunks)
     return out
