@@ -111,7 +111,9 @@ def train_model(
     model built with ``model.cutpaste_head: true``.
 
     Returns a history dict with per-epoch train (and, when a validation set
-    is given, val) loss, gender accuracy, and per-attribute accuracy.
+    is given, val) loss, gender accuracy, and per-attribute accuracy, plus
+    the per-batch series (``batch_loss``, ``batch_*_acc``) and the
+    ``epoch_ends`` markers the batch-level figures draw from.
 
     When ``checkpoint_dir`` is given (config flag
     ``training.save_every_epoch``), the model state is saved at the end of
@@ -161,6 +163,7 @@ def train_model(
         "val_gender_acc": [],
         "train_attr_acc": [],
         "val_attr_acc": [],
+        "batch_loss": [],
         "batch_gender_acc": [],
         "batch_attr_acc_mean": [],
         "batch_cutpaste_acc": [],
@@ -237,6 +240,7 @@ def train_model(
             attr_match = (attr_pred == attrs[intact]).float()
             attr_correct += attr_match.sum(dim=0)
 
+            history["batch_loss"].append(loss.item())
             history["batch_gender_acc"].append(
                 gender_match.float().mean().item() if bs else 0.0
             )
