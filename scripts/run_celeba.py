@@ -20,7 +20,6 @@ Usage:
 from __future__ import annotations
 
 import argparse
-import copy
 import json
 import logging
 import os
@@ -47,15 +46,16 @@ _ROOT = Path(__file__).resolve().parent.parent
 if str(_ROOT) not in sys.path:
     sys.path.insert(0, str(_ROOT))
 
-from lrad.anomaly_score import _per_pixel_errors
-from lrad.dataset import get_celeba_loaders
+from lrad.config import apply_overrides, load_config, to_jsonable
+from lrad.dataset import gather_samples, get_celeba_loaders
 from lrad.decoder import build_decoders
 from lrad.evaluate import evaluate
 from lrad.model import build_model, count_parameters
 from lrad.plots import (
     plot_activations,
     plot_batch_accuracy,
-    plot_fusion_auroc,
+    plot_batch_loss,
+    plot_decoder_history,
     plot_fusion_overlay,
     plot_per_block_breakdown,
     plot_recons_only,
@@ -67,52 +67,7 @@ logger = logging.getLogger("celeba_ood")
 
 
 # ---------------------------------------------------------------------------
-# Config handling
-# ---------------------------------------------------------------------------
-
-def load_config(path: Path) -> dict:
-    with open(path, "r") as f:
-        return yaml.safe_load(f)
-
-
-def _apply_override(cfg: dict, key_path: str, value: str) -> None:
-    node = cfg
-    keys = key_path.split(".")
-    for k in keys[:-1]:
-        if k not in node or not isinstance(node[k], dict):
-            node[k] = {}
-        node = node[k]
-    # YAML-style lists, e.g. model.channels=[32,64,128,256,256]
-    if value.startswith("[") and value.endswith("]"):
-        try:
-            node[keys[-1]] = yaml.safe_load(value)
-            return
-        except yaml.YAMLError:
-            pass
-    for cast in (int, float):
-        try:
-            node[keys[-1]] = cast(value)
-            return
-        except ValueError:
-            continue
-    if value.lower() in {"true", "false"}:
-        node[keys[-1]] = value.lower() == "true"
-        return
-    node[keys[-1]] = value
-
-
-def apply_overrides(cfg: dict, overrides: list[str]) -> dict:
-    cfg = copy.deepcopy(cfg)
-    for item in overrides:
-        if "=" not in item:
-            raise ValueError(f"override must be key=value, got {item!r}")
-        k, v = item.split("=", 1)
-        _apply_override(cfg, k.strip(), v.strip())
-    return cfg
-
-
-# ---------------------------------------------------------------------------
-# Plots
+# Script-local figures (epoch curves, score histograms, ROC)
 # ---------------------------------------------------------------------------
 
 def _plot_history(history: dict, save_path: Path) -> None:
@@ -168,60 +123,9 @@ def _plot_score_distribution(
     plt.close(fig)
 
 
-@torch.no_grad()
-def _compute_fusion_scores(model, decoders, loader, device) -> np.ndarray:
-    """Per-image fused anomaly score = max of per-pixel max over per-block
-    error maps. Returns shape (N,) over the full loader."""
-    scores: list[np.ndarray] = []
-    for batch in loader:
-        img = batch[0].to(device, non_blocking=True)
-        errs_by_block = _per_pixel_errors(model, decoders, img)  # {k: (B,H,W)}
-        errs = torch.stack(
-            [errs_by_block[k] for k in sorted(errs_by_block)], dim=0,
-        )  # (n_blocks, B, H, W)
-        fused = errs.max(dim=0).values          # (B, H, W) — per-pixel max
-        s = fused.flatten(1).max(dim=1).values  # (B,) — most surprising pixel
-        scores.append(s.cpu().numpy())
-    return np.concatenate(scores) if scores else np.zeros(0)
-
-
-def _gather_samples(
-    loader,
-    n: int,
-    *,
-    seed: int | None = None,
-) -> torch.Tensor:
-    """Return ``n`` images from a (non-shuffled) loader.
-
-    With ``seed=None`` the call is backwards compatible: the first ``n``
-    images are returned. With a seed, ``n`` images are drawn uniformly at
-    random from the entire underlying dataset (reproducible), which gives
-    visually-varied picks and lets us show samples beyond the loader's
-    first batch.
-    """
-    if seed is None:
-        chunks: list[torch.Tensor] = []
-        have = 0
-        for batch in loader:
-            chunks.append(batch[0])
-            have += batch[0].size(0)
-            if have >= n:
-                break
-        return torch.cat(chunks, dim=0)[:n]
-
-    ds = loader.dataset
-    total = len(ds)
-    n = min(n, total)
-    gen = torch.Generator().manual_seed(int(seed))
-    idx = torch.randperm(total, generator=gen)[:n].tolist()
-    imgs = [ds[i][0] for i in idx]
-    return torch.stack(imgs, dim=0)
-
-
 def _plot_roc(auroc: dict, save_path: Path) -> None:
     fig, ax = plt.subplots(figsize=(5.6, 5), constrained_layout=True)
-    for k in ("score_msp", "score_entropy_gender",
-              "score_entropy_attrs", "score_entropy_combined"):
+    for k in ("score_entropy_gender", "score_entropy_attrs"):
         v = auroc.get(k, {})
         if "fpr" not in v or "tpr" not in v:
             continue
@@ -239,24 +143,105 @@ def _plot_roc(auroc: dict, save_path: Path) -> None:
     plt.close(fig)
 
 
-# ---------------------------------------------------------------------------
-# JSON helpers
-# ---------------------------------------------------------------------------
+def _write_model_plots(
+    cfg: dict,
+    model,
+    decoders,
+    loaders: dict,
+    results: dict,
+    history: dict | None,
+    dec_history: dict | None,
+    device: torch.device,
+    plot_dir: Path,
+) -> None:
+    """All figures of a single-model run: training curves, score
+    distributions, ROC, and — when decoders exist — the per-block
+    reconstruction figures on a small ID + OOD sample."""
+    if history is not None:
+        _plot_history(history, plot_dir / "training_history.png")
+        plot_batch_accuracy(history, plot_dir / "batch_accuracy.png")
+        plot_batch_loss(history, plot_dir / "batch_loss.png")
+    if dec_history is not None:
+        plot_decoder_history(dec_history, plot_dir / "decoder_history.png")
 
-def _to_jsonable(obj):
-    if isinstance(obj, dict):
-        return {k: _to_jsonable(v) for k, v in obj.items()}
-    if isinstance(obj, (list, tuple)):
-        return [_to_jsonable(v) for v in obj]
-    if isinstance(obj, np.ndarray):
-        return None  # fpr/tpr/score arrays are too large for the summary JSON
-    if isinstance(obj, (np.floating,)):
-        return float(obj)
-    if isinstance(obj, (np.integer,)):
-        return int(obj)
-    if isinstance(obj, (float, int, str, bool)) or obj is None:
-        return obj
-    return str(obj)
+    for key, label in [
+        ("score_entropy_gender", "Predictive entropy (gender head)"),
+        ("score_entropy_attrs", "Predictive entropy (attr heads)"),
+    ]:
+        _plot_score_distribution(
+            results["preds_in"][key],
+            results["preds_ood"][key],
+            label,
+            plot_dir / f"score_dist_{key}.png",
+        )
+    _plot_roc(results["auroc"], plot_dir / "roc_ood.png")
+
+    if decoders is None:
+        return
+
+    ecfg = cfg.get("evaluation", {})
+    n_viz_in = int(ecfg.get("n_viz_in_samples", ecfg.get("n_viz_samples", 4)))
+    n_viz_ood = int(ecfg.get("n_viz_ood_samples",
+                             ecfg.get("n_viz_samples", 4)))
+    viz_seed = ecfg.get("viz_seed")
+    samples_in = gather_samples(
+        loaders["test_in"], n_viz_in, seed=viz_seed,
+    ).to(device)
+    samples_ood = gather_samples(
+        loaders["test_ood"], n_viz_ood,
+        seed=(viz_seed + 1) if viz_seed is not None else None,
+    ).to(device)
+
+    decoders.eval()
+    with torch.no_grad():
+        _, acts_in = model.forward_features(samples_in)
+        _, acts_ood = model.forward_features(samples_ood)
+        recons_in = [d(acts_in[k]) for k, d in enumerate(decoders)]
+        recons_ood = [d(acts_ood[k]) for k, d in enumerate(decoders)]
+
+    all_images = torch.cat([samples_in, samples_ood], dim=0)
+    all_recons = [
+        torch.cat([ri, ro], dim=0)
+        for ri, ro in zip(recons_in, recons_ood)
+    ]
+    row_labels = (
+        [f"ID  {i+1}" for i in range(samples_in.size(0))]
+        + [f"OOD {i+1}" for i in range(samples_ood.size(0))]
+    )
+
+    plot_per_block_breakdown(
+        all_images, all_recons,
+        plot_dir / "per_block_breakdown.png",
+        row_labels=row_labels,
+        title="Original | Err Lk | Recon Lk  per conv block",
+    )
+    plot_recons_only(
+        all_images, all_recons,
+        plot_dir / "recons_only.png",
+        row_labels=row_labels,
+        title="Per-block reconstructions",
+    )
+
+    all_acts = [
+        torch.cat([ai, ao], dim=0) for ai, ao in zip(acts_in, acts_ood)
+    ]
+    plot_activations(
+        all_images, all_acts,
+        plot_dir / "activations.png",
+        row_labels=row_labels,
+        title="Per-block classifier activations (channel-mean)",
+    )
+
+    plot_fusion_overlay(
+        all_images, all_recons,
+        plot_dir / "fusion_overlay.png",
+        row_labels=row_labels,
+        title="Multi-scale fusion (per-pixel max) + overlay",
+    )
+    logger.info(
+        "Wrote per-block plots: per_block_breakdown.png, "
+        "recons_only.png, activations.png, fusion_overlay.png"
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -297,8 +282,11 @@ def build_and_run(
 
     # --- Model ---
     model = build_model(cfg).to(device)
+    # Captured now: train_decoders later freezes the classifier
+    # (requires_grad=False), which would make this count read 0.
+    n_params = count_parameters(model)
     logger.info(f"Model        : {model.__class__.__name__}  "
-                f"({count_parameters(model):,} params)")
+                f"({n_params:,} params)")
 
     history: dict | None = None
     weights_path = output_dir / "weights" / "model.pt"
@@ -307,7 +295,9 @@ def build_and_run(
     if eval_only:
         if not weights_path.exists():
             raise FileNotFoundError(f"missing weights at {weights_path}")
-        model.load_state_dict(torch.load(weights_path, map_location=device))
+        model.load_state_dict(
+            torch.load(weights_path, map_location=device, weights_only=True),
+        )
         logger.info(f"Loaded weights from {weights_path}")
     else:
         logger.info("=" * 70)
@@ -335,7 +325,7 @@ def build_and_run(
         logger.info(f"Training done in {time.time() - t0:.1f}s")
         torch.save(model.state_dict(), weights_path)
         with open(output_dir / "history.json", "w") as f:
-            json.dump(_to_jsonable(history), f, indent=2)
+            json.dump(to_jsonable(history), f, indent=2)
 
     # --- Per-block decoders ---
     image_size = cfg.get("dataset", {}).get("image_size", 64)
@@ -347,7 +337,8 @@ def build_and_run(
     if eval_only:
         if decoders_path.exists():
             decoders.load_state_dict(
-                torch.load(decoders_path, map_location=device),
+                torch.load(decoders_path, map_location=device,
+                           weights_only=True),
             )
             logger.info(f"Loaded decoder weights from {decoders_path}")
         else:
@@ -385,134 +376,24 @@ def build_and_run(
         logger.info(f"Decoder training done in {time.time() - t0:.1f}s")
         torch.save(decoders.state_dict(), decoders_path)
         with open(output_dir / "decoders_history.json", "w") as f:
-            json.dump(_to_jsonable(dec_history), f, indent=2)
+            json.dump(to_jsonable(dec_history), f, indent=2)
     else:
         decoders = None  # type: ignore[assignment]
 
     # --- Evaluate ---
+    # Classifier-head scores only: the headline anomaly score (the bias
+    # term) needs the spread across independently trained models and
+    # therefore lives in run_ensemble.py.
     logger.info("=" * 70)
     logger.info("EVALUATION — per-attribute accuracy + OOD AUROC")
     logger.info("=" * 70)
     results = evaluate(model, loaders, device)
 
-    # The headline bias/variance anomaly score needs the spread across
-    # independently trained models, so it lives in run_ensemble.py. A single
-    # model here reports the classifier OOD scores (msp / entropy) plus a
-    # fused per-block reconstruction-error score (computed with the plots
-    # below).
-
-    # --- Plots ---
     if not no_plots:
-        plot_dir = output_dir / "plots"
-        if history is not None:
-            _plot_history(history, plot_dir / "training_history.png")
-            plot_batch_accuracy(history, plot_dir / "batch_accuracy.png")
-        for key, label in [
-            ("score_msp", "1 - max softmax prob (gender)"),
-            ("score_entropy_combined", "Combined predictive entropy"),
-        ]:
-            _plot_score_distribution(
-                results["preds_in"][key],
-                results["preds_ood"][key],
-                label,
-                plot_dir / f"score_dist_{key}.png",
-            )
-        _plot_roc(results["auroc"], plot_dir / "roc_ood.png")
-
-        # --- Per-block reconstruction plots + fused error score -----------
-        if decoders is not None:
-            ecfg = cfg.get("evaluation", {})
-            n_viz_in = int(ecfg.get(
-                "n_viz_in_samples", ecfg.get("n_viz_samples", 4),
-            ))
-            n_viz_ood = int(ecfg.get(
-                "n_viz_ood_samples", ecfg.get("n_viz_samples", 4),
-            ))
-            viz_seed = ecfg.get("viz_seed")
-            samples_in = _gather_samples(
-                loaders["test_in"], n_viz_in, seed=viz_seed,
-            ).to(device)
-            samples_ood = _gather_samples(
-                loaders["test_ood"], n_viz_ood,
-                seed=(viz_seed + 1) if viz_seed is not None else None,
-            ).to(device)
-
-            decoders.eval()
-            with torch.no_grad():
-                _, acts_in = model.forward_features(samples_in)
-                _, acts_ood = model.forward_features(samples_ood)
-                recons_in = [d(acts_in[k]) for k, d in enumerate(decoders)]
-                recons_ood = [d(acts_ood[k]) for k, d in enumerate(decoders)]
-
-            all_images = torch.cat([samples_in, samples_ood], dim=0)
-            all_recons = [
-                torch.cat([ri, ro], dim=0)
-                for ri, ro in zip(recons_in, recons_ood)
-            ]
-            row_labels = (
-                [f"ID  {i+1}" for i in range(samples_in.size(0))]
-                + [f"OOD {i+1}" for i in range(samples_ood.size(0))]
-            )
-
-            plot_per_block_breakdown(
-                all_images, all_recons,
-                plot_dir / "per_block_breakdown.png",
-                row_labels=row_labels,
-                title="Original | Err Lk | Recon Lk  per conv block",
-            )
-            plot_recons_only(
-                all_images, all_recons,
-                plot_dir / "recons_only.png",
-                row_labels=row_labels,
-                title="Per-block reconstructions",
-            )
-
-            all_acts = [
-                torch.cat([ai, ao], dim=0)
-                for ai, ao in zip(acts_in, acts_ood)
-            ]
-            plot_activations(
-                all_images, all_acts,
-                plot_dir / "activations.png",
-                row_labels=row_labels,
-                title="Per-block classifier activations (channel-mean)",
-            )
-
-            plot_fusion_overlay(
-                all_images, all_recons,
-                plot_dir / "fusion_overlay.png",
-                row_labels=row_labels,
-                title="Multi-scale fusion (per-pixel max) + overlay",
-            )
-
-            in_fusion = _compute_fusion_scores(
-                model, decoders, loaders["test_in"], device,
-            )
-            ood_fusion = _compute_fusion_scores(
-                model, decoders, loaders["test_ood"], device,
-            )
-            fusion_auroc = plot_fusion_auroc(
-                in_fusion, ood_fusion,
-                plot_dir / "fusion_auroc.png",
-                title="Fusion-based anomaly detection",
-            )
-            logger.info(
-                f"Fusion-based AUROC (max-pixel) = {fusion_auroc:.4f}  "
-                f"(in_mean={in_fusion.mean():.4f}, "
-                f"ood_mean={ood_fusion.mean():.4f})"
-            )
-            results["fusion"] = {
-                "auroc": fusion_auroc,
-                "in_mean": float(in_fusion.mean()),
-                "ood_mean": float(ood_fusion.mean()),
-                "n_in": int(in_fusion.size),
-                "n_ood": int(ood_fusion.size),
-            }
-            logger.info(
-                "Wrote per-block plots: per_block_breakdown.png, "
-                "recons_only.png, activations.png, "
-                "fusion_overlay.png, fusion_auroc.png"
-            )
+        _write_model_plots(
+            cfg, model, decoders, loaders, results, history, dec_history,
+            device, output_dir / "plots",
+        )
 
     # --- Summary ---
     summary = {
@@ -529,15 +410,16 @@ def build_and_run(
         "ood_attr": loaders["ood_attr"],
         "model": {
             "channels": list(getattr(model, "channels", [])),
-            "parameters": count_parameters(model),
+            "kernel_size": int(getattr(model, "kernel_size", 3)),
+            "parameters": n_params,
         },
-        "accuracy": _to_jsonable(results["accuracy"]),
-        "auroc": _to_jsonable({
-            k: {kk: vv for kk, vv in v.items() if kk in ("auroc", "in_mean", "ood_mean")}
+        "accuracy": to_jsonable(results["accuracy"]),
+        "auroc": to_jsonable({
+            k: {kk: vv for kk, vv in v.items()
+                if kk in ("auroc", "in_mean", "ood_mean")}
             if isinstance(v, dict) else v
             for k, v in results["auroc"].items()
         }),
-        "fusion": _to_jsonable(results.get("fusion", {})),
     }
     with open(output_dir / "summary.json", "w") as f:
         json.dump(summary, f, indent=2)
