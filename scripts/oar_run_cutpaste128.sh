@@ -1,10 +1,10 @@
 #!/bin/bash
 # ---------------------------------------------------------------------------
 # OAR submission script for Grid'5000 — CutPaste + 128 px ensemble run
-# (configs/celeba_ood_cutpaste128.yaml: 8 members, cutpaste pretext head,
+# (configs/celeba_ood_cutpaste128.yaml: 10 members, cutpaste pretext head,
 # image_size 128). Pinned to **gruss** (Nancy production — 4 nodes x
 # 2 A40 45 GiB): an A40 is ~3x a 2080 Ti, and 128 px costs ~4x per image,
-# so budget ~3-4 h/member → ~24-32 h for 8 members; walltime 48 h.
+# so budget ~3-4 h/member → ~30-40 h for 10 members; walltime 48 h.
 # graffiti would NOT fit this run inside 48 h — do not retarget it there
 # without also shrinking the ensemble.
 #
