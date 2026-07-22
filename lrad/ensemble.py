@@ -86,12 +86,14 @@ def load_ensemble_members(
             )
         model = build_model(mcfg).to(device).eval()
         model.load_state_dict(
-            torch.load(mdir / "weights" / "model.pt", map_location=device),
+            torch.load(mdir / "weights" / "model.pt", map_location=device,
+                       weights_only=True),
         )
         decoders = build_decoders(model, image_size=image_size)
         decoders = decoders.to(device).eval()
         decoders.load_state_dict(
-            torch.load(mdir / "weights" / "decoders.pt", map_location=device),
+            torch.load(mdir / "weights" / "decoders.pt",
+                       map_location=device, weights_only=True),
         )
         models.append(model)
         decoders_list.append(decoders)
@@ -124,6 +126,7 @@ def block_reconstructions(
 def decomposition_maps(
     images: torch.Tensor,
     recons_per_model: Sequence[Sequence[torch.Tensor]],
+    keep_per_model_errors: bool = False,
 ) -> dict[int, dict[str, torch.Tensor]]:
     """Per-pixel Risk / Bias / Variance maps for one batch.
 
@@ -133,6 +136,12 @@ def decomposition_maps(
     shape ``(B, H, W)`` (summed over RGB) plus the ensemble-mean
     reconstruction ``mean_recon`` ``(B, 3, H, W)``. The three maps
     satisfy ``risk == bias + variance`` per pixel up to float error.
+
+    ``keep_per_model_errors`` additionally stores the raw per-model error
+    stack under ``per_model_error`` ``(M, B, H, W)`` — it is a free
+    by-product of the Risk term, and the per-member scorer needs it, so
+    keeping it here avoids a second full ``(x − f̂)²`` pass. Off by
+    default because it multiplies the batch's map memory by ``M``.
     """
     n_models = len(recons_per_model)
     if n_models == 0:
@@ -161,6 +170,8 @@ def decomposition_maps(
             "variance": variance,
             "mean_recon": mean_recon,
         }
+        if keep_per_model_errors:
+            out[k]["per_model_error"] = se_per_model
     return out
 
 
@@ -475,12 +486,20 @@ def collect_decomposition_scores(
         {
           'per_block':  {term: {k: (N,)}},
           'aggregated': {term: (N,)},
+          'per_member': {'per_block': [{k: (N,)}], 'aggregated': [(N,)]},
         }
 
-    for ``term`` in ``('risk', 'bias', 'variance')``.
+    for ``term`` in ``('risk', 'bias', 'variance')``. ``per_member`` holds
+    each member's OWN reconstruction-error scores (``sum_c (x − f̂^m)²``
+    reduced with the same ``agg``), indexed by member — the raw material
+    for the architecture-effect analysis (how channel widths / kernel size
+    affect each member's bias detection).
     """
+    n_models = len(models)
     per_block: dict[str, dict[int, list]] = {t: {} for t in TERMS}
     aggregated: dict[str, list] = {t: [] for t in TERMS}
+    member_per_block: list[dict[int, list]] = [{} for _ in range(n_models)]
+    member_aggregated: list[list] = [[] for _ in range(n_models)]
 
     for batch in loader:
         img = batch[0].to(device, non_blocking=True)
@@ -488,7 +507,9 @@ def collect_decomposition_scores(
             block_reconstructions(models[m], decoders_list[m], img)
             for m in range(len(models))
         ]
-        maps = decomposition_maps(img, recons_per_model)
+        maps = decomposition_maps(
+            img, recons_per_model, keep_per_model_errors=True,
+        )
         for t in TERMS:
             term_maps = {k: maps[k][t] for k in maps}
             for k, mp in term_maps.items():
@@ -497,6 +518,18 @@ def collect_decomposition_scores(
                 )
             aggregated[t].append(
                 aggregate_anomaly_score(term_maps, agg, block_weights)
+                .cpu().numpy()
+            )
+        # Member scores reuse the error stack the Risk term was built
+        # from — no second (x − f̂)² pass over the batch.
+        for m in range(n_models):
+            err_maps = {k: maps[k]["per_model_error"][m] for k in maps}
+            for k, mp in err_maps.items():
+                member_per_block[m].setdefault(k, []).append(
+                    _reduce_over_pixels(mp, agg).cpu().numpy()
+                )
+            member_aggregated[m].append(
+                aggregate_anomaly_score(err_maps, agg, block_weights)
                 .cpu().numpy()
             )
 
@@ -509,6 +542,17 @@ def collect_decomposition_scores(
             t: (np.concatenate(aggregated[t]) if aggregated[t]
                 else np.zeros(0))
             for t in TERMS
+        },
+        "per_member": {
+            "per_block": [
+                {k: np.concatenate(v) for k, v in member_per_block[m].items()}
+                for m in range(n_models)
+            ],
+            "aggregated": [
+                (np.concatenate(member_aggregated[m]) if member_aggregated[m]
+                 else np.zeros(0))
+                for m in range(n_models)
+            ],
         },
     }
 
@@ -530,7 +574,10 @@ def evaluate_ensemble_decomposition(
     ``auroc`` mapping. ``per_block_auroc`` holds one AUROC list per term,
     in block order, ready for the bar plot. ``anomaly_auroc`` surfaces the
     headline OOD score — the Bias term ``bias = risk − variance`` — as a
-    convenience for callers.
+    convenience for callers. ``member_auroc`` scores each member ALONE
+    (its own reconstruction error, same ``agg``), one dict per member with
+    ``aggregated`` and ``per_block`` AUROCs — the y-axis of the
+    architecture-effect plots.
     """
     scores_in = collect_decomposition_scores(
         models, decoders_list, loaders["test_in"], device, agg, block_weights,
@@ -554,6 +601,22 @@ def evaluate_ensemble_decomposition(
             scores_in["aggregated"][t], scores_ood["aggregated"][t],
         )
 
+    member_auroc: list[dict] = []
+    for m in range(len(models)):
+        mem_in = scores_in["per_member"]
+        mem_ood = scores_ood["per_member"]
+        member_auroc.append({
+            "aggregated": _auroc_entry(
+                mem_in["aggregated"][m], mem_ood["aggregated"][m],
+            ).get("auroc", float("nan")),
+            "per_block": [
+                _auroc_entry(
+                    mem_in["per_block"][m][k], mem_ood["per_block"][m][k],
+                ).get("auroc", float("nan"))
+                for k in ks
+            ],
+        })
+
     return {
         "agg": agg,
         "blocks": ks,
@@ -562,6 +625,7 @@ def evaluate_ensemble_decomposition(
         "scores_ood": scores_ood,
         "auroc": auroc,
         "per_block_auroc": per_block_auroc,
+        "member_auroc": member_auroc,
         # The OOD anomaly is the bias term itself: bias = risk − variance
         # = (x − f̄)², with no sigma and no division. Surface it directly so
         # callers don't have to know it lives under the "bias" key.
@@ -617,7 +681,7 @@ def _uncertainty_scores(
     Inputs are per-member predictive probabilities stacked on axis 0. Returns
     ``{head: {term: (N,)}}`` for ``head`` in ``gender / attrs / combined`` and
     ``term`` in ``total / aleatoric / epistemic``. The combined head sums the
-    gender and (attr-averaged) terms, matching ``score_entropy_combined``.
+    gender and (attr-averaged) terms — the summed two-head entropy.
     """
     out: dict[str, dict[str, np.ndarray]] = {}
 
@@ -641,7 +705,7 @@ def _uncertainty_scores(
         "epistemic": total_a - alea_a,
     }
 
-    # --- combined (gender + attrs), matching score_entropy_combined ---
+    # --- combined (gender + attrs): summed two-head entropy terms ---
     out["combined"] = {
         t: out["gender"][t] + out["attrs"][t] for t in UNC_TERMS
     }
