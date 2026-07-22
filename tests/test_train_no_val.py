@@ -134,7 +134,9 @@ def test_train_decoders_saves_per_epoch_checkpoints(tmp_path):
     for e in range(1, epochs + 1):
         assert (tmp_path / f"decoders_ep{e}.pt").exists()
     fresh = build_decoders(model, image_size=IMG)
-    fresh.load_state_dict(torch.load(tmp_path / f"decoders_ep{epochs}.pt"))
+    fresh.load_state_dict(
+        torch.load(tmp_path / f"decoders_ep{epochs}.pt", weights_only=True),
+    )
 
 
 def test_train_with_val_still_records_val_curve():
