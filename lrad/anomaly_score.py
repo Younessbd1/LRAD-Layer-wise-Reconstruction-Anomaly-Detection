@@ -12,19 +12,12 @@ disagreement / epistemic term) from the risk leaves exactly the consensus
 model's irreducible error, which is what genuinely fails to reconstruct on
 OOD inputs (e.g. eyeglasses occluding the face).
 
-This module no longer performs any sigma-whitening. It provides the two
-low-level pieces still shared across the codebase:
-
-  * ``_per_pixel_errors`` — the raw per-pixel reconstruction error
-    ``sum_RGB (x − decoder_k(activation_k))²`` of a single model (summed,
-    not averaged, over the 3 channels), upsampled to the input resolution.
-    Backs the single-model fused error score in ``scripts/run_celeba.py``.
-  * ``_reduce_over_pixels`` / ``aggregate_anomaly_score`` — collapse a
-    per-pixel map ``(B, H, W)`` to a per-image scalar ``(B,)`` and combine
-    the per-block scalars into one anomaly score. Used by the ensemble
-    decomposition scorer.
-
-Everything here runs under ``@torch.no_grad()``.
+This module no longer performs any sigma-whitening. What remains is the
+pixel → scalar reduction machinery shared across the codebase:
+``_reduce_over_pixels`` collapses a per-pixel map ``(B, H, W)`` to one
+scalar per image, and ``aggregate_anomaly_score`` combines the per-block
+scalars into a single anomaly score. Both back the ensemble decomposition
+scorer (``lrad.ensemble``) and the localized variants.
 """
 
 from __future__ import annotations
@@ -32,36 +25,8 @@ from __future__ import annotations
 from typing import Sequence
 
 import torch
-import torch.nn as nn
-
-from .model import FacialCNN
 
 _AGGS = ("mean", "max", "p95")
-
-
-@torch.no_grad()
-def _per_pixel_errors(
-    model: FacialCNN,
-    decoders: nn.ModuleList,
-    images: torch.Tensor,
-) -> dict[int, torch.Tensor]:
-    """Raw per-pixel reconstruction error for every conv block.
-
-    ``error_k = sum_RGB (x - decoder_k(activation_k))²`` upsampled to the
-    input resolution. Returns ``{k: (B, H, W)}`` where ``H, W`` is the
-    *image* size (64x64), not the activation size. The L2 squared error is
-    summed (not averaged) over the 3 channels — no mean, no sqrt — so a
-    pixel lives in ``[0, 3]``, matching the ensemble bias/variance
-    decomposition.
-    """
-    model.eval()
-    decoders.eval()
-    _, acts = model.forward_features(images)
-    errs: dict[int, torch.Tensor] = {}
-    for k, dec in enumerate(decoders):
-        recon = dec(acts[k])
-        errs[k] = ((images - recon) ** 2).sum(dim=1)  # (B, H, W)
-    return errs
 
 
 def _reduce_over_pixels(a: torch.Tensor, agg: str) -> torch.Tensor:
