@@ -5,7 +5,7 @@ Each model's per-block reconstructions ``f̂_k`` are what the OOD score is
 built on: across a deep ensemble they feed the bias/variance decomposition
 (``lrad.ensemble``), and the anomaly score is the bias term ``(x − f̄_k)²``.
 For a single model they also drive the per-block ``recon_Lk`` / ``error_Lk``
-plots and the fused reconstruction-error score.
+plots.
 
 Each ``BlockDecoder`` takes a single block's activation map ``(C, H, W)``
 and grows it to ``(3, image_size, image_size)`` with a stack of ×2
