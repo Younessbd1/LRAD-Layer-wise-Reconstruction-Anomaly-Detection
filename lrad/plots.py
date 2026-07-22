@@ -61,6 +61,8 @@ import matplotlib.pyplot as plt
 import numpy as np
 import torch
 
+from .arch_diagram import KERNEL_COLORS
+
 
 _TITLE_FS = 13
 _LABEL_FS = 11
@@ -104,6 +106,29 @@ plt.rcParams.update({
 })
 
 
+def _causal_rolling_mean(arr: np.ndarray, w: int) -> np.ndarray:
+    """Causal rolling mean (no look-ahead) over a 1-D series."""
+    n = arr.size
+    out = np.empty_like(arr)
+    cs = np.cumsum(arr)
+    out[:w] = cs[:w] / np.arange(1, min(w, n) + 1)
+    out[w:] = (cs[w:] - cs[:-w]) / w
+    return out
+
+
+def _epoch_boundaries(ax: plt.Axes, epoch_ends, n: int, y: float) -> None:
+    """Vertical dashed lines at epoch ends + centred ``E<i>`` labels."""
+    ends = np.asarray(epoch_ends, dtype=float)
+    starts = np.concatenate([[0], ends[:-1] + 1])
+    for i, end in enumerate(ends):
+        if end < n - 1:
+            ax.axvline(end + 0.5, color="gray", linestyle="--",
+                       linewidth=0.75, alpha=0.55)
+        mid = (starts[i] + end) / 2
+        ax.text(mid, y, f"E{i + 1}", ha="center", va="bottom",
+                fontsize=7.5, color="#555", clip_on=True)
+
+
 def plot_batch_accuracy(history: dict, save_path: str | Path) -> None:
     """Per-batch gender and attr accuracy across all training batches.
 
@@ -122,21 +147,8 @@ def plot_batch_accuracy(history: dict, save_path: str | Path) -> None:
 
     # rolling mean — ~1/80 of the full run, at least 10 batches
     w = max(10, n // 80)
-
-    def _roll(arr: np.ndarray) -> np.ndarray:
-        """Causal rolling mean (no look-ahead)."""
-        out = np.empty_like(arr)
-        cs = np.cumsum(arr)
-        out[:w] = cs[:w] / np.arange(1, min(w, n) + 1)
-        out[w:] = (cs[w:] - cs[:-w]) / w
-        return out
-
-    gender_smooth = _roll(gender)
-    attrs_smooth = _roll(attrs)
-
-    # epoch boundary x-positions and start indices
-    epoch_ends_arr = np.asarray(epoch_ends, dtype=float)
-    epoch_starts = np.concatenate([[0], epoch_ends_arr[:-1] + 1])
+    gender_smooth = _causal_rolling_mean(gender, w)
+    attrs_smooth = _causal_rolling_mean(attrs, w)
 
     fig, axes = plt.subplots(1, 2, figsize=(13, 4.2), constrained_layout=True)
     fig.suptitle("Per-batch accuracy during training", fontsize=_TITLE_FS)
@@ -149,15 +161,7 @@ def plot_batch_accuracy(history: dict, save_path: str | Path) -> None:
         ax.plot(x, raw,    alpha=0.18, linewidth=0.55, color=colour)
         ax.plot(x, smooth, linewidth=1.8, color=colour,
                 label=f"rolling mean  (w={w})")
-
-        # epoch boundary lines + epoch number label
-        for i, end in enumerate(epoch_ends_arr):
-            if end < n - 1:
-                ax.axvline(end + 0.5, color="gray", linestyle="--",
-                           linewidth=0.75, alpha=0.55)
-            mid = (epoch_starts[i] + end) / 2
-            ax.text(mid, 0.475, f"E{i + 1}", ha="center", va="bottom",
-                    fontsize=7.5, color="#555", clip_on=True)
+        _epoch_boundaries(ax, epoch_ends, n, y=0.475)
 
         ax.set_xlabel("Batch (global index)", fontsize=_LABEL_FS)
         ax.set_ylabel("Accuracy", fontsize=_LABEL_FS)
@@ -166,6 +170,99 @@ def plot_batch_accuracy(history: dict, save_path: str | Path) -> None:
         ax.set_ylim(0.45, 1.02)
         ax.grid(alpha=0.25)
         ax.legend(fontsize=9)
+
+    fig.savefig(save_path, dpi=_SAVE_DPI, bbox_inches="tight")
+    plt.close(fig)
+
+
+def plot_batch_loss(history: dict, save_path: str | Path) -> None:
+    """Per-batch classifier loss across ALL training batches.
+
+    Raw per-batch combined loss (CE gender + weighted BCE attrs, + the
+    CutPaste CE when the pretext task is on) drawn faint, with a causal
+    rolling mean on top, epoch boundaries marked and a log y-scale so the
+    within- and between-epoch decrease stays visible over the whole run.
+    """
+    loss = np.asarray(history.get("batch_loss", []), dtype=float)
+    epoch_ends = history.get("epoch_ends", [])
+    if loss.size == 0:
+        return
+
+    n = loss.size
+    x = np.arange(n)
+    w = max(10, n // 80)
+    smooth = _causal_rolling_mean(loss, w)
+
+    fig, ax = plt.subplots(figsize=(8.5, 4.2), constrained_layout=True)
+    ax.plot(x, loss, alpha=0.18, linewidth=0.55, color=_C_ID)
+    ax.plot(x, smooth, linewidth=1.8, color=_C_ID,
+            label=f"rolling mean  (w={w})")
+    ax.set_yscale("log")
+    _epoch_boundaries(ax, epoch_ends, n,
+                      y=float(np.percentile(loss, 1)))
+    ax.set_xlabel("Batch (global index)", fontsize=_LABEL_FS)
+    ax.set_ylabel("Classifier loss (log scale)", fontsize=_LABEL_FS)
+    ax.set_title("Per-batch classifier loss during training",
+                 fontsize=_TITLE_FS)
+    ax.set_xlim(0, n - 1)
+    ax.grid(alpha=0.25, which="both")
+    ax.legend(fontsize=9)
+
+    fig.savefig(save_path, dpi=_SAVE_DPI, bbox_inches="tight")
+    plt.close(fig)
+
+
+def plot_decoder_history(
+    history: dict,
+    save_path: str | Path,
+    *,
+    title: str | None = None,
+) -> None:
+    """How the per-block decoders learn: reconstruction MSE per epoch.
+
+    One line per conv block (depth-ordered viridis shades) plus the summed
+    total (grey dashed), log y-scale so the epoch-to-epoch decrease of the
+    reconstruction error stays readable even after the initial drop. Each
+    block line carries a direct end label with its final MSE. Validation
+    curves (when a val split exists) are drawn dotted in the same colours.
+    ``history`` comes from :func:`lrad.train.train_decoders`.
+    """
+    per_block = np.asarray(history.get("train_loss_per_block", []),
+                           dtype=float)  # (E, n_blocks)
+    if per_block.size == 0:
+        return
+    total = np.asarray(history.get("train_loss", []), dtype=float)
+    val_per_block = np.asarray(history.get("val_loss_per_block", []),
+                               dtype=float)
+    n_epochs, n_blocks = per_block.shape
+    epochs = np.arange(1, n_epochs + 1)
+    colours = plt.cm.viridis(np.linspace(0.10, 0.85, n_blocks))
+
+    fig, ax = plt.subplots(figsize=(8.0, 4.6), constrained_layout=True)
+    for k in range(n_blocks):
+        ax.plot(epochs, per_block[:, k], color=colours[k], linewidth=1.8,
+                label=f"block L{k}")
+        if val_per_block.size:
+            ax.plot(epochs, val_per_block[:, k], color=colours[k],
+                    linewidth=1.2, linestyle=":")
+        ax.annotate(
+            f"{per_block[-1, k]:.4f}",
+            xy=(n_epochs, per_block[-1, k]),
+            xytext=(4, 0), textcoords="offset points",
+            va="center", fontsize=7.5, color=colours[k],
+        )
+    if total.size:
+        ax.plot(epochs, total, color="#666666", linewidth=1.2,
+                linestyle="--", label="total (sum)")
+    ax.set_yscale("log")
+    ax.set_xlabel("Epoch", fontsize=_LABEL_FS)
+    ax.set_ylabel("Reconstruction MSE (log scale)", fontsize=_LABEL_FS)
+    ax.set_title(title or "Per-block decoder reconstruction error",
+                 fontsize=_TITLE_FS)
+    ax.set_xlim(1, n_epochs)
+    ax.set_xticks(epochs[:: max(1, n_epochs // 10)])
+    ax.grid(alpha=0.25, which="both")
+    ax.legend(fontsize=8.5, ncols=2)
 
     fig.savefig(save_path, dpi=_SAVE_DPI, bbox_inches="tight")
     plt.close(fig)
@@ -458,74 +555,6 @@ def plot_fusion_overlay(
         fig.suptitle(title, fontsize=_TITLE_FS)
     fig.savefig(save_path, dpi=_SAVE_DPI, bbox_inches="tight")
     plt.close(fig)
-
-
-def plot_fusion_auroc(
-    in_scores: np.ndarray,
-    ood_scores: np.ndarray,
-    save_path: str | Path,
-    *,
-    title: str | None = None,
-) -> float:
-    """ROC curve for the per-image fusion-based anomaly score.
-
-    ``in_scores`` and ``ood_scores`` are scalar per-image scores
-    (typically ``fused.max()``). Returns the AUROC value.
-
-    The figure has two panels:
-
-      * left  — score histogram for in-dist vs OOD (density-normalized).
-      * right — ROC curve with AUROC annotated and the ``y = x`` chance
-                line for reference.
-    """
-    from sklearn.metrics import roc_auc_score, roc_curve
-
-    in_scores = np.asarray(in_scores).ravel()
-    ood_scores = np.asarray(ood_scores).ravel()
-    labels = np.concatenate([
-        np.zeros(in_scores.shape[0]),
-        np.ones(ood_scores.shape[0]),
-    ])
-    scores = np.concatenate([in_scores, ood_scores])
-    auroc = float(roc_auc_score(labels, scores))
-    fpr, tpr, _ = roc_curve(labels, scores)
-
-    fig, axes = plt.subplots(1, 2, figsize=(11, 4.4),
-                             constrained_layout=True)
-
-    ax_h = axes[0]
-    bins = 50
-    ax_h.hist(in_scores, bins=bins, alpha=0.6, density=True,
-              color=_C_ID, label=f"normal  (n={in_scores.size})")
-    ax_h.hist(ood_scores, bins=bins, alpha=0.6, density=True,
-              color=_C_OOD, label=f"anomaly (n={ood_scores.size})")
-    ax_h.set_xlabel("Fused anomaly score  (max of per-pixel fused map)",
-                    fontsize=_LABEL_FS)
-    ax_h.set_ylabel("Density", fontsize=_LABEL_FS)
-    ax_h.set_title("Score distribution", fontsize=_LABEL_FS)
-    ax_h.tick_params(labelsize=_TICK_FS)
-    ax_h.grid(alpha=0.3)
-    ax_h.legend(fontsize=9)
-
-    ax_r = axes[1]
-    ax_r.plot(fpr, tpr, color=_C_BIAS, linewidth=1.6,
-              label=f"fused (max)  AUROC = {auroc:.3f}")
-    ax_r.plot([0, 1], [0, 1], color="gray", linestyle=":", linewidth=0.7)
-    ax_r.set_xlabel("False Positive Rate", fontsize=_LABEL_FS)
-    ax_r.set_ylabel("True Positive Rate", fontsize=_LABEL_FS)
-    ax_r.set_xlim(0, 1)
-    ax_r.set_ylim(0, 1)
-    ax_r.set_aspect("equal", adjustable="box")
-    ax_r.set_title("ROC — anomaly vs normal", fontsize=_LABEL_FS)
-    ax_r.tick_params(labelsize=_TICK_FS)
-    ax_r.grid(alpha=0.3)
-    ax_r.legend(loc="lower right", fontsize=9)
-
-    if title:
-        fig.suptitle(title, fontsize=_TITLE_FS)
-    fig.savefig(save_path, dpi=_SAVE_DPI, bbox_inches="tight")
-    plt.close(fig)
-    return auroc
 
 
 def plot_recons_only(
@@ -1421,6 +1450,142 @@ def plot_ensemble_score_hists(
         title or "Ensemble decomposition — score distributions",
         fontsize=_TITLE_FS,
     )
+    fig.savefig(save_path, dpi=_SAVE_DPI, bbox_inches="tight")
+    plt.close(fig)
+
+
+# Kernel size is a categorical identity with a FIXED colour/marker per
+# value, shared with the architecture SVG so both views paint a kernel
+# the same way (never cycled).
+_KERNEL_STYLE = {3: (KERNEL_COLORS[3], "o"), 5: (KERNEL_COLORS[5], "s")}
+_KERNEL_FALLBACK = ("#888888", "D")
+
+
+def _spearman(x: np.ndarray, y: np.ndarray) -> float:
+    """Spearman rank correlation (ties broken by order — fine for the
+    handful of distinct architectures this annotates)."""
+    if x.size < 3:
+        return float("nan")
+    rx = x.argsort().argsort().astype(float)
+    ry = y.argsort().argsort().astype(float)
+    cx, cy = rx - rx.mean(), ry - ry.mean()
+    denom = np.sqrt((cx ** 2).sum() * (cy ** 2).sum())
+    return float((cx * cy).sum() / denom) if denom > 0 else float("nan")
+
+
+def plot_architecture_effect(
+    records: Sequence[dict],
+    save_path: str | Path,
+    *,
+    title: str | None = None,
+) -> None:
+    """How each member's architecture shapes its OOD bias detection.
+
+    ``records`` — one dict per ensemble member::
+
+        {'member': 1-based index, 'channels': [c0..c4], 'kernel_size': int,
+         'n_params': int, 'auroc': float, 'auroc_per_block': [float]}
+
+    where ``auroc`` is the member's OWN reconstruction-error OOD AUROC
+    (aggregated over blocks, same ``agg`` as the decomposition). Four
+    panels: (a) AUROC vs parameter count, (b) AUROC vs total channel
+    width, (c) AUROC grouped by conv kernel size, (d) the member × block
+    AUROC heatmap. Kernel size keeps a fixed colour/marker everywhere
+    (3 = blue circle, 5 = green square); members are direct-labelled
+    ``M<i>`` so points can be traced back to ``model_<i>/``.
+    """
+    records = list(records)
+    if not records:
+        return
+    members = [int(r["member"]) for r in records]
+    kernels = [int(r["kernel_size"]) for r in records]
+    params = np.asarray([float(r["n_params"]) for r in records])
+    widths = np.asarray([float(sum(r["channels"])) for r in records])
+    auroc = np.asarray([float(r["auroc"]) for r in records])
+    per_block = np.asarray(
+        [list(r["auroc_per_block"]) for r in records], dtype=float,
+    )  # (M, n_blocks)
+    n_blocks = per_block.shape[1]
+
+    fig, axes = plt.subplots(2, 2, figsize=(12.5, 9.0),
+                             constrained_layout=True)
+    fig.suptitle(
+        title or "Architecture vs OOD bias detection — per-member "
+                 "reconstruction-error AUROC",
+        fontsize=_TITLE_FS,
+    )
+
+    def _scatter(ax: plt.Axes, x: np.ndarray, xlabel: str,
+                 log_x: bool = False) -> None:
+        seen: set[int] = set()
+        for i, k in enumerate(kernels):
+            colour, marker = _KERNEL_STYLE.get(k, _KERNEL_FALLBACK)
+            ax.scatter(x[i], auroc[i], s=52, color=colour, marker=marker,
+                       zorder=3,
+                       label=f"kernel {k}×{k}" if k not in seen else None)
+            seen.add(k)
+            ax.annotate(f"M{members[i]}", (x[i], auroc[i]),
+                        xytext=(5, 4), textcoords="offset points",
+                        fontsize=8, color="#444")
+        if log_x:
+            ax.set_xscale("log")
+        ax.axhline(0.5, color="gray", linestyle=":", linewidth=0.8)
+        ax.set_xlabel(xlabel, fontsize=_LABEL_FS)
+        ax.set_ylabel("OOD AUROC (member recon error)", fontsize=_LABEL_FS)
+        ax.grid(alpha=0.25)
+        ax.legend(fontsize=9)
+        ax.set_title(
+            f"Spearman ρ = {_spearman(x, auroc):.2f}",
+            fontsize=_LABEL_FS, loc="right", color="#555",
+        )
+
+    _scatter(axes[0, 0], params, "Trainable parameters", log_x=True)
+    _scatter(axes[0, 1], widths, "Total channel width  Σ channels")
+
+    # (c) grouped by kernel size: one jittered column per kernel value,
+    # a horizontal bar at each group mean.
+    ax = axes[1, 0]
+    kvals = sorted(set(kernels))
+    rng = np.random.default_rng(0)
+    for gi, k in enumerate(kvals):
+        colour, marker = _KERNEL_STYLE.get(k, _KERNEL_FALLBACK)
+        ys = auroc[np.asarray(kernels) == k]
+        xs = gi + rng.uniform(-0.10, 0.10, size=ys.size)
+        ax.scatter(xs, ys, s=48, color=colour, marker=marker, zorder=3)
+        ax.hlines(ys.mean(), gi - 0.22, gi + 0.22, color=colour,
+                  linewidth=2.2)
+        ax.annotate(f"mean {ys.mean():.3f}", (gi + 0.24, ys.mean()),
+                    va="center", fontsize=8.5, color=colour)
+    ax.axhline(0.5, color="gray", linestyle=":", linewidth=0.8)
+    ax.set_xticks(range(len(kvals)))
+    ax.set_xticklabels([f"{k}×{k}" for k in kvals])
+    ax.set_xlim(-0.6, len(kvals) - 0.4 + 0.5)
+    ax.set_xlabel("Conv kernel size", fontsize=_LABEL_FS)
+    ax.set_ylabel("OOD AUROC (member recon error)", fontsize=_LABEL_FS)
+    ax.grid(alpha=0.25, axis="y")
+
+    # (d) member × block AUROC heatmap.
+    ax = axes[1, 1]
+    im = ax.imshow(per_block, cmap="viridis", aspect="auto",
+                   vmin=np.nanmin(per_block), vmax=np.nanmax(per_block))
+    ax.set_xticks(range(n_blocks))
+    ax.set_xticklabels([f"L{k}" for k in range(n_blocks)])
+    ax.set_yticks(range(len(records)))
+    ax.set_yticklabels([
+        f"M{m}  {'-'.join(str(c) for c in r['channels'])}  k{k}"
+        for m, k, r in zip(members, kernels, records)
+    ], fontsize=7.5)
+    mid = (np.nanmin(per_block) + np.nanmax(per_block)) / 2
+    for i in range(len(records)):
+        for j in range(n_blocks):
+            v = per_block[i, j]
+            ax.text(j, i, f"{v:.3f}", ha="center", va="center",
+                    fontsize=7,
+                    color="black" if v > mid else "white")
+    ax.set_xlabel("Conv block", fontsize=_LABEL_FS)
+    ax.set_title("Per-block AUROC by member", fontsize=_LABEL_FS)
+    fig.colorbar(im, ax=ax, shrink=0.85, label="OOD AUROC")
+
     fig.savefig(save_path, dpi=_SAVE_DPI, bbox_inches="tight")
     plt.close(fig)
 
