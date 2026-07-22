@@ -249,7 +249,9 @@ def main() -> None:
             ck = ckpt_dir / f"model_ep{e}.pt"
             if not ck.exists():
                 continue
-            model.load_state_dict(torch.load(ck, map_location=device))
+            model.load_state_dict(
+                torch.load(ck, map_location=device, weights_only=True),
+            )
             curve.append(_auroc(
                 _cutpaste_scores(model, loaders["test_in"], device,
                                  args.per_epoch_eval_batches),
