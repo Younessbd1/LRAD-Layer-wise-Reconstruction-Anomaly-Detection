@@ -1,0 +1,103 @@
+{
+  "output_dir": "outputs/celeba_ood/cp128_20260721_230657_6787580",
+  "blocks": [
+    1,
+    2,
+    3
+  ],
+  "std_floor": 0.001,
+  "n_models": 10,
+  "supervised": true,
+  "ood_cal_frac": 0.5,
+  "split_seed": 42,
+  "n_cal": 6596,
+  "calibration": {
+    "signals": [
+      "cutpaste_prob",
+      "ens_energy_gender",
+      "locfre_b1",
+      "locfre_b2",
+      "locfre_b3",
+      "unc_epistemic_combined"
+    ],
+    "mu": [
+      0.0029347313394666413,
+      -6.412697342298405,
+      3.5418515896674285,
+      2.9578248079032554,
+      2.0662362654348203,
+      0.25455108846845836
+    ],
+    "sd": [
+      0.016001050608790715,
+      2.5222860755260115,
+      1.0513171071195633,
+      1.2159946561626507,
+      1.0356526487022852,
+      0.16199406375653974
+    ],
+    "coef": [
+      0.264053665693162,
+      1.0749017541212482,
+      0.8419502218390249,
+      0.030326711987360006,
+      0.5470986272550195,
+      -0.742254516400656
+    ],
+    "intercept": 0.048025683204563525
+  },
+  "rank_signals": [
+    "locfre_b1",
+    "locfre_b2",
+    "locfre_b3",
+    "unc_epistemic_combined",
+    "ens_energy_gender",
+    "cutpaste_prob"
+  ],
+  "ref_split": "train (minus calibration slice)",
+  "n_ref_images": 5120,
+  "n_test_in": 18941,
+  "n_test_ood": 6597,
+  "auroc": {
+    "locfre_b1": {
+      "auroc": 0.7898021401946097,
+      "in_mean": 3.031888855237007,
+      "ood_mean": 4.071825540831943
+    },
+    "locfre_b2": {
+      "auroc": 0.7772625072389768,
+      "in_mean": 2.395615012811498,
+      "ood_mean": 3.5616250131570046
+    },
+    "locfre_b3": {
+      "auroc": 0.7951789244433964,
+      "in_mean": 1.572121646775015,
+      "ood_mean": 2.6370994032052715
+    },
+    "unc_epistemic_combined": {
+      "auroc": 0.5386977217983575,
+      "in_mean": 0.252674424976104,
+      "ood_mean": 0.2621776835252764
+    },
+    "ens_energy_gender": {
+      "auroc": 0.7126726349376378,
+      "in_mean": -7.319556954008846,
+      "ood_mean": -5.422045236087774
+    },
+    "cutpaste_prob": {
+      "auroc": 0.6738426882446298,
+      "in_mean": 0.0013668819535570687,
+      "ood_mean": 0.004681528015292855
+    },
+    "fused_rank": {
+      "auroc": 0.8039606717930583,
+      "in_mean": 0.4445683309458263,
+      "ood_mean": 0.6591528336448541
+    },
+    "fused_supervised": {
+      "auroc": 0.8638241723577511,
+      "in_mean": -1.0391671431201592,
+      "ood_mean": 1.2051414157117182
+    }
+  }
+}

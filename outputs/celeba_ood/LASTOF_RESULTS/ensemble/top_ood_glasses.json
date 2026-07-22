@@ -1,0 +1,82 @@
+[
+  {
+    "rank": 1,
+    "ood_dataset_index": 12515,
+    "celeba_index": 192134,
+    "score": 0.6586514711380005,
+    "eye_mean_bias": 0.15177284181118011,
+    "global_mean_bias": 0.034972965717315674
+  },
+  {
+    "rank": 2,
+    "ood_dataset_index": 11437,
+    "celeba_index": 176175,
+    "score": 0.5765978097915649,
+    "eye_mean_bias": 0.15704970061779022,
+    "global_mean_bias": 0.04277610778808594
+  },
+  {
+    "rank": 3,
+    "ood_dataset_index": 8916,
+    "celeba_index": 138619,
+    "score": 0.47206947207450867,
+    "eye_mean_bias": 0.1268419623374939,
+    "global_mean_bias": 0.0340816006064415
+  },
+  {
+    "rank": 4,
+    "ood_dataset_index": 7995,
+    "celeba_index": 123976,
+    "score": 0.46806612610816956,
+    "eye_mean_bias": 0.16439206898212433,
+    "global_mean_bias": 0.05773703753948212
+  },
+  {
+    "rank": 5,
+    "ood_dataset_index": 3146,
+    "celeba_index": 48345,
+    "score": 0.45785439014434814,
+    "eye_mean_bias": 0.13188500702381134,
+    "global_mean_bias": 0.03798948973417282
+  },
+  {
+    "rank": 6,
+    "ood_dataset_index": 7584,
+    "celeba_index": 118169,
+    "score": 0.4425503611564636,
+    "eye_mean_bias": 0.150958850979805,
+    "global_mean_bias": 0.05149374157190323
+  },
+  {
+    "rank": 7,
+    "ood_dataset_index": 1733,
+    "celeba_index": 26723,
+    "score": 0.4414951801300049,
+    "eye_mean_bias": 0.0972910150885582,
+    "global_mean_bias": 0.02143973857164383
+  },
+  {
+    "rank": 8,
+    "ood_dataset_index": 12053,
+    "celeba_index": 184748,
+    "score": 0.43023356795310974,
+    "eye_mean_bias": 0.12540499866008759,
+    "global_mean_bias": 0.03655320033431053
+  },
+  {
+    "rank": 9,
+    "ood_dataset_index": 97,
+    "celeba_index": 1556,
+    "score": 0.4288230836391449,
+    "eye_mean_bias": 0.10871096700429916,
+    "global_mean_bias": 0.027559325098991394
+  },
+  {
+    "rank": 10,
+    "ood_dataset_index": 3196,
+    "celeba_index": 49225,
+    "score": 0.4266718626022339,
+    "eye_mean_bias": 0.17694751918315887,
+    "global_mean_bias": 0.0733829140663147
+  }
+]
