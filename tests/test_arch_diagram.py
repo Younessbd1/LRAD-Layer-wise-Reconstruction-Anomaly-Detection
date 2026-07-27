@@ -8,9 +8,13 @@ import pytest
 
 from lrad.arch_diagram import (
     classifier_n_params,
+    decoder_n_params,
+    render_classifier_svg,
+    render_decoder_svg,
     render_ensemble_svg,
     resolve_member_configs,
 )
+from lrad.decoder import build_decoders
 from lrad.model import build_model
 
 
@@ -85,3 +89,39 @@ def test_render_ensemble_svg_writes_valid_xml(tmp_path):
 def test_render_ensemble_svg_rejects_empty(tmp_path):
     with pytest.raises(ValueError):
         render_ensemble_svg([], tmp_path / "x.svg")
+
+
+def test_decoder_n_params_matches_torch():
+    cfg = _cfg()
+    cfg["dataset"]["image_size"] = 32
+    model = build_model(cfg)
+    decoders = build_decoders(model, 32)
+    for ch, size, dec in zip(model.block_out_channels,
+                             model.block_spatial_sizes, decoders):
+        assert decoder_n_params(ch, size, 32) == sum(
+            p.numel() for p in dec.parameters()
+        )
+
+
+def test_render_classifier_svg_writes_valid_xml(tmp_path):
+    cfg = resolve_member_configs(_cfg(size=3))[0]
+    out = tmp_path / "clf.svg"
+    assert render_classifier_svg(cfg, out, member_index=0,
+                                 n_members=3) == out
+    doc = minidom.parse(str(out))
+    # the member label must count members, not indices — the figure this
+    # replaces claimed "member 0/8" for a 10-member ensemble
+    text = " ".join(n.firstChild.data
+                    for n in doc.getElementsByTagName("text")
+                    if n.firstChild and n.firstChild.nodeType == n.TEXT_NODE)
+    assert "member 1 of 3" in text
+    # MSP was dropped from the scoring stack (see lrad/evaluate.py)
+    assert "MSP" not in text
+
+
+def test_render_decoder_svg_writes_valid_xml(tmp_path):
+    cfg = resolve_member_configs(_cfg(size=2))[0]
+    out = tmp_path / "dec.svg"
+    assert render_decoder_svg(cfg, out) == out
+    doc = minidom.parse(str(out))
+    assert doc.documentElement.tagName == "svg"
