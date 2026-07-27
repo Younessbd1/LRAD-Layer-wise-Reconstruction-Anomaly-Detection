@@ -5,6 +5,9 @@ __version__ = "0.3.0"
 from .anomaly_score import aggregate_anomaly_score
 from .arch_diagram import (
     classifier_n_params,
+    decoder_n_params,
+    render_classifier_svg,
+    render_decoder_svg,
     render_ensemble_svg,
     resolve_member_configs,
 )
@@ -101,6 +104,9 @@ __all__ = [
     "plot_recons_only",
     "plot_top_ood_glasses",
     "plot_variance_heatmaps",
+    "decoder_n_params",
+    "render_classifier_svg",
+    "render_decoder_svg",
     "render_ensemble_svg",
     "resolve_member_configs",
     "sample_block_recons",
