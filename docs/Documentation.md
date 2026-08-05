@@ -148,16 +148,17 @@ via `lrad.dataset.split_loader` :
 
 ## 3. Architectures
 
-Trois schémas SVG, générés **depuis la config** par `scripts/generate_arch_svg.py` (donc jamais
-désynchronisés du code), accompagnent ce rapport :
+Trois schémas accompagnent ce rapport, chacun en `.pdf` (source vectorielle) et en `.png`. Ils sont
+commentés un par un dans le [README](../README.md#diagrams) :
 
 | Fichier | Contenu |
 |---|---|
-| [`diagrams/pipeline_classifier.svg`](diagrams/pipeline_classifier.svg) | Le tronc `FacialCNN` : 5 blocs, formes exactes, 3 têtes, CutPaste, pertes et leurs poids |
-| [`diagrams/pipeline_decoder.svg`](diagrams/pipeline_decoder.svg) | Les 5 `BlockDecoder` : progression canaux × résolution, étage par étage, coût analytique en paramètres |
-| [`diagrams/ensemble_architectures_celeba_ood_cp128.svg`](diagrams/ensemble_architectures_celeba_ood_cp128.svg) | Une voie par membre de l'ensemble — les **10** architectures, graines et compte de paramètres |
+| [`diagrams/classifier_pipeline.png`](diagrams/classifier_pipeline.png) | Le tronc `FacialCNN` : 5 blocs, formes exactes, 3 têtes, CutPaste, pertes et leurs poids |
+| [`diagrams/encoder_decoder.png`](diagrams/encoder_decoder.png) | Le tronc déroulé opération par opération, les **prises** `Dec L0…L3`, et un `BlockDecoder` détaillé (prise `L4`) |
+| [`diagrams/ensemble_diversity_cubes.png`](diagrams/ensemble_diversity_cubes.png) | Une ligne par membre — les **10** architectures, graines, noyaux et compte de paramètres |
 
-Régénération :
+Une version SVG plus sobre des trois mêmes vues est générée **depuis la config** par
+`scripts/generate_arch_svg.py` (donc jamais désynchronisée du code) :
 
 ```bash
 python scripts/generate_arch_svg.py --config configs/celeba_ood_cutpaste128.yaml \
