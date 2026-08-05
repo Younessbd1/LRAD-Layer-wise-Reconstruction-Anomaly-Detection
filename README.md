@@ -30,23 +30,28 @@ A from-scratch convolutional classifier is trained on normal (glasses-free) Cele
 
 ### Diagrams
 
-Three figures in [docs/diagrams/](docs/diagrams/) document the pipeline. All three are drawn for the **128 px CutPaste configuration** ([`configs/celeba_ood_cutpaste128.yaml`](configs/celeba_ood_cutpaste128.yaml)) — the run behind `outputs/celeba_ood/LASTOF_RESULTS`.
+Three figures in [docs/diagrams/](docs/diagrams/) document the pipeline, each as a `.pdf` (vector source) and a `.png` (what renders below). All three describe the **128 px CutPaste configuration** ([`configs/celeba_ood_cutpaste128.yaml`](configs/celeba_ood_cutpaste128.yaml)) — the run behind `outputs/celeba_ood/LASTOF_RESULTS`.
 
-They are **generated from the config**, not drawn by hand, so they cannot drift from what the code builds — every channel width, spatial size, loss weight and parameter count in them is derived at render time and checked against torch in `tests/test_arch_diagram.py`:
+| Figure | Question it answers | Source of truth |
+| --- | --- | --- |
+| [classifier_pipeline.png](docs/diagrams/classifier_pipeline.png) | What does **one member** compute, from input tensor to three heads? | [`lrad/model.py`](lrad/model.py), [`lrad/train.py`](lrad/train.py) |
+| [encoder_decoder.png](docs/diagrams/encoder_decoder.png) | Where do the **decoders tap** the frozen trunk, and what do they undo? | [`lrad/decoder.py`](lrad/decoder.py) |
+| [ensemble_diversity_cubes.png](docs/diagrams/ensemble_diversity_cubes.png) | How do the **10 members** differ, and what stays invariant? | `ensemble.member_variants` |
+
+Every number printed in them (channel widths, spatial sizes, loss weights, parameter counts, seeds) is the one the config resolves to. The same quantities are computed analytically in [`lrad/arch_diagram.py`](lrad/arch_diagram.py) and checked against `sum(p.numel() …)` on the real torch modules in `tests/test_arch_diagram.py`, which is what makes them auditable. A plainer SVG rendering of the same three views is generated straight from the config — use it when the config has moved and these figures have not been redrawn yet:
 
 ```bash
-python scripts/generate_arch_svg.py --config configs/celeba_ood_cutpaste128.yaml
+python scripts/generate_arch_svg.py --config configs/celeba_ood_cutpaste128.yaml \
+    --out-dir docs/diagrams
 ```
 
-| Figure | What it shows | Source of truth |
-| --- | --- | --- |
-| [pipeline_classifier.svg](docs/diagrams/pipeline_classifier.svg) | One member's forward pass, input tensor → three heads | [`lrad/model.py`](lrad/model.py), [`lrad/train.py`](lrad/train.py) |
-| [pipeline_decoder.svg](docs/diagrams/pipeline_decoder.svg) | The five per-block decoders that invert the frozen trunk | [`lrad/decoder.py`](lrad/decoder.py) |
-| [ensemble_architectures_celeba_ood_cp128.svg](docs/diagrams/ensemble_architectures_celeba_ood_cp128.svg) | All 10 ensemble members side by side | `ensemble.member_variants` |
+`run_ensemble.py` also drops a copy of the ensemble view into `<run>/ensemble/architectures.svg`, annotated with the parameter counts of the members that were actually instantiated.
 
-#### 1. Classifier pipeline
+#### 1. Classifier pipeline — one member, end to end
 
-![Classifier pipeline](docs/diagrams/pipeline_classifier.svg)
+![Classifier pipeline](docs/diagrams/classifier_pipeline.png)
+
+**How to read it.** One row per stage, top to bottom, in execution order. Each row shows the tensor *leaving* that stage as a cube whose **face is the spatial extent** (`H×W`) and whose **depth is the channel count** — so the cubes flatten into slabs as the trunk trades resolution for width. The label on each arrow is the operation that produced the next row. Colour is only a category: blue = tensor, teal = conv block, purple = task head, orange = self-supervised head. The three boxes at the bottom read the *same* pooled vector in parallel, which is why they hang off one bus rather than off each other.
 
 The trunk is deliberately plain — five `Conv(k×k, pad k/2, bias=False) + BatchNorm2d + ReLU` blocks, `MaxPool2×2` after every block **except the last**, then `AdaptiveAvgPool2d(1×1)`. No dropout, no pretrained weights, no skip connections. At 128 px the spatial trace is:
 
@@ -66,13 +71,19 @@ The supervised losses are computed on intact images only; the pretext CE covers 
 
 The baseline member (`channels [32, 64, 128, 256, 256]`, `k=3`, cutpaste head on) is **981,802 parameters** — 979,232 in the trunk, 2,570 across the three heads. The trunk is ~99.7 % of the model; the heads are almost free.
 
-#### 2. Decoder pipeline
+> The figure's gender-head caption still reads *"→ MSP, entropy, energy"*. **MSP was since removed** from [`lrad/evaluate.py`](lrad/evaluate.py): on two classes `1 − maxₑ pₑ` is a monotone function of `H(p)`, so it is rank-equivalent to the gender entropy and contributes no information the AUROC can see. Only `entropy` and `energy` are computed today.
 
-![Per-block decoder stack](docs/diagrams/pipeline_decoder.svg)
+#### 2. Encoder–decoder architecture — where the decoders tap
 
-After classifier training the trunk is **frozen** and one `BlockDecoder` is trained per conv block to reconstruct the original image from that block's activations alone. Each decoder is a stack of `n_up = log₂(image_size / block_size)` learnable ×2 stages — `ConvTranspose2d(4×4, stride 2, pad 1) + BN + ReLU` — halving channels at every stage down to a floor of 16, closed by `Conv1×1 → 3` + `Sigmoid` so outputs land in `[0,1]` like the inputs.
+![Encoder–decoder architecture](docs/diagrams/encoder_decoder.png)
+
+**How to read it.** The top row is the same forward pass as figure 1, but unrolled left to right with every sub-operation broken out (`Conv → BN+ReLU → Pool` instead of one fused "block"), so the shape at each intermediate point is explicit. Box **depth (Z) is the channel count**, box **face (X/Y) is the spatial extent**, and kernel/stride sit above each box — which is why the boxes start as thin wide sheets (`128×128×3`) and end as narrow deep bars (`8×8×256`). The dashed drops labelled `Dec L0 … Dec L3` are the **decoder taps**: the points where a block's post-pool activation is branched off. The bottom-right chain expands one of them — the `L4` bottleneck tap — into the actual `BlockDecoder` layers, because all five decoders share that structure and only differ in how many stages they need.
+
+After classifier training the trunk is **frozen** (`eval()`, `requires_grad = False`) and one `BlockDecoder` is trained per conv block to reconstruct the original image from that block's activations alone. Each decoder is a stack of `n_up = log₂(image_size / block_size)` learnable ×2 stages — `ConvTranspose2d(4×4, stride 2, pad 1) + BN + ReLU` — halving channels at every stage down to a floor of 16, closed by `Conv1×1 → 3` + `Sigmoid` so outputs land in `[0,1]` like the inputs. The five decoders are optimised jointly by one Adam on `Σₖ MSE(dₖ(aₖ(x)), x)`.
 
 The 4×4/stride-2/pad-1 kernel is chosen because it doubles H and W *exactly*, with no output-size ambiguity — which is what keeps block *k* meaning the same spatial scale across every ensemble member.
+
+Two simplifications in the drawing, so the figure and the code can be read side by side: the expanded chain shows the four ×2 stages of `dec L4` (`8→16→32→64→128`) but folds the last stage's 16-channel output together with the closing `Conv1×1 → 3` into the single `Recon` box; and the taps are drawn on the pooled output of each block, which is what `FacialCNN` actually exposes.
 
 | Decoder | Input activation | `n_up` | Channel path | Params |
 | --- | --- | --- | --- | --- |
@@ -85,11 +96,15 @@ The 4×4/stride-2/pad-1 kernel is chosen because it doubles H and W *exactly*, w
 
 Note the shape of that cost: the two deepest decoders carry 86 % of the parameters, because they start from the widest activation *and* need the most upsampling stages. `dec L3` and `dec L4` are identical in structure — that is the block-4/block-5 shared resolution showing up again.
 
+Reconstruction quality degrades monotonically with tap depth, and by a lot — final-epoch MSE for the baseline member runs `0.00043 → 0.00150 → 0.00327 → 0.00532 → 0.01124` from `L0` to `L4`, a factor of ~26. That is mechanical: successive max-pools destroy spatial detail, so a decoder starting from an 8×8 map can only ever paint a blurred face. **This error floor is why every pixel-space score plateaus around 0.62–0.70** — on a clean face, hair and background already contribute thousands of high-error pixels, while a pair of glasses touches a few hundred.
+
 The reconstructions `f̂_k` are the substrate for every reconstruction-based score: the exact per-pixel `Risk = Bias + Variance` decomposition across the ensemble, the localized z-scored patch-max signals, and the per-block `recon_Lk` / `error_Lk` figures.
 
-#### 3. Ensemble architectures
+#### 3. Ensemble diversity — the ten members side by side
 
-![DeepEnsemble member architectures](docs/diagrams/ensemble_architectures_celeba_ood_cp128.svg)
+![DeepEnsemble member architectures](docs/diagrams/ensemble_diversity_cubes.png)
+
+**How to read it.** One row per member, one column per conv block (`L0 … L4`, with the column header giving the spatial size that *every* member shares at that depth). **Cube height is the channel width** on a common scale (16 → 384) and **colour is the kernel size** (blue = 3×3, green = 5×5). So each row is a staircase, and the interesting content is the *shape* of the staircase: model 2 stays slim then flares at `L4` (24-48-96-192-**384**), model 7 is nearly flat (64-96-160-224-288), model 4 starts at just 16 channels but compensates with a 5×5 receptive field. Seed, kernel and parameter count are printed next to each member's name. Read down a column and every cube sits at the same spatial resolution — that alignment is the whole point of the figure.
 
 The ensemble is *architecturally* diverse, not just seed-diverse. Ten members, seeded `base_seed + i` = 42…51, each with its own channel widths and conv kernel size from `ensemble.member_variants`:
 
@@ -124,7 +139,7 @@ The three figures document the *models*. They do not document the **scoring stac
 | **`fused_rank`** (label-free rank fusion of all six) | **0.804** |
 | **`fused_supervised`** (logistic fit on a 50 % OOD calibration slice) | **0.864** |
 
-The gap between the raw bias term (0.623) and the fused detector (0.804 label-free) is the substance of the project, and no current diagram shows it.
+The gap between the raw bias term (0.623) and the fused detector (0.804 label-free) is the substance of the project, and no current diagram shows it. [`docs/Documentation.md`](docs/Documentation.md) is the full report on that run: every formula, every figure it produces, worked numeric examples, and a critical reading of the anomalies (French).
 
 ## Features
 
@@ -234,7 +249,8 @@ python scripts/epoch_variability_study.py \
 lrad/
 ├── lrad/                          # library (flat layout)
 │   ├── dataset.py                 # CelebA loaders; configurable accessory OOD split
-│   ├── model.py                   # FacialCNN: conv trunk + gender/attrs heads
+│   ├── config.py                  # YAML load + dotted `key=value` CLI overrides
+│   ├── model.py                   # FacialCNN: conv trunk + gender/attrs/cutpaste heads
 │   ├── decoder.py                 # per-block ConvTranspose2d decoders
 │   ├── cutpaste.py                # CutPaste pretext augmentation (patch/scar)
 │   ├── train.py                   # classifier + decoder training loops
@@ -244,22 +260,25 @@ lrad/
 │   ├── localized.py               # per-pixel z-score + multi-scale patch-max
 │   ├── feature_error.py           # localized feature-reconstruction error (locfre)
 │   ├── fusion.py                  # rank / supervised fusion — headline detector
-│   ├── arch_diagram.py            # SVG renderer for the ensemble architecture figure
+│   ├── arch_diagram.py            # member-config resolution, param counts, SVG renderers
 │   ├── plots.py                   # all figures (300 dpi, paper styling)
 │   └── utils.py                   # device, seeding, logging
 ├── configs/
 │   ├── celeba_ood.yaml            # base config (64 px)
 │   └── celeba_ood_cutpaste128.yaml # 128 px + CutPaste pretext head
-├── docs/diagrams/                 # architecture figures (see Architecture § above)
+├── docs/
+│   ├── Documentation.md           # full report on the LASTOF_RESULTS run (FR)
+│   └── diagrams/                  # the three figures above, .pdf source + .png
 ├── scripts/
 │   ├── run_celeba.py              # single-model pipeline
 │   ├── run_ensemble.py            # ensemble + decomposition + instance figures
 │   ├── run_localized.py           # localized z-score / patch-max scoring
 │   ├── run_fused.py               # fused (locfre + epistemic + energy) AUROC
 │   ├── run_gridsearch.py          # CutPaste hyperparameter search
-│   ├── generate_arch_svg.py       # regenerate the ensemble architecture diagram
+│   ├── run_generalization.py      # bias overlay on non-CelebA photos (sanity probe)
+│   ├── generate_arch_svg.py       # regenerate the three diagrams as SVG
 │   ├── epoch_variability_study.py # σ(e) variability vs decoder epochs
-│   └── oar_run_ensemble.sh        # Grid'5000 OAR job
+│   └── oar_run_*.sh               # Grid'5000 OAR jobs (ensemble, fused, gridsearch, …)
 └── tests/                         # pytest: anomaly score, decomposition,
                                    #         decoders, training, plots, checkpointing
 ```
