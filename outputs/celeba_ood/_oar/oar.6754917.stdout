@@ -1,0 +1,933 @@
+OUTPUT_DIR=outputs/celeba_ood/ensemble_20260707_152254_6754917
+=== OAR job 6754917 on graffiti-9.nancy.grid5000.fr [graffiti] at Tue 07 Jul 2026 03:22:54 PM CEST ===
+PWD=/home/ybahaddo/lrad
+PYTHON=/home/ybahaddo/.conda/envs/lrad/bin/python3
+Tue Jul  7 15:22:54 2026       
++-----------------------------------------------------------------------------------------+
+| NVIDIA-SMI 580.95.05              Driver Version: 580.95.05      CUDA Version: 13.0     |
++-----------------------------------------+------------------------+----------------------+
+| GPU  Name                 Persistence-M | Bus-Id          Disp.A | Volatile Uncorr. ECC |
+| Fan  Temp   Perf          Pwr:Usage/Cap |           Memory-Usage | GPU-Util  Compute M. |
+|                                         |                        |               MIG M. |
+|=========================================+========================+======================|
+|   0  NVIDIA GeForce RTX 2080 Ti     On  |   00000000:3B:00.0 Off |                  N/A |
+| 27%   26C    P8             20W /  250W |       1MiB /  11264MiB |      0%      Default |
+|                                         |                        |                  N/A |
++-----------------------------------------+------------------------+----------------------+
+
++-----------------------------------------------------------------------------------------+
+| Processes:                                                                              |
+|  GPU   GI   CI              PID   Type   Process name                        GPU Memory |
+|        ID   ID                                                               Usage      |
+|=========================================================================================|
+|  No running processes found                                                             |
++-----------------------------------------------------------------------------------------+
+torch 2.5.1+cu121 cuda True devices 1
+[15:23:15 INFO] ======================================================================
+[15:23:15 INFO] Ensemble experiment : celeba_ood
+[15:23:15 INFO] Config              : configs/celeba_ood.yaml
+[15:23:15 INFO] Output dir          : outputs/celeba_ood/ensemble_20260707_152254_6754917
+[15:23:15 INFO] Device              : cuda
+[15:23:15 INFO] Ensemble size       : 10   seeds = [42, 43, 44, 45, 46, 47, 48, 49, 50, 51]
+[15:23:15 INFO] Decomposition agg   : p95
+[15:23:15 INFO] GPU                 : NVIDIA GeForce RTX 2080 Ti  (torch 2.5.1+cu121, cuda 12.1)
+[15:23:15 INFO] ======================================================================
+[15:23:28 INFO] OOD attributes: Eyeglasses  →  in-dist=189406  ood=13193 images
+[15:23:28 INFO] Train pos rates: Male=39.0%  Arched_Eyebrows=28.4%  Bushy_Eyebrows=14.9%  Narrow_Eyes=11.9%  Bags_Under_Eyes=20.9%  Smiling=48.7%  Young=79.9%
+[15:23:28 INFO] val_ratio=0 → no validation split: 170465 in-dist images train, 18941 held out for test_in (no early stopping, full schedule).
+[15:23:28 INFO] Dataloaders  train=170465  val=0  test_in=18941  test_ood=13193
+[15:23:28 INFO] ######################################################################
+[15:23:28 INFO] # MODEL 1/10   (seed=42, channels=[32, 64, 128, 256, 256], kernel=3)
+[15:23:28 INFO] ######################################################################
+[15:23:29 INFO] Model        : FacialCNN  (981,288 params)
+[15:23:29 INFO] ======================================================================
+[15:23:29 INFO] TRAINING — combined CE(gender) + BCE(attrs) loss
+[15:23:29 INFO] ======================================================================
+[15:23:29 INFO] No validation set — running the full 20-epoch schedule with no early stopping; final-epoch weights are kept.
+[15:29:05 INFO] epoch   1/20  train_loss=0.8771  train_gender_acc=94.1%  train_attr_acc=[76.1 88.7 86.8 80.2 86.0 83.6]%  (335.6s)
+[15:30:00 INFO] epoch   2/20  train_loss=0.6789  train_gender_acc=97.3%  train_attr_acc=[80.1 90.8 88.7 82.4 91.4 86.5]%  (54.8s)
+[15:31:05 INFO] epoch   3/20  train_loss=0.6293  train_gender_acc=97.9%  train_attr_acc=[81.4 91.3 89.1 83.1 92.1 87.7]%  (65.6s)
+[15:32:11 INFO] epoch   4/20  train_loss=0.5968  train_gender_acc=98.3%  train_attr_acc=[82.2 91.6 89.3 83.6 92.5 88.3]%  (65.5s)
+[15:33:05 INFO] epoch   5/20  train_loss=0.5710  train_gender_acc=98.6%  train_attr_acc=[82.8 91.8 89.6 83.9 92.9 88.9]%  (54.8s)
+[15:34:01 INFO] epoch   6/20  train_loss=0.5466  train_gender_acc=99.0%  train_attr_acc=[83.4 92.1 89.8 84.3 93.2 89.4]%  (55.7s)
+[15:35:23 INFO] epoch   7/20  train_loss=0.5237  train_gender_acc=99.3%  train_attr_acc=[84.0 92.3 90.0 84.7 93.5 90.0]%  (81.4s)
+[15:36:20 INFO] epoch   8/20  train_loss=0.5023  train_gender_acc=99.4%  train_attr_acc=[84.5 92.5 90.2 85.2 93.8 90.5]%  (57.7s)
+[15:37:25 INFO] epoch   9/20  train_loss=0.4815  train_gender_acc=99.6%  train_attr_acc=[85.0 92.9 90.6 85.6 94.1 91.0]%  (65.0s)
+[15:38:20 INFO] epoch  10/20  train_loss=0.4615  train_gender_acc=99.7%  train_attr_acc=[85.7 93.2 90.9 86.1 94.4 91.6]%  (55.1s)
+[15:39:15 INFO] epoch  11/20  train_loss=0.4417  train_gender_acc=99.7%  train_attr_acc=[86.1 93.4 91.2 86.6 94.7 92.2]%  (54.9s)
+[15:40:22 INFO] epoch  12/20  train_loss=0.4214  train_gender_acc=99.8%  train_attr_acc=[86.8 93.8 91.6 87.1 95.1 92.7]%  (67.0s)
+[15:41:22 INFO] epoch  13/20  train_loss=0.4010  train_gender_acc=99.8%  train_attr_acc=[87.4 94.1 92.0 87.7 95.5 93.2]%  (59.4s)
+[15:42:17 INFO] epoch  14/20  train_loss=0.3814  train_gender_acc=99.8%  train_attr_acc=[88.0 94.3 92.4 88.2 95.8 93.7]%  (54.9s)
+[15:43:12 INFO] epoch  15/20  train_loss=0.3619  train_gender_acc=99.8%  train_attr_acc=[88.6 94.6 92.8 88.9 96.1 94.3]%  (55.0s)
+[15:44:06 INFO] epoch  16/20  train_loss=0.3424  train_gender_acc=99.9%  train_attr_acc=[89.2 95.0 93.1 89.4 96.4 94.7]%  (54.4s)
+[15:45:01 INFO] epoch  17/20  train_loss=0.3230  train_gender_acc=99.9%  train_attr_acc=[89.7 95.3 93.6 89.9 96.6 95.2]%  (54.9s)
+[15:45:56 INFO] epoch  18/20  train_loss=0.3056  train_gender_acc=99.9%  train_attr_acc=[90.4 95.5 94.0 90.5 96.9 95.6]%  (54.7s)
+[15:46:52 INFO] epoch  19/20  train_loss=0.2894  train_gender_acc=99.9%  train_attr_acc=[90.9 95.8 94.3 91.1 97.1 95.9]%  (56.2s)
+[15:47:46 INFO] epoch  20/20  train_loss=0.2707  train_gender_acc=99.9%  train_attr_acc=[91.4 96.0 94.7 91.6 97.2 96.3]%  (54.3s)
+[15:47:46 INFO] Training done in 1456.9s
+[15:47:46 INFO] ======================================================================
+[15:47:46 INFO] PHASE 2 — training per-block reconstruction decoders
+[15:47:46 INFO] ======================================================================
+[15:47:46 INFO]   decoder L0: in=(C=32, H=32) → out=(3, 64, 64)  params=8,275
+[15:47:46 INFO]   decoder L1: in=(C=64, H=16) → out=(3, 64, 64)  params=41,107
+[15:47:46 INFO]   decoder L2: in=(C=128, H=8) → out=(3, 64, 64)  params=172,307
+[15:47:46 INFO]   decoder L3: in=(C=256, H=4) → out=(3, 64, 64)  params=696,851
+[15:47:46 INFO]   decoder L4: in=(C=256, H=4) → out=(3, 64, 64)  params=696,851
+[15:48:44 INFO] [decoders] epoch   1/25  train=0.0683  per_block(train)=[0.0049 0.0080 0.0121 0.0175 0.0258]  (57.9s)
+[15:49:42 INFO] [decoders] epoch   2/25  train=0.0385  per_block(train)=[0.0010 0.0025 0.0060 0.0108 0.0182]  (57.5s)
+[15:50:39 INFO] [decoders] epoch   3/25  train=0.0357  per_block(train)=[0.0009 0.0023 0.0056 0.0099 0.0169]  (57.2s)
+[15:51:36 INFO] [decoders] epoch   4/25  train=0.0342  per_block(train)=[0.0008 0.0022 0.0054 0.0095 0.0163]  (57.4s)
+[15:52:35 INFO] [decoders] epoch   5/25  train=0.0333  per_block(train)=[0.0008 0.0022 0.0053 0.0092 0.0158]  (58.3s)
+[15:53:32 INFO] [decoders] epoch   6/25  train=0.0326  per_block(train)=[0.0008 0.0021 0.0052 0.0090 0.0155]  (57.3s)
+[15:54:29 INFO] [decoders] epoch   7/25  train=0.0321  per_block(train)=[0.0007 0.0021 0.0051 0.0088 0.0153]  (56.9s)
+[15:55:27 INFO] [decoders] epoch   8/25  train=0.0317  per_block(train)=[0.0007 0.0021 0.0051 0.0087 0.0151]  (57.7s)
+[15:56:35 INFO] [decoders] epoch   9/25  train=0.0313  per_block(train)=[0.0007 0.0021 0.0050 0.0086 0.0149]  (68.5s)
+[15:57:32 INFO] [decoders] epoch  10/25  train=0.0311  per_block(train)=[0.0007 0.0021 0.0050 0.0086 0.0148]  (57.1s)
+[15:58:29 INFO] [decoders] epoch  11/25  train=0.0308  per_block(train)=[0.0007 0.0020 0.0050 0.0085 0.0147]  (57.3s)
+[15:59:28 INFO] [decoders] epoch  12/25  train=0.0307  per_block(train)=[0.0007 0.0020 0.0050 0.0084 0.0146]  (58.6s)
+[16:00:25 INFO] [decoders] epoch  13/25  train=0.0305  per_block(train)=[0.0006 0.0020 0.0049 0.0084 0.0145]  (57.3s)
+[16:01:22 INFO] [decoders] epoch  14/25  train=0.0303  per_block(train)=[0.0006 0.0020 0.0049 0.0083 0.0144]  (57.0s)
+[16:02:21 INFO] [decoders] epoch  15/25  train=0.0302  per_block(train)=[0.0006 0.0020 0.0049 0.0083 0.0144]  (58.6s)
+[16:03:18 INFO] [decoders] epoch  16/25  train=0.0301  per_block(train)=[0.0006 0.0020 0.0049 0.0083 0.0143]  (56.8s)
+[16:04:15 INFO] [decoders] epoch  17/25  train=0.0299  per_block(train)=[0.0006 0.0020 0.0049 0.0082 0.0142]  (57.0s)
+[16:05:12 INFO] [decoders] epoch  18/25  train=0.0299  per_block(train)=[0.0006 0.0020 0.0049 0.0082 0.0142]  (57.5s)
+[16:06:10 INFO] [decoders] epoch  19/25  train=0.0297  per_block(train)=[0.0006 0.0020 0.0048 0.0082 0.0141]  (57.5s)
+[16:07:07 INFO] [decoders] epoch  20/25  train=0.0297  per_block(train)=[0.0006 0.0020 0.0048 0.0082 0.0141]  (57.4s)
+[16:08:05 INFO] [decoders] epoch  21/25  train=0.0295  per_block(train)=[0.0006 0.0020 0.0048 0.0081 0.0140]  (57.9s)
+[16:09:03 INFO] [decoders] epoch  22/25  train=0.0295  per_block(train)=[0.0006 0.0020 0.0048 0.0081 0.0140]  (57.6s)
+[16:10:00 INFO] [decoders] epoch  23/25  train=0.0294  per_block(train)=[0.0006 0.0020 0.0048 0.0081 0.0140]  (57.4s)
+[16:10:57 INFO] [decoders] epoch  24/25  train=0.0294  per_block(train)=[0.0006 0.0020 0.0048 0.0081 0.0139]  (56.8s)
+[16:11:54 INFO] [decoders] epoch  25/25  train=0.0293  per_block(train)=[0.0006 0.0020 0.0048 0.0081 0.0139]  (57.1s)
+[16:11:54 INFO] Decoder training done in 1447.5s
+[16:11:54 INFO] ======================================================================
+[16:11:54 INFO] EVALUATION — per-attribute accuracy + OOD AUROC
+[16:11:54 INFO] ======================================================================
+[16:11:54 INFO] Collecting predictions on test_in...
+[16:12:44 INFO]   test_in size = 18941, OOD score (combined entropy) mean = 0.1716
+[16:12:44 INFO] Collecting predictions on test_ood (Eyeglasses)...
+[16:13:04 INFO]   test_ood size = 13193, OOD score (combined entropy) mean = 0.2418
+[16:13:04 INFO] Per-attribute accuracy (in-distribution test set):
+[16:13:04 INFO]   Male/Female : 95.64%
+[16:13:04 INFO]   Arched_Eyebrows       : 80.41%
+[16:13:04 INFO]   Bushy_Eyebrows        : 89.45%
+[16:13:04 INFO]   Narrow_Eyes           : 86.75%
+[16:13:04 INFO]   Bags_Under_Eyes       : 73.97%
+[16:13:04 INFO]   Smiling               : 91.02%
+[16:13:04 INFO]   Young                 : 84.57%
+[16:13:04 INFO] OOD AUROC (in-dist vs Eyeglasses):
+[16:13:04 INFO]   score_msp                AUROC = 0.7406  (in_mean=0.011, ood_mean=0.036)
+[16:13:04 INFO]   score_entropy_gender     AUROC = 0.7814  (in_mean=0.026, ood_mean=0.084)
+[16:13:04 INFO]   score_entropy_attrs      AUROC = 0.5420  (in_mean=0.145, ood_mean=0.158)
+[16:13:04 INFO]   score_entropy_combined   AUROC = 0.6100  (in_mean=0.172, ood_mean=0.242)
+[16:14:09 INFO] Fusion-based AUROC (max-pixel) = 0.6125  (in_mean=0.9531, ood_mean=1.1000)
+[16:14:09 INFO] Wrote per-block plots: per_block_breakdown.png, recons_only.png, activations.png, fusion_overlay.png, fusion_auroc.png
+[16:14:09 INFO] Summary written to outputs/celeba_ood/ensemble_20260707_152254_6754917/model_0/summary.json
+[16:14:09 INFO] model 1/10 done in 3041.2s
+[16:14:09 INFO] ######################################################################
+[16:14:09 INFO] # MODEL 2/10   (seed=43, channels=[24, 48, 96, 192, 384], kernel=3)
+[16:14:09 INFO] ######################################################################
+[16:14:10 INFO] Model        : FacialCNN  (886,496 params)
+[16:14:10 INFO] ======================================================================
+[16:14:10 INFO] TRAINING — combined CE(gender) + BCE(attrs) loss
+[16:14:10 INFO] ======================================================================
+[16:14:10 INFO] No validation set — running the full 20-epoch schedule with no early stopping; final-epoch weights are kept.
+[16:15:04 INFO] epoch   1/20  train_loss=0.8956  train_gender_acc=93.8%  train_attr_acc=[77.0 88.5 85.5 80.8 85.2 83.8]%  (54.3s)
+[16:16:00 INFO] epoch   2/20  train_loss=0.7020  train_gender_acc=96.9%  train_attr_acc=[79.7 90.6 88.5 82.0 91.0 86.3]%  (55.6s)
+[16:16:55 INFO] epoch   3/20  train_loss=0.6531  train_gender_acc=97.6%  train_attr_acc=[80.8 91.1 88.8 82.6 91.8 87.2]%  (55.0s)
+[16:17:49 INFO] epoch   4/20  train_loss=0.6226  train_gender_acc=98.0%  train_attr_acc=[81.5 91.4 89.1 83.0 92.2 87.9]%  (54.2s)
+[16:18:43 INFO] epoch   5/20  train_loss=0.5970  train_gender_acc=98.4%  train_attr_acc=[82.1 91.6 89.3 83.4 92.5 88.3]%  (54.4s)
+[16:19:37 INFO] epoch   6/20  train_loss=0.5766  train_gender_acc=98.7%  train_attr_acc=[82.7 91.7 89.5 83.8 92.7 88.6]%  (54.1s)
+[16:20:32 INFO] epoch   7/20  train_loss=0.5558  train_gender_acc=99.0%  train_attr_acc=[83.2 91.9 89.7 84.2 93.0 89.1]%  (54.2s)
+[16:21:26 INFO] epoch   8/20  train_loss=0.5381  train_gender_acc=99.2%  train_attr_acc=[83.6 92.0 89.9 84.5 93.3 89.4]%  (54.4s)
+[16:22:20 INFO] epoch   9/20  train_loss=0.5218  train_gender_acc=99.3%  train_attr_acc=[84.0 92.3 90.0 84.8 93.5 89.8]%  (54.3s)
+[16:23:15 INFO] epoch  10/20  train_loss=0.5073  train_gender_acc=99.4%  train_attr_acc=[84.4 92.4 90.2 85.2 93.8 90.1]%  (54.5s)
+[16:24:09 INFO] epoch  11/20  train_loss=0.4925  train_gender_acc=99.6%  train_attr_acc=[84.8 92.6 90.4 85.5 93.9 90.6]%  (54.2s)
+[16:25:05 INFO] epoch  12/20  train_loss=0.4783  train_gender_acc=99.7%  train_attr_acc=[85.2 92.7 90.6 85.9 94.1 90.9]%  (55.6s)
+[16:25:59 INFO] epoch  13/20  train_loss=0.4647  train_gender_acc=99.7%  train_attr_acc=[85.6 93.0 90.8 86.3 94.3 91.2]%  (54.4s)
+[16:26:54 INFO] epoch  14/20  train_loss=0.4523  train_gender_acc=99.7%  train_attr_acc=[86.0 93.2 91.0 86.6 94.6 91.5]%  (54.9s)
+[16:27:49 INFO] epoch  15/20  train_loss=0.4397  train_gender_acc=99.7%  train_attr_acc=[86.4 93.3 91.2 87.1 94.8 91.9]%  (54.8s)
+[16:28:43 INFO] epoch  16/20  train_loss=0.4276  train_gender_acc=99.7%  train_attr_acc=[86.8 93.5 91.4 87.3 95.0 92.3]%  (54.3s)
+[16:29:38 INFO] epoch  17/20  train_loss=0.4126  train_gender_acc=99.8%  train_attr_acc=[87.3 93.7 91.6 87.8 95.2 92.6]%  (54.9s)
+[16:30:33 INFO] epoch  18/20  train_loss=0.4009  train_gender_acc=99.8%  train_attr_acc=[87.7 93.9 91.9 88.2 95.4 92.9]%  (54.8s)
+[16:31:27 INFO] epoch  19/20  train_loss=0.3881  train_gender_acc=99.8%  train_attr_acc=[88.0 94.1 92.2 88.6 95.6 93.2]%  (54.5s)
+[16:32:21 INFO] epoch  20/20  train_loss=0.3761  train_gender_acc=99.8%  train_attr_acc=[88.5 94.3 92.4 89.0 95.8 93.5]%  (54.2s)
+[16:32:21 INFO] Training done in 1091.8s
+[16:32:22 INFO] ======================================================================
+[16:32:22 INFO] PHASE 2 — training per-block reconstruction decoders
+[16:32:22 INFO] ======================================================================
+[16:32:22 INFO]   decoder L0: in=(C=24, H=32) → out=(3, 64, 64)  params=6,227
+[16:32:22 INFO]   decoder L1: in=(C=48, H=16) → out=(3, 64, 64)  params=24,707
+[16:32:22 INFO]   decoder L2: in=(C=96, H=8) → out=(3, 64, 64)  params=98,531
+[16:32:22 INFO]   decoder L3: in=(C=192, H=4) → out=(3, 64, 64)  params=393,635
+[16:32:22 INFO]   decoder L4: in=(C=384, H=4) → out=(3, 64, 64)  params=1,567,515
+[16:33:29 INFO] [decoders] epoch   1/25  train=0.0677  per_block(train)=[0.0082 0.0077 0.0129 0.0176 0.0212]  (67.5s)
+[16:34:27 INFO] [decoders] epoch   2/25  train=0.0365  per_block(train)=[0.0011 0.0028 0.0065 0.0115 0.0146]  (58.1s)
+[16:35:25 INFO] [decoders] epoch   3/25  train=0.0339  per_block(train)=[0.0010 0.0026 0.0061 0.0107 0.0135]  (57.4s)
+[16:36:23 INFO] [decoders] epoch   4/25  train=0.0326  per_block(train)=[0.0009 0.0025 0.0059 0.0103 0.0130]  (58.0s)
+[16:37:20 INFO] [decoders] epoch   5/25  train=0.0318  per_block(train)=[0.0009 0.0025 0.0058 0.0100 0.0126]  (57.3s)
+[16:38:18 INFO] [decoders] epoch   6/25  train=0.0312  per_block(train)=[0.0009 0.0024 0.0057 0.0099 0.0123]  (58.4s)
+[16:39:17 INFO] [decoders] epoch   7/25  train=0.0307  per_block(train)=[0.0008 0.0024 0.0057 0.0097 0.0121]  (58.8s)
+[16:40:15 INFO] [decoders] epoch   8/25  train=0.0304  per_block(train)=[0.0008 0.0024 0.0056 0.0096 0.0119]  (58.1s)
+[16:41:13 INFO] [decoders] epoch   9/25  train=0.0301  per_block(train)=[0.0008 0.0024 0.0056 0.0096 0.0117]  (57.3s)
+[16:42:11 INFO] [decoders] epoch  10/25  train=0.0299  per_block(train)=[0.0008 0.0024 0.0056 0.0095 0.0116]  (57.9s)
+[16:43:09 INFO] [decoders] epoch  11/25  train=0.0297  per_block(train)=[0.0008 0.0024 0.0056 0.0094 0.0115]  (58.1s)
+[16:44:07 INFO] [decoders] epoch  12/25  train=0.0294  per_block(train)=[0.0007 0.0023 0.0055 0.0094 0.0114]  (58.1s)
+[16:45:05 INFO] [decoders] epoch  13/25  train=0.0292  per_block(train)=[0.0007 0.0023 0.0055 0.0093 0.0113]  (58.0s)
+[16:46:03 INFO] [decoders] epoch  14/25  train=0.0291  per_block(train)=[0.0007 0.0023 0.0055 0.0093 0.0112]  (58.0s)
+[16:47:01 INFO] [decoders] epoch  15/25  train=0.0289  per_block(train)=[0.0007 0.0023 0.0055 0.0092 0.0111]  (58.0s)
+[16:47:58 INFO] [decoders] epoch  16/25  train=0.0288  per_block(train)=[0.0007 0.0023 0.0055 0.0092 0.0111]  (57.8s)
+[16:48:56 INFO] [decoders] epoch  17/25  train=0.0287  per_block(train)=[0.0007 0.0023 0.0055 0.0092 0.0110]  (57.7s)
+[16:49:54 INFO] [decoders] epoch  18/25  train=0.0285  per_block(train)=[0.0007 0.0023 0.0054 0.0092 0.0109]  (58.0s)
+[16:50:52 INFO] [decoders] epoch  19/25  train=0.0285  per_block(train)=[0.0007 0.0023 0.0054 0.0092 0.0109]  (58.1s)
+[16:51:50 INFO] [decoders] epoch  20/25  train=0.0284  per_block(train)=[0.0007 0.0023 0.0054 0.0091 0.0109]  (57.7s)
+[16:52:48 INFO] [decoders] epoch  21/25  train=0.0283  per_block(train)=[0.0007 0.0023 0.0054 0.0091 0.0108]  (58.0s)
+[16:53:46 INFO] [decoders] epoch  22/25  train=0.0282  per_block(train)=[0.0007 0.0023 0.0054 0.0091 0.0108]  (57.8s)
+[16:54:44 INFO] [decoders] epoch  23/25  train=0.0282  per_block(train)=[0.0007 0.0023 0.0054 0.0091 0.0107]  (58.0s)
+[16:55:41 INFO] [decoders] epoch  24/25  train=0.0281  per_block(train)=[0.0007 0.0023 0.0054 0.0090 0.0107]  (57.3s)
+[16:56:39 INFO] [decoders] epoch  25/25  train=0.0280  per_block(train)=[0.0007 0.0023 0.0054 0.0090 0.0106]  (58.2s)
+[16:56:39 INFO] Decoder training done in 1457.8s
+[16:56:39 INFO] ======================================================================
+[16:56:39 INFO] EVALUATION — per-attribute accuracy + OOD AUROC
+[16:56:39 INFO] ======================================================================
+[16:56:39 INFO] Collecting predictions on test_in...
+[16:56:45 INFO]   test_in size = 18941, OOD score (combined entropy) mean = 0.2658
+[16:56:45 INFO] Collecting predictions on test_ood (Eyeglasses)...
+[16:56:50 INFO]   test_ood size = 13193, OOD score (combined entropy) mean = 0.2514
+[16:56:50 INFO] Per-attribute accuracy (in-distribution test set):
+[16:56:50 INFO]   Male/Female : 91.92%
+[16:56:50 INFO]   Arched_Eyebrows       : 79.99%
+[16:56:50 INFO]   Bushy_Eyebrows        : 90.16%
+[16:56:50 INFO]   Narrow_Eyes           : 88.95%
+[16:56:50 INFO]   Bags_Under_Eyes       : 69.14%
+[16:56:50 INFO]   Smiling               : 86.52%
+[16:56:50 INFO]   Young                 : 83.45%
+[16:56:50 INFO] OOD AUROC (in-dist vs Eyeglasses):
+[16:56:50 INFO]   score_msp                AUROC = 0.4438  (in_mean=0.019, ood_mean=0.017)
+[16:56:50 INFO]   score_entropy_gender     AUROC = 0.4457  (in_mean=0.046, ood_mean=0.039)
+[16:56:50 INFO]   score_entropy_attrs      AUROC = 0.4757  (in_mean=0.220, ood_mean=0.212)
+[16:56:50 INFO]   score_entropy_combined   AUROC = 0.4687  (in_mean=0.266, ood_mean=0.251)
+[16:57:49 INFO] Fusion-based AUROC (max-pixel) = 0.6164  (in_mean=0.9087, ood_mean=1.0588)
+[16:57:49 INFO] Wrote per-block plots: per_block_breakdown.png, recons_only.png, activations.png, fusion_overlay.png, fusion_auroc.png
+[16:57:49 INFO] Summary written to outputs/celeba_ood/ensemble_20260707_152254_6754917/model_1/summary.json
+[16:57:49 INFO] model 2/10 done in 2619.6s
+[16:57:49 INFO] ######################################################################
+[16:57:49 INFO] # MODEL 3/10   (seed=44, channels=[48, 96, 192, 256, 256], kernel=3)
+[16:57:49 INFO] ######################################################################
+[16:57:49 INFO] Model        : FacialCNN  (1,244,600 params)
+[16:57:49 INFO] ======================================================================
+[16:57:49 INFO] TRAINING — combined CE(gender) + BCE(attrs) loss
+[16:57:49 INFO] ======================================================================
+[16:57:49 INFO] No validation set — running the full 20-epoch schedule with no early stopping; final-epoch weights are kept.
+[16:58:44 INFO] epoch   1/20  train_loss=0.8467  train_gender_acc=94.5%  train_attr_acc=[77.8 88.4 88.3 81.1 86.4 84.5]%  (55.3s)
+[16:59:41 INFO] epoch   2/20  train_loss=0.6505  train_gender_acc=97.5%  train_attr_acc=[81.2 91.0 89.0 82.6 91.8 87.3]%  (56.7s)
+[17:00:36 INFO] epoch   3/20  train_loss=0.6048  train_gender_acc=98.1%  train_attr_acc=[82.4 91.5 89.4 83.3 92.4 88.2]%  (54.9s)
+[17:01:31 INFO] epoch   4/20  train_loss=0.5719  train_gender_acc=98.6%  train_attr_acc=[83.1 91.8 89.7 83.8 92.9 89.0]%  (55.1s)
+[17:02:27 INFO] epoch   5/20  train_loss=0.5456  train_gender_acc=98.9%  train_attr_acc=[83.7 92.1 89.9 84.3 93.2 89.5]%  (55.7s)
+[17:03:22 INFO] epoch   6/20  train_loss=0.5198  train_gender_acc=99.2%  train_attr_acc=[84.3 92.4 90.1 84.9 93.5 90.0]%  (54.9s)
+[17:04:17 INFO] epoch   7/20  train_loss=0.4946  train_gender_acc=99.4%  train_attr_acc=[84.9 92.6 90.4 85.3 94.0 90.7]%  (54.7s)
+[17:05:12 INFO] epoch   8/20  train_loss=0.4701  train_gender_acc=99.6%  train_attr_acc=[85.5 93.0 90.7 85.8 94.3 91.2]%  (55.4s)
+[17:06:06 INFO] epoch   9/20  train_loss=0.4442  train_gender_acc=99.7%  train_attr_acc=[86.3 93.3 91.1 86.6 94.7 92.0]%  (54.3s)
+[17:07:01 INFO] epoch  10/20  train_loss=0.4202  train_gender_acc=99.7%  train_attr_acc=[87.0 93.6 91.6 87.3 95.1 92.8]%  (54.8s)
+[17:07:56 INFO] epoch  11/20  train_loss=0.3917  train_gender_acc=99.8%  train_attr_acc=[87.8 94.0 92.0 88.1 95.7 93.5]%  (54.5s)
+[17:08:51 INFO] epoch  12/20  train_loss=0.3631  train_gender_acc=99.9%  train_attr_acc=[88.7 94.4 92.6 89.0 96.1 94.2]%  (55.2s)
+[17:09:47 INFO] epoch  13/20  train_loss=0.3341  train_gender_acc=99.9%  train_attr_acc=[89.5 94.9 93.2 89.8 96.5 94.9]%  (56.2s)
+[17:10:46 INFO] epoch  14/20  train_loss=0.3074  train_gender_acc=99.9%  train_attr_acc=[90.5 95.4 93.7 90.8 96.8 95.5]%  (59.5s)
+[17:11:42 INFO] epoch  15/20  train_loss=0.2789  train_gender_acc=99.9%  train_attr_acc=[91.3 95.8 94.3 91.6 97.2 96.0]%  (55.7s)
+[17:12:41 INFO] epoch  16/20  train_loss=0.2521  train_gender_acc=99.9%  train_attr_acc=[92.3 96.2 94.9 92.4 97.5 96.5]%  (58.4s)
+[17:13:38 INFO] epoch  17/20  train_loss=0.2285  train_gender_acc=99.9%  train_attr_acc=[93.1 96.6 95.4 93.3 97.7 96.9]%  (57.1s)
+[17:14:34 INFO] epoch  18/20  train_loss=0.2075  train_gender_acc=99.9%  train_attr_acc=[93.8 97.0 95.9 93.8 97.9 97.2]%  (56.7s)
+[17:15:29 INFO] epoch  19/20  train_loss=0.1840  train_gender_acc=99.9%  train_attr_acc=[94.4 97.3 96.4 94.7 98.2 97.6]%  (55.1s)
+[17:16:26 INFO] epoch  20/20  train_loss=0.1667  train_gender_acc=99.9%  train_attr_acc=[95.1 97.6 96.8 95.2 98.4 97.8]%  (56.0s)
+[17:16:26 INFO] Training done in 1116.4s
+[17:16:26 INFO] ======================================================================
+[17:16:26 INFO] PHASE 2 — training per-block reconstruction decoders
+[17:16:26 INFO] ======================================================================
+[17:16:26 INFO]   decoder L0: in=(C=48, H=32) → out=(3, 64, 64)  params=18,555
+[17:16:26 INFO]   decoder L1: in=(C=96, H=16) → out=(3, 64, 64)  params=92,379
+[17:16:26 INFO]   decoder L2: in=(C=192, H=8) → out=(3, 64, 64)  params=387,483
+[17:16:26 INFO]   decoder L3: in=(C=256, H=4) → out=(3, 64, 64)  params=696,851
+[17:16:26 INFO]   decoder L4: in=(C=256, H=4) → out=(3, 64, 64)  params=696,851
+[17:17:25 INFO] [decoders] epoch   1/25  train=0.0671  per_block(train)=[0.0042 0.0047 0.0082 0.0210 0.0292]  (59.2s)
+[17:18:24 INFO] [decoders] epoch   2/25  train=0.0375  per_block(train)=[0.0007 0.0018 0.0046 0.0108 0.0196]  (58.9s)
+[17:19:23 INFO] [decoders] epoch   3/25  train=0.0344  per_block(train)=[0.0006 0.0016 0.0042 0.0099 0.0181]  (59.7s)
+[17:20:23 INFO] [decoders] epoch   4/25  train=0.0328  per_block(train)=[0.0006 0.0015 0.0040 0.0094 0.0173]  (59.9s)
+[17:21:23 INFO] [decoders] epoch   5/25  train=0.0319  per_block(train)=[0.0005 0.0015 0.0039 0.0092 0.0168]  (60.1s)
+[17:22:36 INFO] [decoders] epoch   6/25  train=0.0311  per_block(train)=[0.0005 0.0014 0.0038 0.0089 0.0164]  (72.5s)
+[17:23:37 INFO] [decoders] epoch   7/25  train=0.0307  per_block(train)=[0.0005 0.0014 0.0038 0.0088 0.0162]  (60.6s)
+[17:24:35 INFO] [decoders] epoch   8/25  train=0.0302  per_block(train)=[0.0005 0.0014 0.0037 0.0087 0.0159]  (58.9s)
+[17:25:35 INFO] [decoders] epoch   9/25  train=0.0298  per_block(train)=[0.0005 0.0014 0.0037 0.0086 0.0157]  (59.6s)
+[17:26:34 INFO] [decoders] epoch  10/25  train=0.0296  per_block(train)=[0.0005 0.0014 0.0036 0.0085 0.0156]  (58.9s)
+[17:27:33 INFO] [decoders] epoch  11/25  train=0.0294  per_block(train)=[0.0004 0.0014 0.0036 0.0085 0.0154]  (59.3s)
+[17:28:33 INFO] [decoders] epoch  12/25  train=0.0291  per_block(train)=[0.0004 0.0014 0.0036 0.0084 0.0153]  (59.4s)
+[17:29:31 INFO] [decoders] epoch  13/25  train=0.0289  per_block(train)=[0.0004 0.0013 0.0036 0.0083 0.0152]  (58.8s)
+[17:30:30 INFO] [decoders] epoch  14/25  train=0.0287  per_block(train)=[0.0004 0.0013 0.0036 0.0083 0.0151]  (58.9s)
+[17:31:30 INFO] [decoders] epoch  15/25  train=0.0286  per_block(train)=[0.0004 0.0013 0.0035 0.0083 0.0150]  (59.3s)
+[17:32:29 INFO] [decoders] epoch  16/25  train=0.0284  per_block(train)=[0.0004 0.0013 0.0035 0.0082 0.0150]  (59.2s)
+[17:33:28 INFO] [decoders] epoch  17/25  train=0.0284  per_block(train)=[0.0004 0.0013 0.0035 0.0082 0.0149]  (59.5s)
+[17:34:28 INFO] [decoders] epoch  18/25  train=0.0282  per_block(train)=[0.0004 0.0013 0.0035 0.0082 0.0148]  (59.9s)
+[17:35:27 INFO] [decoders] epoch  19/25  train=0.0281  per_block(train)=[0.0004 0.0013 0.0035 0.0081 0.0148]  (59.3s)
+[17:36:27 INFO] [decoders] epoch  20/25  train=0.0280  per_block(train)=[0.0004 0.0013 0.0035 0.0081 0.0147]  (59.2s)
+[17:37:26 INFO] [decoders] epoch  21/25  train=0.0279  per_block(train)=[0.0004 0.0013 0.0035 0.0081 0.0147]  (59.0s)
+[17:38:24 INFO] [decoders] epoch  22/25  train=0.0278  per_block(train)=[0.0004 0.0013 0.0035 0.0081 0.0146]  (58.7s)
+[17:39:22 INFO] [decoders] epoch  23/25  train=0.0277  per_block(train)=[0.0004 0.0013 0.0035 0.0080 0.0146]  (58.1s)
+[17:40:21 INFO] [decoders] epoch  24/25  train=0.0277  per_block(train)=[0.0004 0.0013 0.0035 0.0080 0.0146]  (58.9s)
+[17:41:20 INFO] [decoders] epoch  25/25  train=0.0276  per_block(train)=[0.0004 0.0013 0.0035 0.0080 0.0145]  (58.6s)
+[17:41:20 INFO] Decoder training done in 1494.3s
+[17:41:20 INFO] ======================================================================
+[17:41:20 INFO] EVALUATION — per-attribute accuracy + OOD AUROC
+[17:41:20 INFO] ======================================================================
+[17:41:20 INFO] Collecting predictions on test_in...
+[17:41:26 INFO]   test_in size = 18941, OOD score (combined entropy) mean = 0.0841
+[17:41:26 INFO] Collecting predictions on test_ood (Eyeglasses)...
+[17:41:30 INFO]   test_ood size = 13193, OOD score (combined entropy) mean = 0.1126
+[17:41:31 INFO] Per-attribute accuracy (in-distribution test set):
+[17:41:31 INFO]   Male/Female : 97.24%
+[17:41:31 INFO]   Arched_Eyebrows       : 80.67%
+[17:41:31 INFO]   Bushy_Eyebrows        : 88.88%
+[17:41:31 INFO]   Narrow_Eyes           : 88.75%
+[17:41:31 INFO]   Bags_Under_Eyes       : 81.58%
+[17:41:31 INFO]   Smiling               : 90.45%
+[17:41:31 INFO]   Young                 : 84.01%
+[17:41:31 INFO] OOD AUROC (in-dist vs Eyeglasses):
+[17:41:31 INFO]   score_msp                AUROC = 0.6025  (in_mean=0.007, ood_mean=0.019)
+[17:41:31 INFO]   score_entropy_gender     AUROC = 0.6119  (in_mean=0.017, ood_mean=0.046)
+[17:41:31 INFO]   score_entropy_attrs      AUROC = 0.4874  (in_mean=0.067, ood_mean=0.067)
+[17:41:31 INFO]   score_entropy_combined   AUROC = 0.5421  (in_mean=0.084, ood_mean=0.113)
+[17:42:30 INFO] Fusion-based AUROC (max-pixel) = 0.6077  (in_mean=0.9722, ood_mean=1.1077)
+[17:42:30 INFO] Wrote per-block plots: per_block_breakdown.png, recons_only.png, activations.png, fusion_overlay.png, fusion_auroc.png
+[17:42:30 INFO] Summary written to outputs/celeba_ood/ensemble_20260707_152254_6754917/model_2/summary.json
+[17:42:30 INFO] model 3/10 done in 2680.5s
+[17:42:30 INFO] ######################################################################
+[17:42:30 INFO] # MODEL 4/10   (seed=45, channels=[16, 48, 96, 192, 320], kernel=5)
+[17:42:30 INFO] ######################################################################
+[17:42:30 INFO] Model        : FacialCNN  (2,136,312 params)
+[17:42:30 INFO] ======================================================================
+[17:42:30 INFO] TRAINING — combined CE(gender) + BCE(attrs) loss
+[17:42:30 INFO] ======================================================================
+[17:42:30 INFO] No validation set — running the full 20-epoch schedule with no early stopping; final-epoch weights are kept.
+[17:43:24 INFO] epoch   1/20  train_loss=0.8327  train_gender_acc=94.8%  train_attr_acc=[77.2 88.9 87.4 81.2 87.5 84.7]%  (54.7s)
+[17:44:19 INFO] epoch   2/20  train_loss=0.6715  train_gender_acc=97.3%  train_attr_acc=[80.3 90.7 88.6 82.6 91.6 87.1]%  (54.1s)
+[17:45:13 INFO] epoch   3/20  train_loss=0.6251  train_gender_acc=98.0%  train_attr_acc=[81.4 91.2 88.9 83.1 92.2 88.1]%  (54.1s)
+[17:46:06 INFO] epoch   4/20  train_loss=0.5869  train_gender_acc=98.5%  train_attr_acc=[82.4 91.5 89.3 83.6 92.7 88.7]%  (53.8s)
+[17:47:01 INFO] epoch   5/20  train_loss=0.5550  train_gender_acc=98.9%  train_attr_acc=[83.1 91.8 89.5 84.2 93.1 89.4]%  (54.5s)
+[17:47:56 INFO] epoch   6/20  train_loss=0.5222  train_gender_acc=99.3%  train_attr_acc=[83.9 92.2 89.9 84.7 93.5 90.1]%  (54.7s)
+[17:48:50 INFO] epoch   7/20  train_loss=0.4914  train_gender_acc=99.5%  train_attr_acc=[84.7 92.6 90.3 85.4 94.1 90.9]%  (54.6s)
+[17:49:45 INFO] epoch   8/20  train_loss=0.4600  train_gender_acc=99.7%  train_attr_acc=[85.6 93.0 90.8 86.3 94.5 91.6]%  (54.5s)
+[17:50:39 INFO] epoch   9/20  train_loss=0.4243  train_gender_acc=99.8%  train_attr_acc=[86.6 93.6 91.4 87.3 95.1 92.5]%  (54.1s)
+[17:51:33 INFO] epoch  10/20  train_loss=0.3917  train_gender_acc=99.8%  train_attr_acc=[87.8 94.2 92.1 88.2 95.7 93.3]%  (54.4s)
+[17:52:27 INFO] epoch  11/20  train_loss=0.3538  train_gender_acc=99.9%  train_attr_acc=[88.9 94.7 92.8 89.3 96.2 94.2]%  (54.2s)
+[17:53:21 INFO] epoch  12/20  train_loss=0.3198  train_gender_acc=99.8%  train_attr_acc=[90.0 95.3 93.6 90.4 96.7 94.9]%  (53.9s)
+[17:54:16 INFO] epoch  13/20  train_loss=0.2854  train_gender_acc=99.9%  train_attr_acc=[91.1 95.7 94.3 91.4 97.1 95.7]%  (54.6s)
+[17:55:10 INFO] epoch  14/20  train_loss=0.2541  train_gender_acc=99.9%  train_attr_acc=[92.1 96.2 95.0 92.5 97.5 96.3]%  (54.6s)
+[17:56:05 INFO] epoch  15/20  train_loss=0.2259  train_gender_acc=99.9%  train_attr_acc=[93.1 96.7 95.7 93.3 97.8 96.7]%  (54.5s)
+[17:56:59 INFO] epoch  16/20  train_loss=0.1997  train_gender_acc=99.9%  train_attr_acc=[94.0 97.0 96.2 94.3 98.1 97.1]%  (54.3s)
+[17:57:53 INFO] epoch  17/20  train_loss=0.1787  train_gender_acc=99.9%  train_attr_acc=[94.6 97.4 96.7 95.0 98.2 97.4]%  (53.9s)
+[17:58:47 INFO] epoch  18/20  train_loss=0.1601  train_gender_acc=99.9%  train_attr_acc=[95.2 97.7 97.1 95.5 98.4 97.8]%  (54.0s)
+[17:59:42 INFO] epoch  19/20  train_loss=0.1424  train_gender_acc=99.9%  train_attr_acc=[95.9 98.0 97.5 96.1 98.6 98.0]%  (54.9s)
+[18:00:37 INFO] epoch  20/20  train_loss=0.1274  train_gender_acc=99.9%  train_attr_acc=[96.4 98.2 97.8 96.6 98.7 98.1]%  (54.8s)
+[18:00:37 INFO] Training done in 1087.1s
+[18:00:37 INFO] ======================================================================
+[18:00:37 INFO] PHASE 2 — training per-block reconstruction decoders
+[18:00:37 INFO] ======================================================================
+[18:00:37 INFO]   decoder L0: in=(C=16, H=32) → out=(3, 64, 64)  params=4,179
+[18:00:37 INFO]   decoder L1: in=(C=48, H=16) → out=(3, 64, 64)  params=24,707
+[18:00:37 INFO]   decoder L2: in=(C=96, H=8) → out=(3, 64, 64)  params=98,531
+[18:00:37 INFO]   decoder L3: in=(C=192, H=4) → out=(3, 64, 64)  params=393,635
+[18:00:37 INFO]   decoder L4: in=(C=320, H=4) → out=(3, 64, 64)  params=1,088,663
+[18:01:34 INFO] [decoders] epoch   1/25  train=0.1019  per_block(train)=[0.0093 0.0145 0.0168 0.0253 0.0360]  (57.3s)
+[18:02:32 INFO] [decoders] epoch   2/25  train=0.0642  per_block(train)=[0.0038 0.0056 0.0103 0.0176 0.0268]  (57.4s)
+[18:03:29 INFO] [decoders] epoch   3/25  train=0.0599  per_block(train)=[0.0034 0.0053 0.0098 0.0165 0.0248]  (57.0s)
+[18:04:26 INFO] [decoders] epoch   4/25  train=0.0577  per_block(train)=[0.0033 0.0052 0.0095 0.0159 0.0238]  (57.5s)
+[18:05:23 INFO] [decoders] epoch   5/25  train=0.0563  per_block(train)=[0.0032 0.0051 0.0093 0.0155 0.0230]  (56.9s)
+[18:06:21 INFO] [decoders] epoch   6/25  train=0.0552  per_block(train)=[0.0031 0.0051 0.0092 0.0153 0.0225]  (57.5s)
+[18:07:18 INFO] [decoders] epoch   7/25  train=0.0544  per_block(train)=[0.0031 0.0051 0.0092 0.0151 0.0221]  (57.2s)
+[18:08:16 INFO] [decoders] epoch   8/25  train=0.0537  per_block(train)=[0.0030 0.0050 0.0091 0.0149 0.0217]  (57.8s)
+[18:09:13 INFO] [decoders] epoch   9/25  train=0.0532  per_block(train)=[0.0030 0.0050 0.0090 0.0148 0.0214]  (57.8s)
+[18:10:11 INFO] [decoders] epoch  10/25  train=0.0527  per_block(train)=[0.0029 0.0050 0.0090 0.0147 0.0211]  (57.8s)
+[18:11:09 INFO] [decoders] epoch  11/25  train=0.0523  per_block(train)=[0.0029 0.0050 0.0089 0.0146 0.0209]  (57.5s)
+[18:12:06 INFO] [decoders] epoch  12/25  train=0.0520  per_block(train)=[0.0029 0.0050 0.0089 0.0145 0.0207]  (57.5s)
+[18:13:04 INFO] [decoders] epoch  13/25  train=0.0517  per_block(train)=[0.0029 0.0050 0.0089 0.0144 0.0205]  (57.4s)
+[18:14:01 INFO] [decoders] epoch  14/25  train=0.0514  per_block(train)=[0.0029 0.0049 0.0089 0.0144 0.0204]  (57.2s)
+[18:14:58 INFO] [decoders] epoch  15/25  train=0.0512  per_block(train)=[0.0029 0.0049 0.0088 0.0143 0.0202]  (57.3s)
+[18:15:56 INFO] [decoders] epoch  16/25  train=0.0509  per_block(train)=[0.0029 0.0049 0.0088 0.0142 0.0201]  (57.4s)
+[18:16:53 INFO] [decoders] epoch  17/25  train=0.0507  per_block(train)=[0.0029 0.0049 0.0088 0.0142 0.0199]  (57.8s)
+[18:17:51 INFO] [decoders] epoch  18/25  train=0.0505  per_block(train)=[0.0028 0.0049 0.0088 0.0142 0.0198]  (57.7s)
+[18:18:48 INFO] [decoders] epoch  19/25  train=0.0503  per_block(train)=[0.0028 0.0049 0.0088 0.0141 0.0197]  (57.4s)
+[18:19:46 INFO] [decoders] epoch  20/25  train=0.0502  per_block(train)=[0.0028 0.0049 0.0087 0.0141 0.0196]  (57.3s)
+[18:20:43 INFO] [decoders] epoch  21/25  train=0.0500  per_block(train)=[0.0028 0.0049 0.0087 0.0140 0.0195]  (57.3s)
+[18:21:40 INFO] [decoders] epoch  22/25  train=0.0499  per_block(train)=[0.0028 0.0049 0.0087 0.0140 0.0194]  (57.3s)
+[18:22:38 INFO] [decoders] epoch  23/25  train=0.0497  per_block(train)=[0.0028 0.0049 0.0087 0.0140 0.0193]  (57.3s)
+[18:23:35 INFO] [decoders] epoch  24/25  train=0.0496  per_block(train)=[0.0028 0.0049 0.0087 0.0140 0.0192]  (57.5s)
+[18:24:32 INFO] [decoders] epoch  25/25  train=0.0495  per_block(train)=[0.0028 0.0049 0.0087 0.0140 0.0192]  (57.1s)
+[18:24:32 INFO] Decoder training done in 1435.2s
+[18:24:32 INFO] ======================================================================
+[18:24:32 INFO] EVALUATION — per-attribute accuracy + OOD AUROC
+[18:24:32 INFO] ======================================================================
+[18:24:32 INFO] Collecting predictions on test_in...
+[18:24:38 INFO]   test_in size = 18941, OOD score (combined entropy) mean = 0.1180
+[18:24:38 INFO] Collecting predictions on test_ood (Eyeglasses)...
+[18:24:42 INFO]   test_ood size = 13193, OOD score (combined entropy) mean = 0.1789
+[18:24:42 INFO] Per-attribute accuracy (in-distribution test set):
+[18:24:42 INFO]   Male/Female : 96.43%
+[18:24:42 INFO]   Arched_Eyebrows       : 78.49%
+[18:24:42 INFO]   Bushy_Eyebrows        : 82.89%
+[18:24:42 INFO]   Narrow_Eyes           : 65.48%
+[18:24:42 INFO]   Bags_Under_Eyes       : 79.19%
+[18:24:42 INFO]   Smiling               : 90.17%
+[18:24:42 INFO]   Young                 : 82.07%
+[18:24:42 INFO] OOD AUROC (in-dist vs Eyeglasses):
+[18:24:42 INFO]   score_msp                AUROC = 0.7121  (in_mean=0.008, ood_mean=0.029)
+[18:24:42 INFO]   score_entropy_gender     AUROC = 0.7697  (in_mean=0.018, ood_mean=0.067)
+[18:24:42 INFO]   score_entropy_attrs      AUROC = 0.5450  (in_mean=0.100, ood_mean=0.111)
+[18:24:42 INFO]   score_entropy_combined   AUROC = 0.6052  (in_mean=0.118, ood_mean=0.179)
+[18:25:42 INFO] Fusion-based AUROC (max-pixel) = 0.5932  (in_mean=1.0937, ood_mean=1.2178)
+[18:25:42 INFO] Wrote per-block plots: per_block_breakdown.png, recons_only.png, activations.png, fusion_overlay.png, fusion_auroc.png
+[18:25:42 INFO] Summary written to outputs/celeba_ood/ensemble_20260707_152254_6754917/model_3/summary.json
+[18:25:42 INFO] model 4/10 done in 2592.0s
+[18:25:42 INFO] ######################################################################
+[18:25:42 INFO] # MODEL 5/10   (seed=46, channels=[40, 80, 160, 320, 320], kernel=3)
+[18:25:42 INFO] ######################################################################
+[18:25:42 INFO] Model        : FacialCNN  (1,531,888 params)
+[18:25:42 INFO] ======================================================================
+[18:25:42 INFO] TRAINING — combined CE(gender) + BCE(attrs) loss
+[18:25:42 INFO] ======================================================================
+[18:25:42 INFO] No validation set — running the full 20-epoch schedule with no early stopping; final-epoch weights are kept.
+[18:26:36 INFO] epoch   1/20  train_loss=0.8524  train_gender_acc=94.4%  train_attr_acc=[77.4 88.5 88.2 81.2 86.1 83.9]%  (54.6s)
+[18:27:31 INFO] epoch   2/20  train_loss=0.6577  train_gender_acc=97.4%  train_attr_acc=[80.9 91.1 88.9 82.7 91.7 87.1]%  (54.4s)
+[18:28:26 INFO] epoch   3/20  train_loss=0.6092  train_gender_acc=98.1%  train_attr_acc=[82.2 91.5 89.3 83.5 92.3 88.2]%  (54.8s)
+[18:29:20 INFO] epoch   4/20  train_loss=0.5757  train_gender_acc=98.5%  train_attr_acc=[82.9 91.7 89.6 83.9 92.8 88.8]%  (54.5s)
+[18:30:15 INFO] epoch   5/20  train_loss=0.5483  train_gender_acc=98.9%  train_attr_acc=[83.6 92.0 89.8 84.4 93.2 89.3]%  (55.0s)
+[18:31:10 INFO] epoch   6/20  train_loss=0.5207  train_gender_acc=99.2%  train_attr_acc=[84.3 92.3 90.1 84.9 93.6 89.9]%  (54.7s)
+[18:32:05 INFO] epoch   7/20  train_loss=0.4937  train_gender_acc=99.5%  train_attr_acc=[84.9 92.6 90.4 85.6 94.0 90.5]%  (55.2s)
+[18:33:00 INFO] epoch   8/20  train_loss=0.4675  train_gender_acc=99.6%  train_attr_acc=[85.6 92.9 90.8 86.1 94.4 91.2]%  (54.9s)
+[18:33:54 INFO] epoch   9/20  train_loss=0.4404  train_gender_acc=99.7%  train_attr_acc=[86.5 93.3 91.2 86.9 94.8 91.9]%  (54.5s)
+[18:34:49 INFO] epoch  10/20  train_loss=0.4106  train_gender_acc=99.8%  train_attr_acc=[87.3 93.8 91.8 87.8 95.4 92.6]%  (54.4s)
+[18:35:43 INFO] epoch  11/20  train_loss=0.3819  train_gender_acc=99.8%  train_attr_acc=[88.1 94.1 92.3 88.7 95.8 93.3]%  (54.7s)
+[18:36:38 INFO] epoch  12/20  train_loss=0.3509  train_gender_acc=99.9%  train_attr_acc=[89.1 94.7 92.9 89.6 96.2 94.2]%  (54.2s)
+[18:37:32 INFO] epoch  13/20  train_loss=0.3217  train_gender_acc=99.9%  train_attr_acc=[90.1 95.1 93.6 90.5 96.6 94.8]%  (54.2s)
+[18:38:27 INFO] epoch  14/20  train_loss=0.2933  train_gender_acc=99.9%  train_attr_acc=[90.9 95.6 94.2 91.4 97.0 95.5]%  (54.7s)
+[18:39:21 INFO] epoch  15/20  train_loss=0.2648  train_gender_acc=99.9%  train_attr_acc=[91.8 96.0 94.8 92.3 97.4 96.0]%  (54.5s)
+[18:40:16 INFO] epoch  16/20  train_loss=0.2400  train_gender_acc=99.9%  train_attr_acc=[92.5 96.4 95.3 93.1 97.7 96.5]%  (54.8s)
+[18:41:10 INFO] epoch  17/20  train_loss=0.2156  train_gender_acc=99.9%  train_attr_acc=[93.4 96.8 95.9 94.0 97.9 96.8]%  (54.5s)
+[18:42:05 INFO] epoch  18/20  train_loss=0.1918  train_gender_acc=99.9%  train_attr_acc=[94.2 97.2 96.3 94.6 98.2 97.2]%  (54.4s)
+[18:42:59 INFO] epoch  19/20  train_loss=0.1756  train_gender_acc=99.9%  train_attr_acc=[94.6 97.5 96.7 95.2 98.3 97.4]%  (54.5s)
+[18:43:54 INFO] epoch  20/20  train_loss=0.1586  train_gender_acc=99.9%  train_attr_acc=[95.2 97.7 97.1 95.7 98.5 97.7]%  (54.7s)
+[18:43:54 INFO] Training done in 1092.5s
+[18:43:54 INFO] ======================================================================
+[18:43:54 INFO] PHASE 2 — training per-block reconstruction decoders
+[18:43:54 INFO] ======================================================================
+[18:43:54 INFO]   decoder L0: in=(C=40, H=32) → out=(3, 64, 64)  params=12,903
+[18:43:54 INFO]   decoder L1: in=(C=80, H=16) → out=(3, 64, 64)  params=64,183
+[18:43:54 INFO]   decoder L2: in=(C=160, H=8) → out=(3, 64, 64)  params=269,143
+[18:43:54 INFO]   decoder L3: in=(C=320, H=4) → out=(3, 64, 64)  params=1,088,663
+[18:43:54 INFO]   decoder L4: in=(C=320, H=4) → out=(3, 64, 64)  params=1,088,663
+[18:45:01 INFO] [decoders] epoch   1/25  train=0.0640  per_block(train)=[0.0036 0.0069 0.0106 0.0167 0.0262]  (66.4s)
+[18:46:08 INFO] [decoders] epoch   2/25  train=0.0361  per_block(train)=[0.0009 0.0022 0.0052 0.0100 0.0177]  (66.9s)
+[18:47:15 INFO] [decoders] epoch   3/25  train=0.0332  per_block(train)=[0.0008 0.0020 0.0049 0.0091 0.0163]  (67.1s)
+[18:48:22 INFO] [decoders] epoch   4/25  train=0.0316  per_block(train)=[0.0008 0.0019 0.0047 0.0087 0.0155]  (67.1s)
+[18:49:29 INFO] [decoders] epoch   5/25  train=0.0306  per_block(train)=[0.0007 0.0019 0.0045 0.0084 0.0151]  (67.3s)
+[18:50:36 INFO] [decoders] epoch   6/25  train=0.0300  per_block(train)=[0.0007 0.0018 0.0045 0.0082 0.0148]  (67.2s)
+[18:51:43 INFO] [decoders] epoch   7/25  train=0.0294  per_block(train)=[0.0007 0.0018 0.0044 0.0080 0.0145]  (67.2s)
+[18:52:51 INFO] [decoders] epoch   8/25  train=0.0290  per_block(train)=[0.0007 0.0018 0.0044 0.0079 0.0143]  (67.2s)
+[18:53:58 INFO] [decoders] epoch   9/25  train=0.0286  per_block(train)=[0.0007 0.0018 0.0043 0.0078 0.0141]  (67.1s)
+[18:55:05 INFO] [decoders] epoch  10/25  train=0.0284  per_block(train)=[0.0006 0.0018 0.0043 0.0077 0.0139]  (67.1s)
+[18:56:12 INFO] [decoders] epoch  11/25  train=0.0281  per_block(train)=[0.0006 0.0017 0.0043 0.0077 0.0138]  (67.1s)
+[18:57:19 INFO] [decoders] epoch  12/25  train=0.0281  per_block(train)=[0.0006 0.0018 0.0043 0.0076 0.0137]  (67.1s)
+[18:58:26 INFO] [decoders] epoch  13/25  train=0.0278  per_block(train)=[0.0006 0.0017 0.0042 0.0076 0.0136]  (67.1s)
+[18:59:33 INFO] [decoders] epoch  14/25  train=0.0276  per_block(train)=[0.0006 0.0017 0.0042 0.0075 0.0135]  (67.1s)
+[19:00:41 INFO] [decoders] epoch  15/25  train=0.0274  per_block(train)=[0.0006 0.0017 0.0042 0.0075 0.0134]  (67.1s)
+[19:01:48 INFO] [decoders] epoch  16/25  train=0.0272  per_block(train)=[0.0006 0.0017 0.0042 0.0074 0.0133]  (67.2s)
+[19:02:55 INFO] [decoders] epoch  17/25  train=0.0271  per_block(train)=[0.0006 0.0017 0.0042 0.0074 0.0133]  (67.1s)
+[19:04:02 INFO] [decoders] epoch  18/25  train=0.0270  per_block(train)=[0.0006 0.0017 0.0042 0.0074 0.0132]  (67.1s)
+[19:05:09 INFO] [decoders] epoch  19/25  train=0.0269  per_block(train)=[0.0006 0.0017 0.0042 0.0073 0.0131]  (67.1s)
+[19:06:16 INFO] [decoders] epoch  20/25  train=0.0268  per_block(train)=[0.0006 0.0017 0.0041 0.0073 0.0131]  (67.1s)
+[19:07:23 INFO] [decoders] epoch  21/25  train=0.0267  per_block(train)=[0.0006 0.0017 0.0041 0.0073 0.0130]  (67.1s)
+[19:08:31 INFO] [decoders] epoch  22/25  train=0.0266  per_block(train)=[0.0006 0.0017 0.0041 0.0073 0.0130]  (67.2s)
+[19:09:38 INFO] [decoders] epoch  23/25  train=0.0266  per_block(train)=[0.0006 0.0017 0.0041 0.0073 0.0130]  (67.1s)
+[19:10:45 INFO] [decoders] epoch  24/25  train=0.0265  per_block(train)=[0.0006 0.0017 0.0041 0.0072 0.0129]  (67.1s)
+[19:11:52 INFO] [decoders] epoch  25/25  train=0.0264  per_block(train)=[0.0006 0.0017 0.0041 0.0072 0.0129]  (67.2s)
+[19:11:52 INFO] Decoder training done in 1677.9s
+[19:11:52 INFO] ======================================================================
+[19:11:52 INFO] EVALUATION — per-attribute accuracy + OOD AUROC
+[19:11:52 INFO] ======================================================================
+[19:11:52 INFO] Collecting predictions on test_in...
+[19:11:58 INFO]   test_in size = 18941, OOD score (combined entropy) mean = 0.1666
+[19:11:58 INFO] Collecting predictions on test_ood (Eyeglasses)...
+[19:12:03 INFO]   test_ood size = 13193, OOD score (combined entropy) mean = 0.1935
+[19:12:03 INFO] Per-attribute accuracy (in-distribution test set):
+[19:12:03 INFO]   Male/Female : 96.17%
+[19:12:03 INFO]   Arched_Eyebrows       : 79.26%
+[19:12:03 INFO]   Bushy_Eyebrows        : 80.93%
+[19:12:03 INFO]   Narrow_Eyes           : 81.05%
+[19:12:03 INFO]   Bags_Under_Eyes       : 42.37%
+[19:12:03 INFO]   Smiling               : 79.96%
+[19:12:03 INFO]   Young                 : 86.32%
+[19:12:03 INFO] OOD AUROC (in-dist vs Eyeglasses):
+[19:12:03 INFO]   score_msp                AUROC = 0.5638  (in_mean=0.010, ood_mean=0.019)
+[19:12:03 INFO]   score_entropy_gender     AUROC = 0.5667  (in_mean=0.023, ood_mean=0.045)
+[19:12:03 INFO]   score_entropy_attrs      AUROC = 0.5143  (in_mean=0.144, ood_mean=0.148)
+[19:12:03 INFO]   score_entropy_combined   AUROC = 0.5387  (in_mean=0.167, ood_mean=0.193)
+[19:13:02 INFO] Fusion-based AUROC (max-pixel) = 0.6108  (in_mean=0.9242, ood_mean=1.0623)
+[19:13:02 INFO] Wrote per-block plots: per_block_breakdown.png, recons_only.png, activations.png, fusion_overlay.png, fusion_auroc.png
+[19:13:02 INFO] Summary written to outputs/celeba_ood/ensemble_20260707_152254_6754917/model_4/summary.json
+[19:13:02 INFO] model 5/10 done in 2840.4s
+[19:13:02 INFO] ######################################################################
+[19:13:02 INFO] # MODEL 6/10   (seed=47, channels=[32, 64, 128, 256, 256], kernel=5)
+[19:13:02 INFO] ######################################################################
+[19:13:02 INFO] Model        : FacialCNN  (2,719,528 params)
+[19:13:02 INFO] ======================================================================
+[19:13:02 INFO] TRAINING — combined CE(gender) + BCE(attrs) loss
+[19:13:02 INFO] ======================================================================
+[19:13:02 INFO] No validation set — running the full 20-epoch schedule with no early stopping; final-epoch weights are kept.
+[19:13:58 INFO] epoch   1/20  train_loss=0.8114  train_gender_acc=95.1%  train_attr_acc=[78.0 88.8 88.2 81.4 88.1 84.9]%  (56.1s)
+[19:14:53 INFO] epoch   2/20  train_loss=0.6509  train_gender_acc=97.6%  train_attr_acc=[81.0 91.0 88.8 82.6 91.9 87.4]%  (55.0s)
+[19:15:49 INFO] epoch   3/20  train_loss=0.6046  train_gender_acc=98.2%  train_attr_acc=[82.3 91.4 89.1 83.3 92.5 88.3]%  (55.2s)
+[19:16:45 INFO] epoch   4/20  train_loss=0.5691  train_gender_acc=98.7%  train_attr_acc=[83.0 91.7 89.5 83.9 92.9 89.0]%  (56.1s)
+[19:17:40 INFO] epoch   5/20  train_loss=0.5336  train_gender_acc=99.1%  train_attr_acc=[83.9 92.0 90.0 84.5 93.5 89.8]%  (55.2s)
+[19:18:36 INFO] epoch   6/20  train_loss=0.4977  train_gender_acc=99.4%  train_attr_acc=[84.7 92.6 90.4 85.3 94.0 90.5]%  (55.9s)
+[19:19:32 INFO] epoch   7/20  train_loss=0.4581  train_gender_acc=99.6%  train_attr_acc=[85.8 93.1 91.0 86.2 94.6 91.5]%  (56.1s)
+[19:20:28 INFO] epoch   8/20  train_loss=0.4145  train_gender_acc=99.7%  train_attr_acc=[87.1 93.6 91.9 87.5 95.4 92.6]%  (55.7s)
+[19:21:22 INFO] epoch   9/20  train_loss=0.3668  train_gender_acc=99.8%  train_attr_acc=[88.5 94.5 92.7 88.9 96.1 93.8]%  (54.9s)
+[19:22:19 INFO] epoch  10/20  train_loss=0.3152  train_gender_acc=99.9%  train_attr_acc=[90.1 95.2 93.9 90.4 96.9 95.0]%  (56.4s)
+[19:23:14 INFO] epoch  11/20  train_loss=0.2655  train_gender_acc=99.9%  train_attr_acc=[91.7 96.1 94.9 92.1 97.5 96.0]%  (55.2s)
+[19:24:10 INFO] epoch  12/20  train_loss=0.2194  train_gender_acc=99.9%  train_attr_acc=[93.1 96.8 96.0 93.5 98.0 96.8]%  (55.8s)
+[19:25:05 INFO] epoch  13/20  train_loss=0.1809  train_gender_acc=99.9%  train_attr_acc=[94.4 97.4 96.8 94.8 98.3 97.4]%  (55.3s)
+[19:26:02 INFO] epoch  14/20  train_loss=0.1495  train_gender_acc=99.9%  train_attr_acc=[95.5 97.9 97.5 95.8 98.6 97.9]%  (56.3s)
+[19:26:58 INFO] epoch  15/20  train_loss=0.1284  train_gender_acc=99.9%  train_attr_acc=[96.2 98.2 97.8 96.6 98.8 98.2]%  (56.5s)
+[19:27:54 INFO] epoch  16/20  train_loss=0.1094  train_gender_acc=99.9%  train_attr_acc=[96.9 98.5 98.2 97.1 98.9 98.4]%  (55.6s)
+[19:28:51 INFO] epoch  17/20  train_loss=0.0985  train_gender_acc=99.9%  train_attr_acc=[97.2 98.7 98.4 97.5 99.1 98.5]%  (57.9s)
+[19:29:48 INFO] epoch  18/20  train_loss=0.0888  train_gender_acc=99.9%  train_attr_acc=[97.6 98.8 98.6 97.8 99.1 98.6]%  (56.8s)
+[19:30:45 INFO] epoch  19/20  train_loss=0.0803  train_gender_acc=99.9%  train_attr_acc=[97.7 98.9 98.7 98.1 99.2 98.8]%  (56.7s)
+[19:31:41 INFO] epoch  20/20  train_loss=0.0766  train_gender_acc=99.9%  train_attr_acc=[98.0 99.0 98.7 98.1 99.2 98.8]%  (55.7s)
+[19:31:41 INFO] Training done in 1118.5s
+[19:31:41 INFO] ======================================================================
+[19:31:41 INFO] PHASE 2 — training per-block reconstruction decoders
+[19:31:41 INFO] ======================================================================
+[19:31:41 INFO]   decoder L0: in=(C=32, H=32) → out=(3, 64, 64)  params=8,275
+[19:31:41 INFO]   decoder L1: in=(C=64, H=16) → out=(3, 64, 64)  params=41,107
+[19:31:41 INFO]   decoder L2: in=(C=128, H=8) → out=(3, 64, 64)  params=172,307
+[19:31:41 INFO]   decoder L3: in=(C=256, H=4) → out=(3, 64, 64)  params=696,851
+[19:31:41 INFO]   decoder L4: in=(C=256, H=4) → out=(3, 64, 64)  params=696,851
+[19:32:40 INFO] [decoders] epoch   1/25  train=0.1048  per_block(train)=[0.0073 0.0141 0.0155 0.0248 0.0430]  (59.5s)
+[19:33:38 INFO] [decoders] epoch   2/25  train=0.0646  per_block(train)=[0.0019 0.0049 0.0093 0.0165 0.0320]  (58.1s)
+[19:34:36 INFO] [decoders] epoch   3/25  train=0.0600  per_block(train)=[0.0018 0.0046 0.0087 0.0152 0.0298]  (58.0s)
+[19:35:34 INFO] [decoders] epoch   4/25  train=0.0576  per_block(train)=[0.0017 0.0045 0.0084 0.0145 0.0286]  (57.9s)
+[19:36:32 INFO] [decoders] epoch   5/25  train=0.0562  per_block(train)=[0.0017 0.0044 0.0083 0.0141 0.0278]  (57.9s)
+[19:37:30 INFO] [decoders] epoch   6/25  train=0.0551  per_block(train)=[0.0016 0.0043 0.0081 0.0138 0.0272]  (57.4s)
+[19:38:27 INFO] [decoders] epoch   7/25  train=0.0543  per_block(train)=[0.0016 0.0043 0.0081 0.0136 0.0267]  (57.8s)
+[19:39:25 INFO] [decoders] epoch   8/25  train=0.0536  per_block(train)=[0.0016 0.0043 0.0080 0.0134 0.0264]  (58.0s)
+[19:40:23 INFO] [decoders] epoch   9/25  train=0.0531  per_block(train)=[0.0016 0.0042 0.0080 0.0133 0.0260]  (57.7s)
+[19:41:21 INFO] [decoders] epoch  10/25  train=0.0526  per_block(train)=[0.0016 0.0042 0.0079 0.0131 0.0258]  (58.3s)
+[19:42:19 INFO] [decoders] epoch  11/25  train=0.0522  per_block(train)=[0.0015 0.0042 0.0079 0.0131 0.0255]  (58.1s)
+[19:43:17 INFO] [decoders] epoch  12/25  train=0.0518  per_block(train)=[0.0015 0.0042 0.0078 0.0130 0.0253]  (58.1s)
+[19:44:16 INFO] [decoders] epoch  13/25  train=0.0516  per_block(train)=[0.0015 0.0042 0.0078 0.0129 0.0252]  (58.1s)
+[19:45:14 INFO] [decoders] epoch  14/25  train=0.0512  per_block(train)=[0.0015 0.0042 0.0078 0.0128 0.0249]  (58.6s)
+[19:46:12 INFO] [decoders] epoch  15/25  train=0.0510  per_block(train)=[0.0015 0.0042 0.0078 0.0127 0.0248]  (58.2s)
+[19:47:10 INFO] [decoders] epoch  16/25  train=0.0507  per_block(train)=[0.0015 0.0042 0.0077 0.0127 0.0246]  (57.3s)
+[19:48:08 INFO] [decoders] epoch  17/25  train=0.0505  per_block(train)=[0.0015 0.0041 0.0077 0.0126 0.0245]  (58.4s)
+[19:49:06 INFO] [decoders] epoch  18/25  train=0.0503  per_block(train)=[0.0015 0.0041 0.0077 0.0126 0.0244]  (58.1s)
+[19:50:05 INFO] [decoders] epoch  19/25  train=0.0501  per_block(train)=[0.0015 0.0041 0.0077 0.0126 0.0243]  (58.5s)
+[19:51:03 INFO] [decoders] epoch  20/25  train=0.0499  per_block(train)=[0.0015 0.0041 0.0077 0.0125 0.0241]  (58.8s)
+[19:52:02 INFO] [decoders] epoch  21/25  train=0.0497  per_block(train)=[0.0015 0.0041 0.0077 0.0124 0.0240]  (58.1s)
+[19:53:00 INFO] [decoders] epoch  22/25  train=0.0496  per_block(train)=[0.0015 0.0041 0.0077 0.0124 0.0239]  (58.5s)
+[19:53:58 INFO] [decoders] epoch  23/25  train=0.0495  per_block(train)=[0.0015 0.0041 0.0076 0.0124 0.0238]  (58.4s)
+[19:55:00 INFO] [decoders] epoch  24/25  train=0.0493  per_block(train)=[0.0015 0.0041 0.0076 0.0124 0.0237]  (61.8s)
+[19:56:02 INFO] [decoders] epoch  25/25  train=0.0493  per_block(train)=[0.0015 0.0041 0.0076 0.0123 0.0237]  (61.9s)
+[19:56:02 INFO] Decoder training done in 1461.4s
+[19:56:02 INFO] ======================================================================
+[19:56:02 INFO] EVALUATION — per-attribute accuracy + OOD AUROC
+[19:56:02 INFO] ======================================================================
+[19:56:02 INFO] Collecting predictions on test_in...
+[19:56:10 INFO]   test_in size = 18941, OOD score (combined entropy) mean = 0.0881
+[19:56:10 INFO] Collecting predictions on test_ood (Eyeglasses)...
+[19:56:15 INFO]   test_ood size = 13193, OOD score (combined entropy) mean = 0.1043
+[19:56:15 INFO] Per-attribute accuracy (in-distribution test set):
+[19:56:15 INFO]   Male/Female : 97.24%
+[19:56:15 INFO]   Arched_Eyebrows       : 79.91%
+[19:56:15 INFO]   Bushy_Eyebrows        : 89.00%
+[19:56:15 INFO]   Narrow_Eyes           : 88.64%
+[19:56:15 INFO]   Bags_Under_Eyes       : 79.93%
+[19:56:15 INFO]   Smiling               : 90.71%
+[19:56:15 INFO]   Young                 : 63.56%
+[19:56:15 INFO] OOD AUROC (in-dist vs Eyeglasses):
+[19:56:15 INFO]   score_msp                AUROC = 0.5951  (in_mean=0.007, ood_mean=0.017)
+[19:56:15 INFO]   score_entropy_gender     AUROC = 0.5910  (in_mean=0.016, ood_mean=0.042)
+[19:56:15 INFO]   score_entropy_attrs      AUROC = 0.4521  (in_mean=0.072, ood_mean=0.063)
+[19:56:15 INFO]   score_entropy_combined   AUROC = 0.4947  (in_mean=0.088, ood_mean=0.104)
+[19:57:24 INFO] Fusion-based AUROC (max-pixel) = 0.5866  (in_mean=1.1349, ood_mean=1.2512)
+[19:57:24 INFO] Wrote per-block plots: per_block_breakdown.png, recons_only.png, activations.png, fusion_overlay.png, fusion_auroc.png
+[19:57:24 INFO] Summary written to outputs/celeba_ood/ensemble_20260707_152254_6754917/model_5/summary.json
+[19:57:24 INFO] model 6/10 done in 2661.5s
+[19:57:24 INFO] ######################################################################
+[19:57:24 INFO] # MODEL 7/10   (seed=48, channels=[64, 96, 160, 224, 288], kernel=3)
+[19:57:24 INFO] ######################################################################
+[19:57:24 INFO] Model        : FacialCNN  (1,102,408 params)
+[19:57:24 INFO] ======================================================================
+[19:57:24 INFO] TRAINING — combined CE(gender) + BCE(attrs) loss
+[19:57:24 INFO] ======================================================================
+[19:57:24 INFO] No validation set — running the full 20-epoch schedule with no early stopping; final-epoch weights are kept.
+[19:58:22 INFO] epoch   1/20  train_loss=0.8481  train_gender_acc=94.4%  train_attr_acc=[77.1 89.2 88.2 80.9 86.2 84.3]%  (58.5s)
+[19:59:21 INFO] epoch   2/20  train_loss=0.6534  train_gender_acc=97.4%  train_attr_acc=[81.2 91.1 89.0 82.6 91.8 87.2]%  (58.8s)
+[20:00:19 INFO] epoch   3/20  train_loss=0.6055  train_gender_acc=98.1%  train_attr_acc=[82.3 91.5 89.4 83.3 92.4 88.2]%  (57.8s)
+[20:01:17 INFO] epoch   4/20  train_loss=0.5771  train_gender_acc=98.4%  train_attr_acc=[83.2 91.8 89.7 83.8 92.8 88.8]%  (58.6s)
+[20:02:15 INFO] epoch   5/20  train_loss=0.5509  train_gender_acc=98.8%  train_attr_acc=[83.7 92.0 89.9 84.3 93.1 89.3]%  (57.6s)
+[20:03:10 INFO] epoch   6/20  train_loss=0.5288  train_gender_acc=99.1%  train_attr_acc=[84.2 92.2 90.1 84.6 93.5 89.8]%  (55.5s)
+[20:04:05 INFO] epoch   7/20  train_loss=0.5056  train_gender_acc=99.3%  train_attr_acc=[84.8 92.4 90.3 85.0 93.8 90.3]%  (55.0s)
+[20:05:00 INFO] epoch   8/20  train_loss=0.4845  train_gender_acc=99.5%  train_attr_acc=[85.2 92.7 90.6 85.5 94.1 90.9]%  (55.0s)
+[20:06:00 INFO] epoch   9/20  train_loss=0.4636  train_gender_acc=99.6%  train_attr_acc=[85.7 93.0 90.9 86.2 94.4 91.5]%  (59.1s)
+[20:07:00 INFO] epoch  10/20  train_loss=0.4425  train_gender_acc=99.7%  train_attr_acc=[86.3 93.3 91.1 86.8 94.7 92.0]%  (60.2s)
+[20:07:56 INFO] epoch  11/20  train_loss=0.4208  train_gender_acc=99.8%  train_attr_acc=[87.0 93.6 91.6 87.5 95.1 92.5]%  (56.4s)
+[20:08:51 INFO] epoch  12/20  train_loss=0.3981  train_gender_acc=99.8%  train_attr_acc=[87.7 93.9 91.9 88.0 95.4 93.2]%  (55.2s)
+[20:09:49 INFO] epoch  13/20  train_loss=0.3756  train_gender_acc=99.8%  train_attr_acc=[88.2 94.3 92.4 88.6 95.8 93.7]%  (58.1s)
+[20:10:49 INFO] epoch  14/20  train_loss=0.3521  train_gender_acc=99.9%  train_attr_acc=[89.0 94.6 92.8 89.4 96.1 94.5]%  (59.1s)
+[20:11:47 INFO] epoch  15/20  train_loss=0.3296  train_gender_acc=99.9%  train_attr_acc=[89.7 95.0 93.2 90.2 96.5 94.9]%  (58.6s)
+[20:12:46 INFO] epoch  16/20  train_loss=0.3080  train_gender_acc=99.9%  train_attr_acc=[90.5 95.4 93.7 90.8 96.7 95.4]%  (59.1s)
+[20:13:45 INFO] epoch  17/20  train_loss=0.2865  train_gender_acc=99.9%  train_attr_acc=[91.1 95.7 94.2 91.5 97.0 95.8]%  (59.2s)
+[20:14:44 INFO] epoch  18/20  train_loss=0.2656  train_gender_acc=99.9%  train_attr_acc=[91.8 96.1 94.6 92.2 97.3 96.2]%  (58.8s)
+[20:15:44 INFO] epoch  19/20  train_loss=0.2450  train_gender_acc=99.9%  train_attr_acc=[92.3 96.4 95.1 92.8 97.5 96.6]%  (59.4s)
+[20:16:43 INFO] epoch  20/20  train_loss=0.2282  train_gender_acc=99.9%  train_attr_acc=[92.9 96.6 95.4 93.4 97.7 96.9]%  (59.4s)
+[20:16:43 INFO] Training done in 1159.3s
+[20:16:43 INFO] ======================================================================
+[20:16:43 INFO] PHASE 2 — training per-block reconstruction decoders
+[20:16:43 INFO] ======================================================================
+[20:16:43 INFO]   decoder L0: in=(C=64, H=32) → out=(3, 64, 64)  params=32,931
+[20:16:43 INFO]   decoder L1: in=(C=96, H=16) → out=(3, 64, 64)  params=92,379
+[20:16:43 INFO]   decoder L2: in=(C=160, H=8) → out=(3, 64, 64)  params=269,143
+[20:16:43 INFO]   decoder L3: in=(C=224, H=4) → out=(3, 64, 64)  params=534,491
+[20:16:43 INFO]   decoder L4: in=(C=288, H=4) → out=(3, 64, 64)  params=881,877
+[20:17:47 INFO] [decoders] epoch   1/25  train=0.0639  per_block(train)=[0.0024 0.0052 0.0105 0.0200 0.0258]  (64.2s)
+[20:18:52 INFO] [decoders] epoch   2/25  train=0.0373  per_block(train)=[0.0006 0.0019 0.0051 0.0115 0.0181]  (64.9s)
+[20:19:57 INFO] [decoders] epoch   3/25  train=0.0345  per_block(train)=[0.0005 0.0017 0.0047 0.0107 0.0168]  (64.5s)
+[20:21:01 INFO] [decoders] epoch   4/25  train=0.0330  per_block(train)=[0.0005 0.0016 0.0045 0.0102 0.0161]  (64.7s)
+[20:22:06 INFO] [decoders] epoch   5/25  train=0.0321  per_block(train)=[0.0005 0.0016 0.0044 0.0099 0.0157]  (64.8s)
+[20:23:11 INFO] [decoders] epoch   6/25  train=0.0314  per_block(train)=[0.0004 0.0015 0.0044 0.0097 0.0154]  (64.3s)
+[20:24:16 INFO] [decoders] epoch   7/25  train=0.0309  per_block(train)=[0.0004 0.0015 0.0043 0.0096 0.0151]  (65.7s)
+[20:25:21 INFO] [decoders] epoch   8/25  train=0.0305  per_block(train)=[0.0004 0.0015 0.0042 0.0094 0.0149]  (64.8s)
+[20:26:26 INFO] [decoders] epoch   9/25  train=0.0302  per_block(train)=[0.0004 0.0015 0.0042 0.0094 0.0148]  (64.4s)
+[20:27:30 INFO] [decoders] epoch  10/25  train=0.0298  per_block(train)=[0.0004 0.0015 0.0042 0.0093 0.0146]  (64.2s)
+[20:28:34 INFO] [decoders] epoch  11/25  train=0.0296  per_block(train)=[0.0004 0.0014 0.0041 0.0092 0.0145]  (64.1s)
+[20:29:38 INFO] [decoders] epoch  12/25  train=0.0294  per_block(train)=[0.0004 0.0014 0.0041 0.0091 0.0143]  (64.3s)
+[20:30:43 INFO] [decoders] epoch  13/25  train=0.0293  per_block(train)=[0.0004 0.0014 0.0041 0.0091 0.0143]  (64.9s)
+[20:31:48 INFO] [decoders] epoch  14/25  train=0.0291  per_block(train)=[0.0004 0.0014 0.0041 0.0091 0.0142]  (64.8s)
+[20:32:53 INFO] [decoders] epoch  15/25  train=0.0290  per_block(train)=[0.0004 0.0014 0.0041 0.0090 0.0141]  (64.9s)
+[20:33:58 INFO] [decoders] epoch  16/25  train=0.0288  per_block(train)=[0.0004 0.0014 0.0041 0.0090 0.0140]  (64.9s)
+[20:35:01 INFO] [decoders] epoch  17/25  train=0.0287  per_block(train)=[0.0003 0.0014 0.0041 0.0090 0.0140]  (63.8s)
+[20:36:05 INFO] [decoders] epoch  18/25  train=0.0286  per_block(train)=[0.0003 0.0014 0.0040 0.0089 0.0139]  (63.6s)
+[20:37:09 INFO] [decoders] epoch  19/25  train=0.0285  per_block(train)=[0.0003 0.0014 0.0040 0.0089 0.0138]  (63.8s)
+[20:38:14 INFO] [decoders] epoch  20/25  train=0.0284  per_block(train)=[0.0003 0.0014 0.0040 0.0089 0.0138]  (65.4s)
+[20:39:20 INFO] [decoders] epoch  21/25  train=0.0283  per_block(train)=[0.0003 0.0014 0.0040 0.0088 0.0138]  (65.6s)
+[20:40:24 INFO] [decoders] epoch  22/25  train=0.0282  per_block(train)=[0.0003 0.0014 0.0040 0.0088 0.0137]  (64.6s)
+[20:41:29 INFO] [decoders] epoch  23/25  train=0.0282  per_block(train)=[0.0003 0.0014 0.0040 0.0088 0.0137]  (64.9s)
+[20:42:34 INFO] [decoders] epoch  24/25  train=0.0280  per_block(train)=[0.0003 0.0014 0.0040 0.0088 0.0136]  (64.6s)
+[20:43:39 INFO] [decoders] epoch  25/25  train=0.0280  per_block(train)=[0.0003 0.0014 0.0040 0.0088 0.0136]  (64.8s)
+[20:43:39 INFO] Decoder training done in 1615.7s
+[20:43:39 INFO] ======================================================================
+[20:43:39 INFO] EVALUATION — per-attribute accuracy + OOD AUROC
+[20:43:39 INFO] ======================================================================
+[20:43:39 INFO] Collecting predictions on test_in...
+[20:43:46 INFO]   test_in size = 18941, OOD score (combined entropy) mean = 0.1656
+[20:43:46 INFO] Collecting predictions on test_ood (Eyeglasses)...
+[20:43:50 INFO]   test_ood size = 13193, OOD score (combined entropy) mean = 0.2216
+[20:43:50 INFO] Per-attribute accuracy (in-distribution test set):
+[20:43:50 INFO]   Male/Female : 96.86%
+[20:43:50 INFO]   Arched_Eyebrows       : 80.52%
+[20:43:50 INFO]   Bushy_Eyebrows        : 89.43%
+[20:43:50 INFO]   Narrow_Eyes           : 88.70%
+[20:43:50 INFO]   Bags_Under_Eyes       : 81.44%
+[20:43:50 INFO]   Smiling               : 91.07%
+[20:43:50 INFO]   Young                 : 84.19%
+[20:43:50 INFO] OOD AUROC (in-dist vs Eyeglasses):
+[20:43:50 INFO]   score_msp                AUROC = 0.7559  (in_mean=0.009, ood_mean=0.035)
+[20:43:50 INFO]   score_entropy_gender     AUROC = 0.7907  (in_mean=0.022, ood_mean=0.082)
+[20:43:50 INFO]   score_entropy_attrs      AUROC = 0.4825  (in_mean=0.144, ood_mean=0.139)
+[20:43:50 INFO]   score_entropy_combined   AUROC = 0.5676  (in_mean=0.166, ood_mean=0.222)
+[20:45:00 INFO] Fusion-based AUROC (max-pixel) = 0.6033  (in_mean=0.9608, ood_mean=1.0939)
+[20:45:00 INFO] Wrote per-block plots: per_block_breakdown.png, recons_only.png, activations.png, fusion_overlay.png, fusion_auroc.png
+[20:45:00 INFO] Summary written to outputs/celeba_ood/ensemble_20260707_152254_6754917/model_6/summary.json
+[20:45:00 INFO] model 7/10 done in 2856.7s
+[20:45:00 INFO] ######################################################################
+[20:45:00 INFO] # MODEL 8/10   (seed=49, channels=[24, 64, 128, 192, 256], kernel=5)
+[20:45:00 INFO] ######################################################################
+[20:45:00 INFO] Model        : FacialCNN  (2,091,584 params)
+[20:45:00 INFO] ======================================================================
+[20:45:00 INFO] TRAINING — combined CE(gender) + BCE(attrs) loss
+[20:45:00 INFO] ======================================================================
+[20:45:00 INFO] No validation set — running the full 20-epoch schedule with no early stopping; final-epoch weights are kept.
+[20:46:01 INFO] epoch   1/20  train_loss=0.8144  train_gender_acc=95.1%  train_attr_acc=[77.8 89.2 88.0 81.3 87.8 84.9]%  (60.5s)
+[20:47:04 INFO] epoch   2/20  train_loss=0.6532  train_gender_acc=97.6%  train_attr_acc=[81.1 91.0 88.7 82.6 91.8 87.5]%  (62.6s)
+[20:48:11 INFO] epoch   3/20  train_loss=0.6063  train_gender_acc=98.2%  train_attr_acc=[82.3 91.4 89.1 83.2 92.5 88.4]%  (67.1s)
+[20:49:10 INFO] epoch   4/20  train_loss=0.5698  train_gender_acc=98.7%  train_attr_acc=[82.9 91.8 89.5 83.7 92.9 89.0]%  (59.7s)
+[20:50:08 INFO] epoch   5/20  train_loss=0.5360  train_gender_acc=99.1%  train_attr_acc=[83.8 92.0 89.9 84.3 93.4 89.7]%  (57.9s)
+[20:51:06 INFO] epoch   6/20  train_loss=0.5020  train_gender_acc=99.4%  train_attr_acc=[84.7 92.5 90.2 85.0 93.9 90.5]%  (57.8s)
+[20:52:04 INFO] epoch   7/20  train_loss=0.4681  train_gender_acc=99.6%  train_attr_acc=[85.5 92.9 90.8 85.8 94.4 91.3]%  (57.7s)
+[20:53:02 INFO] epoch   8/20  train_loss=0.4307  train_gender_acc=99.7%  train_attr_acc=[86.7 93.5 91.4 86.8 95.0 92.3]%  (57.9s)
+[20:54:00 INFO] epoch   9/20  train_loss=0.3884  train_gender_acc=99.8%  train_attr_acc=[87.9 94.1 92.3 88.2 95.7 93.3]%  (57.8s)
+[20:54:57 INFO] epoch  10/20  train_loss=0.3465  train_gender_acc=99.8%  train_attr_acc=[89.3 94.8 93.1 89.4 96.4 94.3]%  (57.9s)
+[20:55:55 INFO] epoch  11/20  train_loss=0.3030  train_gender_acc=99.9%  train_attr_acc=[90.7 95.5 94.0 90.7 97.0 95.2]%  (57.5s)
+[20:56:54 INFO] epoch  12/20  train_loss=0.2612  train_gender_acc=99.9%  train_attr_acc=[92.0 96.1 94.8 92.1 97.5 96.1]%  (58.6s)
+[20:57:51 INFO] epoch  13/20  train_loss=0.2216  train_gender_acc=99.9%  train_attr_acc=[93.2 96.8 95.7 93.4 98.0 96.7]%  (57.8s)
+[20:58:50 INFO] epoch  14/20  train_loss=0.1875  train_gender_acc=99.9%  train_attr_acc=[94.3 97.3 96.5 94.5 98.3 97.3]%  (58.7s)
+[20:59:50 INFO] epoch  15/20  train_loss=0.1606  train_gender_acc=99.9%  train_attr_acc=[95.2 97.8 97.0 95.4 98.4 97.7]%  (60.3s)
+[21:00:47 INFO] epoch  16/20  train_loss=0.1413  train_gender_acc=99.9%  train_attr_acc=[95.9 98.0 97.5 96.1 98.6 97.9]%  (56.8s)
+[21:01:39 INFO] epoch  17/20  train_loss=0.1212  train_gender_acc=99.9%  train_attr_acc=[96.6 98.3 97.8 96.7 98.8 98.2]%  (51.4s)
+[21:02:31 INFO] epoch  18/20  train_loss=0.1102  train_gender_acc=99.9%  train_attr_acc=[97.0 98.5 98.1 97.1 98.9 98.3]%  (51.8s)
+[21:03:29 INFO] epoch  19/20  train_loss=0.0980  train_gender_acc=99.9%  train_attr_acc=[97.2 98.7 98.3 97.5 99.0 98.5]%  (58.0s)
+[21:04:28 INFO] epoch  20/20  train_loss=0.0905  train_gender_acc=99.9%  train_attr_acc=[97.5 98.8 98.5 97.8 99.1 98.7]%  (59.1s)
+[21:04:28 INFO] Training done in 1167.2s
+[21:04:28 INFO] ======================================================================
+[21:04:28 INFO] PHASE 2 — training per-block reconstruction decoders
+[21:04:28 INFO] ======================================================================
+[21:04:28 INFO]   decoder L0: in=(C=24, H=32) → out=(3, 64, 64)  params=6,227
+[21:04:28 INFO]   decoder L1: in=(C=64, H=16) → out=(3, 64, 64)  params=41,107
+[21:04:28 INFO]   decoder L2: in=(C=128, H=8) → out=(3, 64, 64)  params=172,307
+[21:04:28 INFO]   decoder L3: in=(C=192, H=4) → out=(3, 64, 64)  params=393,635
+[21:04:28 INFO]   decoder L4: in=(C=256, H=4) → out=(3, 64, 64)  params=696,851
+[21:05:27 INFO] [decoders] epoch   1/25  train=0.1016  per_block(train)=[0.0080 0.0118 0.0148 0.0270 0.0401]  (59.3s)
+[21:06:21 INFO] [decoders] epoch   2/25  train=0.0647  per_block(train)=[0.0017 0.0049 0.0089 0.0182 0.0310]  (54.1s)
+[21:07:19 INFO] [decoders] epoch   3/25  train=0.0605  per_block(train)=[0.0016 0.0047 0.0083 0.0170 0.0290]  (57.8s)
+[21:08:20 INFO] [decoders] epoch   4/25  train=0.0583  per_block(train)=[0.0015 0.0045 0.0081 0.0163 0.0278]  (61.0s)
+[21:09:18 INFO] [decoders] epoch   5/25  train=0.0569  per_block(train)=[0.0015 0.0044 0.0079 0.0159 0.0271]  (57.9s)
+[21:10:13 INFO] [decoders] epoch   6/25  train=0.0560  per_block(train)=[0.0015 0.0044 0.0078 0.0157 0.0265]  (54.7s)
+[21:11:07 INFO] [decoders] epoch   7/25  train=0.0551  per_block(train)=[0.0015 0.0044 0.0077 0.0155 0.0261]  (54.6s)
+[21:12:07 INFO] [decoders] epoch   8/25  train=0.0545  per_block(train)=[0.0014 0.0043 0.0077 0.0153 0.0257]  (59.6s)
+[21:13:07 INFO] [decoders] epoch   9/25  train=0.0539  per_block(train)=[0.0014 0.0043 0.0076 0.0152 0.0254]  (60.5s)
+[21:14:08 INFO] [decoders] epoch  10/25  train=0.0534  per_block(train)=[0.0014 0.0043 0.0076 0.0151 0.0250]  (60.8s)
+[21:15:08 INFO] [decoders] epoch  11/25  train=0.0531  per_block(train)=[0.0014 0.0043 0.0076 0.0150 0.0248]  (60.2s)
+[21:16:09 INFO] [decoders] epoch  12/25  train=0.0527  per_block(train)=[0.0014 0.0043 0.0075 0.0149 0.0246]  (61.0s)
+[21:17:10 INFO] [decoders] epoch  13/25  train=0.0524  per_block(train)=[0.0014 0.0042 0.0075 0.0149 0.0244]  (60.8s)
+[21:18:10 INFO] [decoders] epoch  14/25  train=0.0521  per_block(train)=[0.0014 0.0042 0.0075 0.0148 0.0242]  (60.3s)
+[21:19:11 INFO] [decoders] epoch  15/25  train=0.0519  per_block(train)=[0.0014 0.0042 0.0075 0.0147 0.0241]  (61.0s)
+[21:20:12 INFO] [decoders] epoch  16/25  train=0.0517  per_block(train)=[0.0014 0.0042 0.0075 0.0147 0.0239]  (60.8s)
+[21:21:13 INFO] [decoders] epoch  17/25  train=0.0514  per_block(train)=[0.0014 0.0042 0.0074 0.0146 0.0238]  (60.3s)
+[21:22:13 INFO] [decoders] epoch  18/25  train=0.0512  per_block(train)=[0.0014 0.0042 0.0074 0.0146 0.0236]  (60.6s)
+[21:23:13 INFO] [decoders] epoch  19/25  train=0.0511  per_block(train)=[0.0014 0.0042 0.0074 0.0146 0.0235]  (60.3s)
+[21:24:14 INFO] [decoders] epoch  20/25  train=0.0509  per_block(train)=[0.0014 0.0042 0.0074 0.0145 0.0234]  (60.4s)
+[21:25:14 INFO] [decoders] epoch  21/25  train=0.0507  per_block(train)=[0.0014 0.0042 0.0074 0.0145 0.0233]  (60.2s)
+[21:26:15 INFO] [decoders] epoch  22/25  train=0.0506  per_block(train)=[0.0014 0.0042 0.0074 0.0144 0.0233]  (60.6s)
+[21:27:15 INFO] [decoders] epoch  23/25  train=0.0504  per_block(train)=[0.0014 0.0042 0.0073 0.0144 0.0231]  (60.5s)
+[21:28:15 INFO] [decoders] epoch  24/25  train=0.0503  per_block(train)=[0.0014 0.0042 0.0073 0.0144 0.0231]  (60.0s)
+[21:29:16 INFO] [decoders] epoch  25/25  train=0.0502  per_block(train)=[0.0013 0.0041 0.0073 0.0144 0.0230]  (61.0s)
+[21:29:16 INFO] Decoder training done in 1488.4s
+[21:29:16 INFO] ======================================================================
+[21:29:16 INFO] EVALUATION — per-attribute accuracy + OOD AUROC
+[21:29:16 INFO] ======================================================================
+[21:29:16 INFO] Collecting predictions on test_in...
+[21:29:23 INFO]   test_in size = 18941, OOD score (combined entropy) mean = 0.0745
+[21:29:23 INFO] Collecting predictions on test_ood (Eyeglasses)...
+[21:29:28 INFO]   test_ood size = 13193, OOD score (combined entropy) mean = 0.1349
+[21:29:28 INFO] Per-attribute accuracy (in-distribution test set):
+[21:29:28 INFO]   Male/Female : 97.71%
+[21:29:28 INFO]   Arched_Eyebrows       : 71.93%
+[21:29:28 INFO]   Bushy_Eyebrows        : 87.31%
+[21:29:28 INFO]   Narrow_Eyes           : 88.61%
+[21:29:28 INFO]   Bags_Under_Eyes       : 77.07%
+[21:29:28 INFO]   Smiling               : 90.42%
+[21:29:28 INFO]   Young                 : 86.59%
+[21:29:28 INFO] OOD AUROC (in-dist vs Eyeglasses):
+[21:29:28 INFO]   score_msp                AUROC = 0.6520  (in_mean=0.005, ood_mean=0.020)
+[21:29:28 INFO]   score_entropy_gender     AUROC = 0.7006  (in_mean=0.013, ood_mean=0.047)
+[21:29:28 INFO]   score_entropy_attrs      AUROC = 0.6188  (in_mean=0.062, ood_mean=0.088)
+[21:29:28 INFO]   score_entropy_combined   AUROC = 0.6524  (in_mean=0.074, ood_mean=0.135)
+[21:30:36 INFO] Fusion-based AUROC (max-pixel) = 0.5948  (in_mean=1.1301, ood_mean=1.2572)
+[21:30:36 INFO] Wrote per-block plots: per_block_breakdown.png, recons_only.png, activations.png, fusion_overlay.png, fusion_auroc.png
+[21:30:36 INFO] Summary written to outputs/celeba_ood/ensemble_20260707_152254_6754917/model_7/summary.json
+[21:30:36 INFO] model 8/10 done in 2735.8s
+[21:30:36 INFO] ######################################################################
+[21:30:36 INFO] # MODEL 9/10   (seed=50, channels=[48, 64, 96, 192, 384], kernel=3)
+[21:30:36 INFO] ######################################################################
+[21:30:36 INFO] Model        : FacialCNN  (918,328 params)
+[21:30:36 INFO] ======================================================================
+[21:30:36 INFO] TRAINING — combined CE(gender) + BCE(attrs) loss
+[21:30:36 INFO] ======================================================================
+[21:30:36 INFO] No validation set — running the full 20-epoch schedule with no early stopping; final-epoch weights are kept.
+[21:31:34 INFO] epoch   1/20  train_loss=0.8846  train_gender_acc=93.8%  train_attr_acc=[77.2 88.2 87.4 81.0 84.9 83.9]%  (57.5s)
+[21:32:31 INFO] epoch   2/20  train_loss=0.6827  train_gender_acc=97.0%  train_attr_acc=[80.4 90.8 88.7 82.4 91.3 86.6]%  (57.5s)
+[21:33:29 INFO] epoch   3/20  train_loss=0.6347  train_gender_acc=97.7%  train_attr_acc=[81.6 91.2 89.1 83.0 92.0 87.6]%  (57.9s)
+[21:34:40 INFO] epoch   4/20  train_loss=0.6033  train_gender_acc=98.2%  train_attr_acc=[82.4 91.5 89.4 83.5 92.4 88.2]%  (71.2s)
+[21:35:36 INFO] epoch   5/20  train_loss=0.5800  train_gender_acc=98.5%  train_attr_acc=[82.8 91.7 89.6 83.9 92.7 88.7]%  (56.1s)
+[21:36:28 INFO] epoch   6/20  train_loss=0.5591  train_gender_acc=98.8%  train_attr_acc=[83.3 91.8 89.7 84.2 93.0 89.1]%  (51.5s)
+[21:37:25 INFO] epoch   7/20  train_loss=0.5415  train_gender_acc=99.0%  train_attr_acc=[83.7 92.0 89.9 84.5 93.2 89.5]%  (56.8s)
+[21:38:22 INFO] epoch   8/20  train_loss=0.5232  train_gender_acc=99.3%  train_attr_acc=[84.2 92.1 90.0 84.8 93.4 89.9]%  (57.7s)
+[21:39:20 INFO] epoch   9/20  train_loss=0.5077  train_gender_acc=99.4%  train_attr_acc=[84.6 92.3 90.3 85.1 93.7 90.1]%  (57.8s)
+[21:40:18 INFO] epoch  10/20  train_loss=0.4927  train_gender_acc=99.5%  train_attr_acc=[85.0 92.5 90.4 85.5 93.9 90.5]%  (57.7s)
+[21:41:15 INFO] epoch  11/20  train_loss=0.4768  train_gender_acc=99.6%  train_attr_acc=[85.3 92.8 90.6 85.8 94.1 90.9]%  (57.3s)
+[21:42:13 INFO] epoch  12/20  train_loss=0.4664  train_gender_acc=99.6%  train_attr_acc=[85.7 92.9 90.7 86.2 94.4 91.2]%  (57.7s)
+[21:43:11 INFO] epoch  13/20  train_loss=0.4499  train_gender_acc=99.7%  train_attr_acc=[86.1 93.0 91.1 86.6 94.6 91.7]%  (58.1s)
+[21:44:10 INFO] epoch  14/20  train_loss=0.4371  train_gender_acc=99.7%  train_attr_acc=[86.6 93.2 91.3 87.0 94.8 92.0]%  (58.6s)
+[21:45:07 INFO] epoch  15/20  train_loss=0.4233  train_gender_acc=99.8%  train_attr_acc=[87.0 93.4 91.5 87.3 95.1 92.4]%  (57.5s)
+[21:46:05 INFO] epoch  16/20  train_loss=0.4091  train_gender_acc=99.8%  train_attr_acc=[87.4 93.6 91.7 87.8 95.3 92.8]%  (58.1s)
+[21:47:03 INFO] epoch  17/20  train_loss=0.3970  train_gender_acc=99.8%  train_attr_acc=[87.8 93.8 92.0 88.2 95.5 93.1]%  (57.5s)
+[21:48:00 INFO] epoch  18/20  train_loss=0.3825  train_gender_acc=99.9%  train_attr_acc=[88.2 94.1 92.2 88.6 95.7 93.4]%  (57.8s)
+[21:48:58 INFO] epoch  19/20  train_loss=0.3716  train_gender_acc=99.8%  train_attr_acc=[88.7 94.2 92.4 89.0 95.9 93.7]%  (57.6s)
+[21:49:56 INFO] epoch  20/20  train_loss=0.3581  train_gender_acc=99.8%  train_attr_acc=[89.0 94.5 92.6 89.4 96.2 94.1]%  (58.0s)
+[21:49:56 INFO] Training done in 1159.8s
+[21:49:57 INFO] ======================================================================
+[21:49:57 INFO] PHASE 2 — training per-block reconstruction decoders
+[21:49:57 INFO] ======================================================================
+[21:49:57 INFO]   decoder L0: in=(C=48, H=32) → out=(3, 64, 64)  params=18,555
+[21:49:57 INFO]   decoder L1: in=(C=64, H=16) → out=(3, 64, 64)  params=41,107
+[21:49:57 INFO]   decoder L2: in=(C=96, H=8) → out=(3, 64, 64)  params=98,531
+[21:49:57 INFO]   decoder L3: in=(C=192, H=4) → out=(3, 64, 64)  params=393,635
+[21:49:57 INFO]   decoder L4: in=(C=384, H=4) → out=(3, 64, 64)  params=1,567,515
+[21:50:59 INFO] [decoders] epoch   1/25  train=0.0632  per_block(train)=[0.0032 0.0093 0.0114 0.0182 0.0211]  (62.0s)
+[21:52:00 INFO] [decoders] epoch   2/25  train=0.0365  per_block(train)=[0.0007 0.0024 0.0064 0.0120 0.0150]  (61.5s)
+[21:53:02 INFO] [decoders] epoch   3/25  train=0.0339  per_block(train)=[0.0006 0.0022 0.0060 0.0112 0.0139]  (62.1s)
+[21:54:04 INFO] [decoders] epoch   4/25  train=0.0326  per_block(train)=[0.0006 0.0021 0.0059 0.0107 0.0133]  (62.0s)
+[21:55:07 INFO] [decoders] epoch   5/25  train=0.0317  per_block(train)=[0.0005 0.0020 0.0058 0.0105 0.0129]  (62.5s)
+[21:56:09 INFO] [decoders] epoch   6/25  train=0.0311  per_block(train)=[0.0005 0.0020 0.0057 0.0103 0.0126]  (62.7s)
+[21:57:12 INFO] [decoders] epoch   7/25  train=0.0306  per_block(train)=[0.0005 0.0020 0.0056 0.0101 0.0124]  (62.8s)
+[21:58:17 INFO] [decoders] epoch   8/25  train=0.0303  per_block(train)=[0.0005 0.0020 0.0056 0.0100 0.0122]  (64.3s)
+[21:59:21 INFO] [decoders] epoch   9/25  train=0.0299  per_block(train)=[0.0004 0.0020 0.0056 0.0099 0.0120]  (64.1s)
+[22:00:23 INFO] [decoders] epoch  10/25  train=0.0296  per_block(train)=[0.0004 0.0019 0.0055 0.0099 0.0119]  (62.6s)
+[22:01:20 INFO] [decoders] epoch  11/25  train=0.0294  per_block(train)=[0.0004 0.0019 0.0055 0.0098 0.0118]  (56.8s)
+[22:02:22 INFO] [decoders] epoch  12/25  train=0.0292  per_block(train)=[0.0004 0.0019 0.0055 0.0097 0.0117]  (61.6s)
+[22:03:23 INFO] [decoders] epoch  13/25  train=0.0290  per_block(train)=[0.0004 0.0019 0.0055 0.0097 0.0115]  (61.8s)
+[22:04:26 INFO] [decoders] epoch  14/25  train=0.0288  per_block(train)=[0.0004 0.0019 0.0055 0.0096 0.0115]  (62.4s)
+[22:05:28 INFO] [decoders] epoch  15/25  train=0.0287  per_block(train)=[0.0004 0.0019 0.0055 0.0096 0.0114]  (61.7s)
+[22:06:29 INFO] [decoders] epoch  16/25  train=0.0286  per_block(train)=[0.0004 0.0019 0.0054 0.0096 0.0113]  (61.8s)
+[22:07:31 INFO] [decoders] epoch  17/25  train=0.0285  per_block(train)=[0.0004 0.0019 0.0054 0.0095 0.0113]  (61.5s)
+[22:08:33 INFO] [decoders] epoch  18/25  train=0.0283  per_block(train)=[0.0004 0.0019 0.0054 0.0095 0.0112]  (62.2s)
+[22:09:35 INFO] [decoders] epoch  19/25  train=0.0282  per_block(train)=[0.0004 0.0019 0.0054 0.0095 0.0111]  (62.1s)
+[22:10:37 INFO] [decoders] epoch  20/25  train=0.0282  per_block(train)=[0.0004 0.0019 0.0054 0.0095 0.0111]  (61.5s)
+[22:11:38 INFO] [decoders] epoch  21/25  train=0.0281  per_block(train)=[0.0004 0.0019 0.0054 0.0094 0.0110]  (61.8s)
+[22:12:40 INFO] [decoders] epoch  22/25  train=0.0280  per_block(train)=[0.0004 0.0019 0.0054 0.0094 0.0110]  (61.5s)
+[22:13:42 INFO] [decoders] epoch  23/25  train=0.0279  per_block(train)=[0.0004 0.0019 0.0054 0.0094 0.0110]  (62.2s)
+[22:14:44 INFO] [decoders] epoch  24/25  train=0.0278  per_block(train)=[0.0004 0.0018 0.0054 0.0094 0.0109]  (62.1s)
+[22:15:46 INFO] [decoders] epoch  25/25  train=0.0278  per_block(train)=[0.0004 0.0018 0.0054 0.0094 0.0109]  (61.6s)
+[22:15:46 INFO] Decoder training done in 1549.0s
+[22:15:46 INFO] ======================================================================
+[22:15:46 INFO] EVALUATION — per-attribute accuracy + OOD AUROC
+[22:15:46 INFO] ======================================================================
+[22:15:46 INFO] Collecting predictions on test_in...
+[22:15:52 INFO]   test_in size = 18941, OOD score (combined entropy) mean = 0.2609
+[22:15:52 INFO] Collecting predictions on test_ood (Eyeglasses)...
+[22:15:57 INFO]   test_ood size = 13193, OOD score (combined entropy) mean = 0.2848
+[22:15:57 INFO] Per-attribute accuracy (in-distribution test set):
+[22:15:57 INFO]   Male/Female : 96.03%
+[22:15:57 INFO]   Arched_Eyebrows       : 81.38%
+[22:15:57 INFO]   Bushy_Eyebrows        : 84.05%
+[22:15:57 INFO]   Narrow_Eyes           : 86.95%
+[22:15:57 INFO]   Bags_Under_Eyes       : 81.82%
+[22:15:57 INFO]   Smiling               : 90.72%
+[22:15:57 INFO]   Young                 : 81.12%
+[22:15:57 INFO] OOD AUROC (in-dist vs Eyeglasses):
+[22:15:57 INFO]   score_msp                AUROC = 0.5290  (in_mean=0.011, ood_mean=0.017)
+[22:15:57 INFO]   score_entropy_gender     AUROC = 0.5241  (in_mean=0.027, ood_mean=0.042)
+[22:15:57 INFO]   score_entropy_attrs      AUROC = 0.5261  (in_mean=0.234, ood_mean=0.243)
+[22:15:57 INFO]   score_entropy_combined   AUROC = 0.5413  (in_mean=0.261, ood_mean=0.285)
+[22:17:05 INFO] Fusion-based AUROC (max-pixel) = 0.6108  (in_mean=0.9254, ood_mean=1.0680)
+[22:17:05 INFO] Wrote per-block plots: per_block_breakdown.png, recons_only.png, activations.png, fusion_overlay.png, fusion_auroc.png
+[22:17:05 INFO] Summary written to outputs/celeba_ood/ensemble_20260707_152254_6754917/model_8/summary.json
+[22:17:05 INFO] model 9/10 done in 2788.4s
+[22:17:05 INFO] ######################################################################
+[22:17:05 INFO] # MODEL 10/10   (seed=51, channels=[32, 48, 112, 224, 336], kernel=5)
+[22:17:05 INFO] ######################################################################
+[22:17:05 INFO] Model        : FacialCNN  (2,688,200 params)
+[22:17:05 INFO] ======================================================================
+[22:17:05 INFO] TRAINING — combined CE(gender) + BCE(attrs) loss
+[22:17:05 INFO] ======================================================================
+[22:17:05 INFO] No validation set — running the full 20-epoch schedule with no early stopping; final-epoch weights are kept.
+[22:18:02 INFO] epoch   1/20  train_loss=0.8233  train_gender_acc=94.9%  train_attr_acc=[77.4 89.0 88.2 80.6 87.4 84.9]%  (57.8s)
+[22:19:01 INFO] epoch   2/20  train_loss=0.6623  train_gender_acc=97.5%  train_attr_acc=[80.5 91.0 88.6 82.4 91.8 87.2]%  (58.4s)
+[22:19:59 INFO] epoch   3/20  train_loss=0.6159  train_gender_acc=98.1%  train_attr_acc=[81.8 91.4 89.0 83.0 92.4 88.1]%  (58.0s)
+[22:20:57 INFO] epoch   4/20  train_loss=0.5807  train_gender_acc=98.6%  train_attr_acc=[82.7 91.7 89.4 83.6 92.8 88.8]%  (57.9s)
+[22:21:55 INFO] epoch   5/20  train_loss=0.5467  train_gender_acc=99.0%  train_attr_acc=[83.4 92.0 89.8 84.1 93.2 89.5]%  (58.5s)
+[22:22:54 INFO] epoch   6/20  train_loss=0.5130  train_gender_acc=99.3%  train_attr_acc=[84.3 92.3 90.1 84.8 93.7 90.3]%  (58.4s)
+[22:23:52 INFO] epoch   7/20  train_loss=0.4791  train_gender_acc=99.6%  train_attr_acc=[85.2 92.7 90.7 85.7 94.2 91.1]%  (58.7s)
+[22:24:51 INFO] epoch   8/20  train_loss=0.4418  train_gender_acc=99.7%  train_attr_acc=[86.3 93.2 91.2 86.5 94.9 92.1]%  (58.5s)
+[22:25:47 INFO] epoch   9/20  train_loss=0.4029  train_gender_acc=99.8%  train_attr_acc=[87.5 93.9 92.0 87.7 95.5 93.1]%  (56.3s)
+[22:26:39 INFO] epoch  10/20  train_loss=0.3624  train_gender_acc=99.8%  train_attr_acc=[88.8 94.5 92.8 88.9 96.0 94.1]%  (51.8s)
+[22:27:31 INFO] epoch  11/20  train_loss=0.3208  train_gender_acc=99.9%  train_attr_acc=[90.0 95.0 93.8 90.2 96.6 95.0]%  (52.1s)
+[22:28:25 INFO] epoch  12/20  train_loss=0.2801  train_gender_acc=99.9%  train_attr_acc=[91.4 95.7 94.6 91.4 97.1 95.9]%  (54.2s)
+[22:29:20 INFO] epoch  13/20  train_loss=0.2425  train_gender_acc=99.9%  train_attr_acc=[92.5 96.3 95.4 92.7 97.6 96.5]%  (54.4s)
+[22:30:14 INFO] epoch  14/20  train_loss=0.2092  train_gender_acc=99.9%  train_attr_acc=[93.6 96.9 96.1 93.7 97.9 97.1]%  (54.6s)
+[22:31:09 INFO] epoch  15/20  train_loss=0.1807  train_gender_acc=99.9%  train_attr_acc=[94.5 97.3 96.8 94.7 98.2 97.5]%  (54.3s)
+[22:32:04 INFO] epoch  16/20  train_loss=0.1565  train_gender_acc=99.9%  train_attr_acc=[95.3 97.6 97.3 95.5 98.4 97.8]%  (54.9s)
+[22:32:58 INFO] epoch  17/20  train_loss=0.1345  train_gender_acc=99.9%  train_attr_acc=[96.0 98.1 97.8 96.2 98.6 98.1]%  (53.9s)
+[22:33:52 INFO] epoch  18/20  train_loss=0.1217  train_gender_acc=99.9%  train_attr_acc=[96.5 98.2 97.9 96.6 98.8 98.3]%  (54.7s)
+[22:34:47 INFO] epoch  19/20  train_loss=0.1089  train_gender_acc=99.9%  train_attr_acc=[96.9 98.4 98.2 97.1 98.9 98.4]%  (54.8s)
+[22:35:41 INFO] epoch  20/20  train_loss=0.0984  train_gender_acc=99.9%  train_attr_acc=[97.3 98.6 98.4 97.4 99.0 98.6]%  (53.9s)
+[22:35:41 INFO] Training done in 1116.3s
+[22:35:41 INFO] ======================================================================
+[22:35:41 INFO] PHASE 2 — training per-block reconstruction decoders
+[22:35:41 INFO] ======================================================================
+[22:35:41 INFO]   decoder L0: in=(C=32, H=32) → out=(3, 64, 64)  params=8,275
+[22:35:41 INFO]   decoder L1: in=(C=48, H=16) → out=(3, 64, 64)  params=24,707
+[22:35:41 INFO]   decoder L2: in=(C=112, H=8) → out=(3, 64, 64)  params=132,859
+[22:35:41 INFO]   decoder L3: in=(C=224, H=4) → out=(3, 64, 64)  params=534,491
+[22:35:41 INFO]   decoder L4: in=(C=336, H=4) → out=(3, 64, 64)  params=1,200,216
+[22:36:39 INFO] [decoders] epoch   1/25  train=0.0926  per_block(train)=[0.0053 0.0109 0.0166 0.0238 0.0360]  (57.9s)
+[22:37:37 INFO] [decoders] epoch   2/25  train=0.0580  per_block(train)=[0.0014 0.0050 0.0091 0.0163 0.0261]  (57.7s)
+[22:38:35 INFO] [decoders] epoch   3/25  train=0.0540  per_block(train)=[0.0012 0.0048 0.0086 0.0151 0.0242]  (58.3s)
+[22:39:33 INFO] [decoders] epoch   4/25  train=0.0519  per_block(train)=[0.0012 0.0047 0.0084 0.0145 0.0231]  (58.1s)
+[22:40:31 INFO] [decoders] epoch   5/25  train=0.0505  per_block(train)=[0.0011 0.0046 0.0083 0.0142 0.0223]  (57.5s)
+[22:41:29 INFO] [decoders] epoch   6/25  train=0.0496  per_block(train)=[0.0011 0.0046 0.0082 0.0139 0.0218]  (58.4s)
+[22:42:27 INFO] [decoders] epoch   7/25  train=0.0487  per_block(train)=[0.0011 0.0045 0.0081 0.0137 0.0214]  (58.1s)
+[22:43:25 INFO] [decoders] epoch   8/25  train=0.0482  per_block(train)=[0.0011 0.0045 0.0080 0.0135 0.0210]  (58.1s)
+[22:44:23 INFO] [decoders] epoch   9/25  train=0.0476  per_block(train)=[0.0011 0.0045 0.0080 0.0134 0.0207]  (57.7s)
+[22:45:21 INFO] [decoders] epoch  10/25  train=0.0472  per_block(train)=[0.0011 0.0045 0.0079 0.0133 0.0205]  (58.6s)
+[22:46:20 INFO] [decoders] epoch  11/25  train=0.0468  per_block(train)=[0.0010 0.0045 0.0079 0.0132 0.0202]  (58.2s)
+[22:47:17 INFO] [decoders] epoch  12/25  train=0.0466  per_block(train)=[0.0010 0.0045 0.0079 0.0131 0.0200]  (57.6s)
+[22:48:15 INFO] [decoders] epoch  13/25  train=0.0461  per_block(train)=[0.0010 0.0044 0.0078 0.0130 0.0198]  (58.1s)
+[22:49:13 INFO] [decoders] epoch  14/25  train=0.0460  per_block(train)=[0.0010 0.0044 0.0079 0.0130 0.0197]  (57.9s)
+[22:50:12 INFO] [decoders] epoch  15/25  train=0.0457  per_block(train)=[0.0010 0.0044 0.0078 0.0129 0.0195]  (58.2s)
+[22:51:11 INFO] [decoders] epoch  16/25  train=0.0455  per_block(train)=[0.0010 0.0044 0.0078 0.0129 0.0194]  (59.1s)
+[22:52:08 INFO] [decoders] epoch  17/25  train=0.0453  per_block(train)=[0.0010 0.0044 0.0078 0.0128 0.0192]  (57.7s)
+[22:53:06 INFO] [decoders] epoch  18/25  train=0.0451  per_block(train)=[0.0010 0.0044 0.0078 0.0128 0.0191]  (58.1s)
+[22:54:04 INFO] [decoders] epoch  19/25  train=0.0449  per_block(train)=[0.0010 0.0044 0.0078 0.0127 0.0190]  (57.6s)
+[22:55:02 INFO] [decoders] epoch  20/25  train=0.0447  per_block(train)=[0.0010 0.0044 0.0077 0.0127 0.0189]  (57.9s)
+[22:56:00 INFO] [decoders] epoch  21/25  train=0.0446  per_block(train)=[0.0010 0.0044 0.0077 0.0127 0.0188]  (57.7s)
+[22:56:58 INFO] [decoders] epoch  22/25  train=0.0444  per_block(train)=[0.0010 0.0044 0.0077 0.0126 0.0187]  (58.0s)
+[22:57:56 INFO] [decoders] epoch  23/25  train=0.0443  per_block(train)=[0.0010 0.0044 0.0077 0.0126 0.0186]  (58.3s)
+[22:58:54 INFO] [decoders] epoch  24/25  train=0.0442  per_block(train)=[0.0010 0.0044 0.0077 0.0126 0.0185]  (58.0s)
+[22:59:52 INFO] [decoders] epoch  25/25  train=0.0441  per_block(train)=[0.0010 0.0044 0.0077 0.0125 0.0185]  (57.7s)
+[22:59:52 INFO] Decoder training done in 1450.5s
+[22:59:52 INFO] ======================================================================
+[22:59:52 INFO] EVALUATION — per-attribute accuracy + OOD AUROC
+[22:59:52 INFO] ======================================================================
+[22:59:52 INFO] Collecting predictions on test_in...
+[22:59:58 INFO]   test_in size = 18941, OOD score (combined entropy) mean = 0.1199
+[22:59:58 INFO] Collecting predictions on test_ood (Eyeglasses)...
+[23:00:02 INFO]   test_ood size = 13193, OOD score (combined entropy) mean = 0.1651
+[23:00:02 INFO] Per-attribute accuracy (in-distribution test set):
+[23:00:02 INFO]   Male/Female : 97.17%
+[23:00:02 INFO]   Arched_Eyebrows       : 78.20%
+[23:00:02 INFO]   Bushy_Eyebrows        : 89.72%
+[23:00:02 INFO]   Narrow_Eyes           : 76.69%
+[23:00:02 INFO]   Bags_Under_Eyes       : 81.30%
+[23:00:02 INFO]   Smiling               : 88.99%
+[23:00:02 INFO]   Young                 : 79.08%
+[23:00:02 INFO] OOD AUROC (in-dist vs Eyeglasses):
+[23:00:02 INFO]   score_msp                AUROC = 0.6905  (in_mean=0.006, ood_mean=0.024)
+[23:00:02 INFO]   score_entropy_gender     AUROC = 0.7437  (in_mean=0.015, ood_mean=0.058)
+[23:00:02 INFO]   score_entropy_attrs      AUROC = 0.5086  (in_mean=0.105, ood_mean=0.107)
+[23:00:02 INFO]   score_entropy_combined   AUROC = 0.5701  (in_mean=0.120, ood_mean=0.165)
+[23:01:01 INFO] Fusion-based AUROC (max-pixel) = 0.5981  (in_mean=1.0811, ood_mean=1.2119)
+[23:01:01 INFO] Wrote per-block plots: per_block_breakdown.png, recons_only.png, activations.png, fusion_overlay.png, fusion_auroc.png
+[23:01:01 INFO] Summary written to outputs/celeba_ood/ensemble_20260707_152254_6754917/model_9/summary.json
+[23:01:01 INFO] model 10/10 done in 2636.9s
+[23:01:01 INFO] All 10 models ready in 27453.2s
+[23:01:01 INFO] ======================================================================
+[23:01:01 INFO] ENSEMBLE DECOMPOSITION — Risk = Bias + Variance
+[23:01:01 INFO] ======================================================================
+[23:01:58 INFO] Aggregated OOD AUROC (p95):  Risk=0.6356  Bias=0.6377  Variance=0.6271
+[23:01:58 INFO]   -> anomaly score = Bias = |Risk − Variance| (no sigma, no division):  AUROC=0.6377
+[23:01:58 INFO]   block 0:  risk=0.5887  bias=0.5654  variance=0.5971
+[23:01:58 INFO]   block 1:  risk=0.6119  bias=0.5972  variance=0.6206
+[23:01:58 INFO]   block 2:  risk=0.6353  bias=0.6282  variance=0.6403
+[23:01:58 INFO]   block 3:  risk=0.6448  bias=0.6472  variance=0.6295
+[23:01:58 INFO]   block 4:  risk=0.6257  bias=0.6311  variance=0.6058
+[23:01:58 INFO] ======================================================================
+[23:01:58 INFO] PREDICTIVE UNCERTAINTY — Total = Aleatoric + Epistemic (MI)
+[23:01:58 INFO] ======================================================================
+[23:03:44 INFO]   gender   : total=0.6883  aleatoric=0.6822  epistemic=0.6862
+[23:03:44 INFO]   attrs    : total=0.6494  aleatoric=0.5366  epistemic=0.6869
+[23:03:44 INFO]   combined : total=0.7252  aleatoric=0.6531  epistemic=0.7397
+[23:03:44 INFO]   -> OOD score = epistemic (combined predictive MI):  AUROC=0.7397
+[23:03:44 INFO] Risk = Bias + Variance identity — max abs residual on 25 samples (10 ID + 15 OOD): 1.99e-07
+[23:07:20 INFO] Wrote per-instance figures: 20 ID → instances_in/, 20 OOD → instances_ood/  (one folder per instance: 10 member figures + summary.png; block L4, sigma=3, overlay_power=0.8)
+[23:07:43 INFO] Top 10 OOD eyeglasses faces (eye-region bias, block L4) → top_ood_glasses.png; ranking in top_ood_glasses.json
+[23:07:44 INFO] Wrote ensemble plots: ensemble_decomposition.png, decomposition_auroc.png, ensemble_score_hists.png, mean_recon_breakdown.png, mean_recons_only.png, mean_abs_bias.png, variance_heatmaps_ood.png, variance_heatmaps_all.png, mean_error_maps.png, min_error_maps.png, score_comparison.png, bias_variance_vs_block.png, bias_variance_vs_percentile.png
+[23:07:44 INFO] Ensemble summary written to outputs/celeba_ood/ensemble_20260707_152254_6754917/ensemble/summary.json
+[23:07:44 INFO] All done.
+=== job 6754917 finished at Tue 07 Jul 2026 11:07:47 PM CEST with exit code 0 ===

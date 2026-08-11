@@ -1,0 +1,52 @@
+loaded model_0  channels=[32, 64, 128, 256, 256]  kernel_size=3
+loaded model_1  channels=[24, 48, 96, 192, 384]  kernel_size=3
+loaded model_2  channels=[48, 96, 192, 256, 256]  kernel_size=3
+loaded model_3  channels=[16, 48, 96, 192, 320]  kernel_size=5
+loaded model_4  channels=[40, 80, 160, 320, 320]  kernel_size=3
+loaded model_5  channels=[32, 64, 128, 256, 256]  kernel_size=5
+loaded model_6  channels=[64, 96, 160, 224, 288]  kernel_size=3
+loaded model_7  channels=[24, 64, 128, 192, 256]  kernel_size=5
+loaded model_8  channels=[48, 64, 96, 192, 384]  kernel_size=3
+loaded model_9  channels=[32, 48, 112, 224, 336]  kernel_size=5
+OOD attributes: Eyeglasses  →  in-dist=189406  ood=13193 images
+Train pos rates: Male=39.0%  Arched_Eyebrows=28.4%  Bushy_Eyebrows=14.9%  Narrow_Eyes=11.9%  Bags_Under_Eyes=20.9%  Smiling=48.7%  Young=79.9%
+val_ratio=0 → no validation split: 170465 in-dist images train, 18941 held out for test_in (no early stopping, full schedule).
+Supervised fusion: 6596 OOD calibration / 6597 OOD eval images, 6596 train negatives, seed=42
+locfre reference stats fitted on 5120 in-dist images (blocks [1, 2, 3])
+supervised fusion fitted on 6596 in / 6596 ood: {'cutpaste_prob': np.float64(0.264), 'ens_energy_gender': np.float64(1.075), 'locfre_b1': np.float64(0.842), 'locfre_b2': np.float64(0.03), 'locfre_b3': np.float64(0.547), 'unc_epistemic_combined': np.float64(-0.742)}
+Evaluated 18941 in-dist vs 6597 OOD images (5120 ref images)
+OOD AUROC per signal:
+  cutpaste_prob              0.6738
+  ens_energy_gender          0.7127
+  locfre_b1                  0.7898
+  locfre_b2                  0.7773
+  locfre_b3                  0.7952
+  unc_epistemic_combined     0.5387
+  FUSED_RANK                 0.8040
+  FUSED_SUPERVISED           0.8638
+Wrote outputs/celeba_ood/cp128_20260721_230657_6787580/ensemble/fused_auroc.json
+Wrote outputs/celeba_ood/cp128_20260721_230657_6787580/ensemble/plots/fused_auroc.png
+loaded model_0  channels=[32, 64, 128, 256, 256]  kernel_size=3
+loaded model_1  channels=[24, 48, 96, 192, 384]  kernel_size=3
+loaded model_2  channels=[48, 96, 192, 256, 256]  kernel_size=3
+loaded model_3  channels=[16, 48, 96, 192, 320]  kernel_size=5
+loaded model_4  channels=[40, 80, 160, 320, 320]  kernel_size=3
+loaded model_5  channels=[32, 64, 128, 256, 256]  kernel_size=5
+loaded model_6  channels=[64, 96, 160, 224, 288]  kernel_size=3
+loaded model_7  channels=[24, 64, 128, 192, 256]  kernel_size=5
+loaded model_8  channels=[48, 64, 96, 192, 384]  kernel_size=3
+loaded model_9  channels=[32, 48, 112, 224, 336]  kernel_size=5
+OOD attributes: Eyeglasses  →  in-dist=189406  ood=13193 images
+Train pos rates: Male=39.0%  Arched_Eyebrows=28.4%  Bushy_Eyebrows=14.9%  Narrow_Eyes=11.9%  Bags_Under_Eyes=20.9%  Smiling=48.7%  Young=79.9%
+val_ratio=0 → no validation split: 170465 in-dist images train, 18941 held out for test_in (no early stopping, full schedule).
+Reference stats from 'train' (max 40 batches), patch sizes [4, 8, 16]
+Reference stats fitted on 5120 in-dist images (5 blocks, std_floor=0.001)
+Evaluated 18941 in-dist vs 13193 OOD images (5120 ref images for the stats)
+OOD AUROC — global-p95 baseline vs z-score+patch-max:
+  risk      baseline=0.6304   localized=0.7029   (Δ +0.0724)
+  bias      baseline=0.6228   localized=0.6794   (Δ +0.0566)
+  variance  baseline=0.6425   localized=0.6970   (Δ +0.0544)
+  per-block risk      L0=0.6811  L1=0.6498  L2=0.6697  L3=0.6970  L4=0.6901
+  per-block bias      L0=0.5796  L1=0.6417  L2=0.6586  L3=0.6883  L4=0.6790
+  per-block variance  L0=0.6385  L1=0.6435  L2=0.6711  L3=0.6969  L4=0.6854
+Wrote outputs/celeba_ood/cp128_20260721_230657_6787580/ensemble/localized_auroc.json
