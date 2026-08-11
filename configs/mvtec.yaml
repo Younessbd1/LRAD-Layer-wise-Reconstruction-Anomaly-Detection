@@ -1,0 +1,132 @@
+# ---------------------------------------------------------------------------
+# MVTec AD — LRAD ensemble, per-category, for direct comparison to PatchCore.
+#
+# What changes versus the CelebA configs, and why:
+#
+#   1. NO SUPERVISED HEADS. MVTec is a cold-start benchmark: the training
+#      split of each category holds nominal images only and carries no
+#      labels at all. `gender_head`/`attrs_head` are therefore off and the
+#      trunk trains on the CutPaste pretext task alone, in its 3-way form
+#      (intact / box patch / scar) from Li et al., CVPR 2021 — the standard
+#      self-supervised objective on this benchmark.
+#   2. PER-CATEGORY MODELS. PatchCore fits one memory bank per category and
+#      reports the 15-category mean; scripts/run_mvtec.py mirrors that,
+#      training a fresh ensemble for each `dataset.categories` entry.
+#   3. 256 -> 224 PREPROCESSING, matching PatchCore §4.1 so the numbers are
+#      like for like ("images are resized and center cropped to 256x256 and
+#      224x224 respectively").
+#   4. SMALLER ENSEMBLE (4 members). MVTec train splits are ~200-400 images
+#      per category — two orders of magnitude below CelebA — so a member is
+#      cheap, but 15 categories multiply the cost. 4 members x 4 pilot
+#      categories = 16 trainings; going to all 15 categories at this size is
+#      60. Raise `ensemble.size` once the pilot numbers justify the spend.
+#
+# Targets to beat (PatchCore-10%, mean over all 15 categories):
+#      image AUROC 99.0   pixel AUROC 98.1   PRO 93.5
+# Pilot categories below are deliberately mixed: bottle (easy object,
+# PatchCore 100), carpet (texture), screw (PatchCore's weakest PRO, 87.4),
+# transistor (weakest pixel AUROC, 96.4).
+# ---------------------------------------------------------------------------
+
+experiment:
+  name: "mvtec_lrad"
+  seed: 42
+  output_dir: "outputs/mvtec/run"
+
+dataset:
+  root: "./data"
+  # The pilot set. Use `--categories all` on the runner for the full 15.
+  categories: [bottle, carpet, screw, transistor]
+  image_size: 256      # resize
+  crop_size: 224       # centre crop — this is what the trunk sees
+  batch_size: 32
+  num_workers: 4
+  # No validation split: MVTec train sets are small (~200-400 images) and
+  # every held-out nominal image is one the decoders never learn to
+  # reconstruct. Same choice as the CelebA cp128 run — full schedule, no
+  # early stopping, final-epoch weights.
+  val_ratio: 0.00
+  pin_memory: true
+  seed: 42
+
+model:
+  in_channels: 3
+  # Six blocks, not five: at 224 px an extra pooling stage keeps the
+  # bottleneck at 7x7 rather than 14x14, matching the 8x8 bottleneck the
+  # 128 px CelebA trunk ends on. 224 -> 112 -> 56 -> 28 -> 14 -> 7 -> 7.
+  channels: [32, 64, 128, 256, 256, 256]
+  kernel_size: 3
+  # Cold start: no labels exist, so both supervised heads are off and the
+  # pretext head is the only training signal.
+  gender_head: false
+  attrs_head: false
+  cutpaste_head: true
+  cutpaste_classes: 3
+
+training:
+  # SCHEDULE IS IN OPTIMIZER STEPS, NOT EPOCHS. MVTec categories hold 60
+  # (toothbrush) to 391 (hazelnut) training images, so at batch 32 a fixed
+  # epoch count buys 2-13 steps per epoch — a 6.5x spread in how much
+  # training each category receives, which would make the per-category
+  # table meaningless. `steps` is converted to an epoch count per category
+  # by scripts/run_mvtec.py; `epochs` below is only the fallback if
+  # `steps` is removed.
+  #
+  # The budget matters more than it looks. At 420 decoder steps (60 epochs
+  # on bottle) the decoders never individuate: they converge to the
+  # dataset mean, and the bias map degenerates into |x - mean image|,
+  # correlating ~0.85 with image brightness and scoring BELOW 0.5 pixel
+  # AUROC — MVTec defects are often dark, hence easier to reconstruct than
+  # nominal texture. For scale, the CelebA cp128 run trained its decoders
+  # for ~31,650 steps.
+  steps: 4000
+  epochs: 40
+  save_every_epoch: false
+  lr: 0.0003
+  attr_loss_weight: 0.0   # unused (no attr head); kept explicit
+  log_every: 50
+
+  # CutPaste pretext. `scar_prob: 0.5` is a real mix here, unlike the
+  # CelebA winner (0.0): MVTec defects genuinely come in both shapes —
+  # scratches and cracks are scar-like, dents and missing parts box-like —
+  # and the 3-way head needs both classes populated to learn either.
+  cutpaste:
+    prob: 0.5
+    area_range: [0.02, 0.15]
+    aspect_range: [0.3, 3.3]
+    scar_prob: 0.5
+    loss_weight: 1.0
+
+  decoders:
+    # The reconstruction IS the anomaly score, so the decoders get the
+    # larger budget of the two. See the note above on why this is in steps.
+    steps: 8000
+    epochs: 60
+    lr: 0.001
+    log_every: 100
+
+evaluation:
+  n_viz_in_samples: 8
+  n_viz_ood_samples: 12
+  viz_seed: 1234
+  # Pixel-level localization (lrad.pixel_metrics).
+  pixel_metrics: true
+  # PatchCore smooths its segmentation map with a Gaussian of sigma=4.
+  smooth_sigma: 4.0
+  pro_fpr_limit: 0.30
+  # Rows per qualitative panel. Two panels are written per category — the
+  # highest- and the lowest-scoring defective images — so failures are as
+  # visible as successes.
+  n_instances: 6
+  # Display-only blur for the overlay column. Never affects a score.
+  overlay_sigma: 3.0
+
+ensemble:
+  size: 4
+  base_seed: 42
+  agg: p95
+  member_variants:
+    - {channels: [32, 64, 128, 256, 256, 256], kernel_size: 3}   # baseline
+    - {channels: [24, 48, 96, 192, 256, 384], kernel_size: 3}    # slim early
+    - {channels: [48, 96, 160, 224, 256, 256], kernel_size: 5}   # wide, large RF
+    - {channels: [32, 48, 112, 224, 288, 320], kernel_size: 5}   # steep, large RF
