@@ -1,4 +1,14 @@
-"""CelebA gender + attribute classifier with confidence-based OOD detection."""
+"""LRAD — layer-wise reconstruction anomaly detection.
+
+Two tasks share this pipeline:
+
+* **CelebA** (:mod:`lrad.dataset`) — supervised gender + attribute trunk,
+  eyeglasses held out as OOD.
+* **MVTec AD** (:mod:`lrad.mvtec`) — cold-start industrial anomaly
+  detection, benchmarked against PatchCore. No labels exist, so the trunk
+  trains on the CutPaste pretext task alone and localization is scored with
+  pixel AUROC + PRO (:mod:`lrad.pixel_metrics`).
+"""
 
 __version__ = "0.3.0"
 
@@ -39,6 +49,18 @@ from .evaluate import (
     per_attribute_accuracy,
 )
 from .model import FacialCNN, build_model, count_parameters
+from .mvtec import (
+    MVTEC_CATEGORIES,
+    MVTEC_TEXTURES,
+    MVTecCategory,
+    get_mvtec_loaders,
+)
+from .pixel_metrics import (
+    collect_anomaly_maps,
+    evaluate_pixel_metrics,
+    pixel_auroc,
+    pro_score,
+)
 from .plots import (
     plot_architecture_effect,
     plot_batch_loss,
@@ -67,6 +89,9 @@ __all__ = [
     "CelebAFacialAttributes",
     "FacialCNN",
     "GENDER_ATTR",
+    "MVTEC_CATEGORIES",
+    "MVTEC_TEXTURES",
+    "MVTecCategory",
     "OOD_ATTR",
     "OOD_ATTRS",
     "aggregate_anomaly_score",
@@ -74,6 +99,7 @@ __all__ = [
     "build_decoders",
     "build_model",
     "classifier_n_params",
+    "collect_anomaly_maps",
     "collect_decomposition_scores",
     "collect_eye_region_bias",
     "collect_predictions",
@@ -82,9 +108,13 @@ __all__ = [
     "evaluate",
     "evaluate_ensemble_decomposition",
     "evaluate_one_epoch",
+    "evaluate_pixel_metrics",
     "gather_samples",
     "get_celeba_loaders",
     "get_device",
+    "get_mvtec_loaders",
+    "pixel_auroc",
+    "pro_score",
     "identity_residual",
     "load_config",
     "ood_auroc",
