@@ -47,16 +47,26 @@ def evaluate_one_epoch(
         attrs = attrs.to(device, non_blocking=True)
 
         out = model(img)
-        loss_g = F.cross_entropy(out["gender_logits"], gender)
-        loss_a = F.binary_cross_entropy_with_logits(out["attr_logits"], attrs)
-        loss = loss_g + attr_loss_weight * loss_a
-
+        # Heads the model was built without contribute nothing. On a
+        # pretext-only trunk (MVTec) this loop measures no supervised loss
+        # at all and reports 0 — the pretext CE is tracked per batch in
+        # ``train_model`` instead, since it needs the CutPaste labels.
+        loss = img.new_zeros(())
         bs = img.size(0)
+        if "gender_logits" in out:
+            loss = loss + F.cross_entropy(out["gender_logits"], gender)
+            gender_correct += (
+                out["gender_logits"].argmax(dim=1) == gender
+            ).sum().item()
+        if "attr_logits" in out:
+            loss = loss + attr_loss_weight * F.binary_cross_entropy_with_logits(
+                out["attr_logits"], attrs,
+            )
+            attr_pred = (torch.sigmoid(out["attr_logits"]) >= 0.5).float()
+            attr_correct += (attr_pred == attrs).float().sum(dim=0)
+
         n += bs
         loss_sum += loss.item() * bs
-        gender_correct += (out["gender_logits"].argmax(dim=1) == gender).sum().item()
-        attr_pred = (torch.sigmoid(out["attr_logits"]) >= 0.5).float()
-        attr_correct += (attr_pred == attrs).float().sum(dim=0)
 
     return {
         "loss": loss_sum / max(n, 1),
@@ -142,6 +152,11 @@ def train_model(
             "area_range": tuple(cutpaste.get("area_range", (0.02, 0.12))),
             "aspect_range": tuple(cutpaste.get("aspect_range", (0.3, 3.3))),
             "scar_prob": float(cutpaste.get("scar_prob", 0.5)),
+            # Derived from the head the model actually carries rather than
+            # read from the config: a 3-way head fed binary labels would
+            # train class 2 on nothing and never error, so the two must not
+            # be able to disagree.
+            "three_way": getattr(model, "cutpaste_classes", 2) == 3,
         }
         if cutpaste is not None else None
     )
@@ -201,17 +216,26 @@ def train_model(
             out = model(img)
             # Supervised losses on intact faces only — a pasted patch can
             # occlude the very evidence the gender/attr labels describe.
-            if intact.any():
-                loss_g = F.cross_entropy(
-                    out["gender_logits"][intact], gender[intact],
+            # Both heads are optional: a pretext-only trunk (MVTec, which
+            # has no labels at all) skips this block entirely and trains on
+            # the CutPaste CE alone.
+            loss = img.new_zeros(())
+            if "gender_logits" in out:
+                loss = loss + (
+                    F.cross_entropy(out["gender_logits"][intact],
+                                    gender[intact])
+                    if intact.any()
+                    # vanishingly rare with prob <= 0.5, but keep the graph
+                    # connected so .backward() never sees a detached loss
+                    else out["gender_logits"].sum() * 0.0
                 )
-                loss_a = F.binary_cross_entropy_with_logits(
-                    out["attr_logits"][intact], attrs[intact],
+            if "attr_logits" in out:
+                loss = loss + attr_loss_weight * (
+                    F.binary_cross_entropy_with_logits(
+                        out["attr_logits"][intact], attrs[intact])
+                    if intact.any()
+                    else out["attr_logits"].sum() * 0.0
                 )
-            else:  # vanishingly rare with prob <= 0.5, but keep it sound
-                loss_g = out["gender_logits"].sum() * 0.0
-                loss_a = out["attr_logits"].sum() * 0.0
-            loss = loss_g + attr_loss_weight * loss_a
             if cp_labels is not None:
                 loss_cp = F.cross_entropy(
                     out["cutpaste_logits"], cp_labels,
@@ -231,22 +255,28 @@ def train_model(
             bs = int(intact.sum().item())
             n += bs
             loss_sum += loss.item() * bs
-            g_out = out["gender_logits"][intact]
-            gender_match = g_out.argmax(dim=1) == gender[intact]
-            gender_correct += gender_match.sum().item()
-            attr_pred = (
-                torch.sigmoid(out["attr_logits"][intact]) >= 0.5
-            ).float()
-            attr_match = (attr_pred == attrs[intact]).float()
-            attr_correct += attr_match.sum(dim=0)
+            if "gender_logits" in out:
+                g_out = out["gender_logits"][intact]
+                gender_match = g_out.argmax(dim=1) == gender[intact]
+                gender_correct += gender_match.sum().item()
+                batch_gender_acc = (
+                    gender_match.float().mean().item() if bs else 0.0
+                )
+            else:
+                batch_gender_acc = 0.0
+            if "attr_logits" in out:
+                attr_pred = (
+                    torch.sigmoid(out["attr_logits"][intact]) >= 0.5
+                ).float()
+                attr_match = (attr_pred == attrs[intact]).float()
+                attr_correct += attr_match.sum(dim=0)
+                batch_attr_acc = attr_match.mean().item() if bs else 0.0
+            else:
+                batch_attr_acc = 0.0
 
             history["batch_loss"].append(loss.item())
-            history["batch_gender_acc"].append(
-                gender_match.float().mean().item() if bs else 0.0
-            )
-            history["batch_attr_acc_mean"].append(
-                attr_match.mean().item() if bs else 0.0
-            )
+            history["batch_gender_acc"].append(batch_gender_acc)
+            history["batch_attr_acc_mean"].append(batch_attr_acc)
 
         history["epoch_ends"].append(len(history["batch_gender_acc"]) - 1)
 
@@ -279,16 +309,34 @@ def train_model(
             # train metrics (and drop the redundant duplicate train_loss).
             report = val_metrics if has_val else train_metrics
             tag = "val" if has_val else "train"
-            attr_acc_str = " ".join(f"{a*100:.1f}" for a in report["attr_acc"])
             prefix = (f"train_loss={train_metrics['loss']:.4f}  "
                       if has_val else "")
+            # Only report the heads the model has. A pretext-only trunk
+            # would otherwise log a constant "gender_acc=0.0% attr_acc=[]",
+            # which reads like a broken run rather than an absent head.
+            parts = [f"{tag}_loss={report['loss']:.4f}"]
+            if model.head_gender is not None:
+                parts.append(f"{tag}_gender_acc={report['gender_acc']*100:.1f}%")
+            if model.head_attrs is not None:
+                attr_acc_str = " ".join(
+                    f"{a*100:.1f}" for a in report["attr_acc"]
+                )
+                parts.append(f"{tag}_attr_acc=[{attr_acc_str}]%")
+            if history["batch_cutpaste_acc"]:
+                # Mean over the epoch's batches: the pretext head is the
+                # only learning signal on MVTec, so this is the number that
+                # says whether the trunk is training at all.
+                start = (history["epoch_ends"][-2] + 1
+                         if len(history["epoch_ends"]) > 1 else 0)
+                ep_cp = history["batch_cutpaste_acc"][start:]
+                if ep_cp:
+                    parts.append(
+                        f"train_cutpaste_acc={sum(ep_cp)/len(ep_cp)*100:.1f}%"
+                    )
             logger.info(
-                f"epoch {epoch:>3}/{epochs}  "
-                f"{prefix}"
-                f"{tag}_loss={report['loss']:.4f}  "
-                f"{tag}_gender_acc={report['gender_acc']*100:.1f}%  "
-                f"{tag}_attr_acc=[{attr_acc_str}]%  "
-                f"({time.time() - t0:.1f}s)"
+                f"epoch {epoch:>3}/{epochs}  {prefix}"
+                + "  ".join(parts)
+                + f"  ({time.time() - t0:.1f}s)"
             )
 
         # Early stopping only makes sense with a real validation signal.
