@@ -64,6 +64,7 @@ def cutpaste_batch(
     area_range: tuple[float, float] = (0.02, 0.12),
     aspect_range: tuple[float, float] = (0.3, 3.3),
     scar_prob: float = 0.5,
+    three_way: bool = False,
     generator: torch.Generator | None = None,
 ) -> tuple[torch.Tensor, torch.Tensor]:
     """Paste donor patches onto a random subset of the batch.
@@ -73,6 +74,16 @@ def cutpaste_batch(
     (label 0). ``scar_prob`` picks the scar flavour over the box flavour
     per altered image. The donor of image ``i`` is image ``i+1`` (mod B),
     so no image donates to itself.
+
+    ``three_way=True`` switches to the 3-way CutPaste formulation of Li et
+    al. (CVPR 2021): intact = 0, **box** patch = 1, **scar** = 2, and the
+    head is built with ``model.cutpaste_classes: 3``. Separating the two
+    flavours into their own classes is what the paper found strongest on
+    MVTec — a box and a scar are geometrically very different defects
+    (a dent versus a scratch), and collapsing them into one "altered"
+    class forces the trunk to discard exactly the shape information that
+    distinguishes real MVTec defect types. On CelebA the binary form is
+    kept, where the only target concept is "something covers the face".
     """
     if images.dim() != 4:
         raise ValueError(
@@ -101,6 +112,8 @@ def cutpaste_batch(
             continue
         if torch.rand(1, generator=generator).item() < scar_prob:
             ph, pw = _scar_hw(H, W, generator)
+            if three_way:
+                labels[i] = 2
         else:
             ph, pw = _patch_hw(H, W, area_range, aspect_range, generator)
         # Source window in the donor and destination window in the target
