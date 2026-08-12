@@ -141,6 +141,115 @@ The three figures document the *models*. They do not document the **scoring stac
 
 The gap between the raw bias term (0.623) and the fused detector (0.804 label-free) is the substance of the project, and no current diagram shows it. [`docs/Documentation.md`](docs/Documentation.md) is the full report on that run: every formula, every figure it produces, worked numeric examples, and a critical reading of the anomalies (French).
 
+## MVTec AD — the PatchCore comparison
+
+The same decomposition runs as a **cold-start industrial anomaly detector** on
+[MVTec AD](https://www.mvtec.com/company/research/datasets/mvtec-ad), to be
+benchmarked head-to-head against
+[PatchCore](https://arxiv.org/abs/2106.08265) (Roth et al., CVPR 2022).
+
+**What changes, and why.** MVTec's training split holds nominal images only and
+carries **no labels of any kind** — the gender and attribute heads have nothing
+to learn from. So the trunk is trained **purely self-supervised**, on the 3-way
+CutPaste pretext task (intact / box patch / scar; Li et al., CVPR 2021), and the
+supervised heads are switched off (`model.gender_head: false`,
+`attrs_head: false`). Everything downstream is unchanged: the trunk is frozen,
+one `BlockDecoder` is fitted per conv block, and the anomaly score is the same
+ensemble Bias term `(x − f̄_k)²`. Members still differ by seed and architecture.
+
+The protocol mirrors PatchCore's: one independent ensemble **per category**,
+trained on that category's nominal images only, 256 → 224 centre-crop
+preprocessing, and the 15-category mean reported at the end.
+
+Because MVTec ships ground-truth masks, all three of PatchCore's metrics are
+computed — `lrad/pixel_metrics.py`:
+
+| Metric | What it measures | PatchCore−10% |
+| --- | --- | --- |
+| image AUROC | detection: is this image defective? | 99.0 |
+| pixel AUROC | localization, pooled over all pixels | 98.1 |
+| PRO | localization, **equal weight per defect region** | 93.5 |
+
+PRO is the honest one. Pixel AUROC is dominated by large defects — a model that
+finds every big blob and misses every hairline scratch still scores well, because
+the big blob supplies thousands of positive pixels and the scratch a few dozen.
+PRO averages the per-region recovery with weight 1 per connected component
+whatever its area, then integrates against FPR up to 0.30 and normalizes. Note
+its random baseline is **0.15**, not 0.5: a chance localizer traces the diagonal,
+and `∫₀^0.3 x dx / 0.3 = 0.15`.
+
+```bash
+# 1. fetch the dataset (~4.9 GB; CC BY-NC-SA 4.0, non-commercial research only)
+python scripts/download_mvtec.py --root ./data
+python scripts/download_mvtec.py --root ./data --verify-only   # check a copy
+
+# 2. run the pilot categories from the config (bottle, carpet, screw, transistor)
+python scripts/run_mvtec.py --config configs/mvtec.yaml
+
+# 3. all 15 categories
+python scripts/run_mvtec.py --config configs/mvtec.yaml --categories all
+
+# 4. re-score already-trained members
+python scripts/run_mvtec.py --config configs/mvtec.yaml \
+    --output-dir outputs/mvtec/my_run --eval-only
+```
+
+### Outputs
+
+```text
+<run>/
+├── results.md                     # per-category table vs PatchCore
+├── summary.json                   # every metric, machine-readable
+├── vs_patchcore.png               # grouped bars, all 3 metrics per category
+└── <category>/
+    ├── summary.json
+    ├── model_<i>/
+    │   ├── weights/{model,decoders}.pt
+    │   ├── history.json
+    │   └── plots/{batch_loss,decoder_loss}.png
+    └── plots/
+        ├── curves.png             # image ROC + PRO curve (shaded integral)
+        ├── auroc_per_block.png    # detection AUROC per block, R/B/V
+        ├── score_hists.png        # nominal vs defective score distributions
+        ├── architecture_effect.png    # member architecture vs its AUROC
+        ├── instances_best.png     # Input | Anomaly map | GT | Overlay
+        └── instances_worst.png    # the lowest-scoring defects — the failures
+```
+
+`instances_worst.png` is deliberately written next to `instances_best.png`:
+showing only the top detections makes any category look solved, when the
+low-scoring tail is precisely what the PRO number is reacting to. The overlay
+column carries the ground-truth contour on top of the heatmap, so "did the hot
+region land inside the real defect" is answerable at a glance.
+
+`results.md` and `summary.json` are rewritten after **every** category, so a job
+killed at the walltime still leaves a complete table for whatever finished. A
+category that fails (missing download, OOM) is logged and skipped rather than
+taking the whole run down, and a plotting failure never costs a category its
+numbers.
+
+### Schedule: steps, not epochs
+
+MVTec categories hold 60 (toothbrush) to 391 (hazelnut) training images. At batch
+32 a fixed epoch count therefore buys 2–13 optimizer steps per epoch — a **6.5×
+spread** in how much training each category receives, which alone would make the
+per-category table incomparable. `configs/mvtec.yaml` sets `training.steps` and
+`training.decoders.steps` instead, and the runner converts each into a per-category
+epoch count.
+
+The absolute budget matters as much as the fairness. At a few hundred decoder
+steps the decoders never individuate: they converge to the dataset mean, and the
+bias map degenerates into `|x − mean image|`, which correlates ~0.85 with plain
+image brightness and scores **below 0.5** pixel AUROC — MVTec defects are often
+darker, and therefore *easier* to reconstruct, than nominal texture.
+`lrad/pixel_metrics.py` warns when it detects that collapse (maps varying far
+less between images than within one) instead of letting it pass as a result.
+
+Budget ~30–45 min per member at 224 px on an A40 with the default 4,000 + 8,000
+steps: the 4-category pilot at 4 members is ~8–12 h, all 15 categories ~30–45 h.
+Run the pilot first and read the real per-member time out of the log before
+committing to the full sweep.
+
 ## Features
 
 - Exact pixelwise `Risk = Bias + Variance` decomposition, verified at runtime
@@ -149,6 +258,7 @@ The gap between the raw bias term (0.623) and the fused detector (0.804 label-fr
 - Per-instance figures: one figure per member (recon + error) and a bias / mean / min + overlay summary, per test face
 - Top-N OOD eyeglasses faces ranked by eye-region bias (strength × concentration)
 - Configurable OOD attribute set (default: eyeglasses only)
+- Second benchmark on MVTec AD: per-category cold-start runs, pretext-only trunk, image AUROC + pixel AUROC + PRO against PatchCore
 - Epoch-variability study: traces inter-model variability σ(e) from per-epoch decoder checkpoints
 - Single YAML config shared by both single-model and ensemble runners; dotted `key=value` CLI overrides (lists supported, e.g. `model.channels=[...]`)
 
@@ -165,6 +275,7 @@ The gap between the raw bias term (0.623) and the fused detector (0.804 label-fr
 
 - Python ≥ 3.10
 - CelebA dataset placed at `data/celeba/` (official source, or set `dataset.download: true` in the config to let torchvision fetch it)
+- For the MVTec task: MVTec AD at `data/mvtec_anomaly_detection/` via `python scripts/download_mvtec.py`
 - CUDA optional but recommended for ensemble runs
 
 ## Installation
@@ -249,10 +360,12 @@ python scripts/epoch_variability_study.py \
 lrad/
 ├── lrad/                          # library (flat layout)
 │   ├── dataset.py                 # CelebA loaders; configurable accessory OOD split
+│   ├── mvtec.py                   # MVTec AD: per-category loaders + ground-truth masks
 │   ├── config.py                  # YAML load + dotted `key=value` CLI overrides
-│   ├── model.py                   # FacialCNN: conv trunk + gender/attrs/cutpaste heads
+│   ├── model.py                   # FacialCNN: conv trunk + optional gender/attrs/cutpaste heads
 │   ├── decoder.py                 # per-block ConvTranspose2d decoders
-│   ├── cutpaste.py                # CutPaste pretext augmentation (patch/scar)
+│   ├── cutpaste.py                # CutPaste pretext augmentation (patch/scar, 2- or 3-way)
+│   ├── pixel_metrics.py           # pixel AUROC + PRO for anomaly localization
 │   ├── train.py                   # classifier + decoder training loops
 │   ├── evaluate.py                # accuracy + classifier-confidence OOD AUROC
 │   ├── anomaly_score.py           # per-pixel error + pixel→scalar reductions
@@ -265,13 +378,16 @@ lrad/
 │   └── utils.py                   # device, seeding, logging
 ├── configs/
 │   ├── celeba_ood.yaml            # base config (64 px)
-│   └── celeba_ood_cutpaste128.yaml # 128 px + CutPaste pretext head
+│   ├── celeba_ood_cutpaste128.yaml # 128 px + CutPaste pretext head
+│   └── mvtec.yaml                 # MVTec AD, per-category, pretext-only trunk
 ├── docs/
 │   ├── Documentation.md           # full report on the LASTOF_RESULTS run (FR)
 │   └── diagrams/                  # the three figures above, .pdf source + .png
 ├── scripts/
 │   ├── run_celeba.py              # single-model pipeline
 │   ├── run_ensemble.py            # ensemble + decomposition + instance figures
+│   ├── run_mvtec.py               # MVTec per-category ensembles + PatchCore table
+│   ├── download_mvtec.py          # fetch/extract/verify MVTec AD
 │   ├── run_localized.py           # localized z-score / patch-max scoring
 │   ├── run_fused.py               # fused (locfre + epistemic + energy) AUROC
 │   ├── run_gridsearch.py          # CutPaste hyperparameter search
