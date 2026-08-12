@@ -4,8 +4,9 @@ setup(
     name="lrad",
     version="0.3.0",
     description=(
-        "CelebA multi-task CNN (gender softmax + attribute BCE) with "
-        "confidence-based OOD detection for sunglasses."
+        "Layer-wise reconstruction anomaly detection: deep-ensemble "
+        "bias/variance decomposition for OOD detection on CelebA and "
+        "cold-start industrial anomaly detection on MVTec AD."
     ),
     author="BAHADDOU Youness",
     packages=find_packages(exclude=("tests", "scripts", "configs")),
@@ -16,6 +17,7 @@ setup(
         "numpy>=1.24",
         "matplotlib>=3.7",
         "scikit-learn>=1.2",
+        "scipy>=1.10",
         "pyyaml>=6.0",
         "Pillow>=9.0",
     ],
