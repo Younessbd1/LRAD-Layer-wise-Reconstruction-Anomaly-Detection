@@ -1808,3 +1808,221 @@ def plot_fused_auroc_panel(
         fig.suptitle(title, fontsize=_TITLE_FS)
     fig.savefig(save_path, dpi=_SAVE_DPI, bbox_inches="tight")
     plt.close(fig)
+
+
+# ---------------------------------------------------------------------------
+# MVTec AD — anomaly localization figures
+# ---------------------------------------------------------------------------
+#
+# These differ from the CelebA family in one decisive way: MVTec ships a
+# ground-truth mask for every defect, so a localization figure can show what
+# the model claimed AND what was actually there, side by side. That is the
+# figure the industrial-AD literature leads with (PatchCore Fig. 1), and the
+# only one that makes an over-confident heatmap obvious at a glance.
+
+# Contour colour for ground-truth defect outlines. Orange on viridis is the
+# one hue that stays legible over both the dark-blue floor and the yellow
+# peak of the colormap.
+_C_CONTOUR = "#FF7F0E"
+
+
+def plot_mvtec_segmentation(
+    images: torch.Tensor,
+    maps: np.ndarray,
+    masks: np.ndarray,
+    save_path: str | Path,
+    *,
+    scores: Sequence[float] | None = None,
+    labels: Sequence[str] | None = None,
+    title: str | None = None,
+    overlay_sigma: float = 3.0,
+) -> None:
+    """Qualitative localization panel: one row per test image, four columns.
+
+        Input | Anomaly map | Ground truth | Overlay (+ GT contour)
+
+    ``maps`` and ``masks`` are ``(N, H, W)``; ``images`` is ``(N, 3, H, W)``.
+    The anomaly map keeps its own per-image colour scale — defect energy
+    varies by orders of magnitude between a scratch and a missing part, and
+    a shared scale would black out every subtle row.
+
+    The ground-truth contour is drawn ON the overlay rather than only in its
+    own column, because the question a reader actually has is "did the hot
+    region land inside the true defect", and that is answerable only when
+    the two are superimposed.
+    """
+    n = len(maps)
+    if n == 0:
+        raise ValueError("nothing to plot — maps is empty")
+    imgs = _to_image_grid(images)
+
+    fig, axes = plt.subplots(
+        n, 4, figsize=(4 * 2.5, n * 2.5), layout="constrained",
+        squeeze=False,
+    )
+    col_titles = ("Input", "Anomaly map (bias)", "Ground truth", "Overlay")
+
+    for i in range(n):
+        img, amap, gt = imgs[i], maps[i], masks[i]
+
+        axes[i][0].imshow(img)
+        axes[i][1].imshow(amap, cmap="viridis")
+        axes[i][2].imshow(gt, cmap="gray", vmin=0, vmax=1)
+
+        cam = smooth_cam(amap, sigma=overlay_sigma)
+        axes[i][3].imshow(img)
+        axes[i][3].imshow(cam, cmap="inferno", alpha=cam * 0.75)
+        if gt.max() > 0:
+            # A single contour at the mask's midpoint traces the defect
+            # boundary without hiding the heatmap underneath it.
+            axes[i][3].contour(gt, levels=[0.5], colors=_C_CONTOUR,
+                               linewidths=1.4)
+
+        for j in range(4):
+            _bare(axes[i][j])
+            if i == 0:
+                axes[i][j].set_title(col_titles[j], fontsize=_LABEL_FS)
+
+        row = labels[i] if labels is not None else f"#{i}"
+        if scores is not None:
+            row = f"{row}\nscore {scores[i]:.3g}"
+        _row_label(axes[i][0], row)
+
+    fig.suptitle(title or "MVTec AD — anomaly localization",
+                 fontsize=_TITLE_FS)
+    fig.savefig(save_path, dpi=_SAVE_DPI, bbox_inches="tight")
+    plt.close(fig)
+
+
+def plot_mvtec_curves(
+    save_path: str | Path,
+    *,
+    roc: dict | None = None,
+    pro_curve: dict | None = None,
+    pixel_auroc: float | None = None,
+    pro: float | None = None,
+    image_auroc: float | None = None,
+    fpr_limit: float = 0.30,
+    title: str | None = None,
+) -> None:
+    """Image-level ROC beside the PRO curve.
+
+    ``roc`` is an ``_auroc_entry`` dict (``fpr``/``tpr``); ``pro_curve`` is
+    the ``{"fpr": [...], "pro": [...]}`` returned by
+    :func:`lrad.pixel_metrics.pro_score`.
+
+    The PRO panel shades the integrated region and draws the chance
+    diagonal, because PRO's random baseline is ``fpr_limit / 2`` (0.15 at
+    the usual 0.30 limit) rather than 0.5 — without the diagonal in view, a
+    reader anchored on AUROC conventions will misread a 0.3 as "worse than
+    chance" when it is twice chance.
+    """
+    fig, axes = plt.subplots(1, 2, figsize=(9.6, 4.2), layout="constrained")
+
+    ax = axes[0]
+    if roc and roc.get("fpr") is not None:
+        lbl = "image-level ROC"
+        if image_auroc is not None:
+            lbl += f" (AUROC = {image_auroc:.3f})"
+        ax.plot(roc["fpr"], roc["tpr"], color=_C_BIAS, linewidth=1.8,
+                label=lbl)
+    ax.plot([0, 1], [0, 1], color="gray", linestyle=":", linewidth=0.9,
+            label="chance")
+    ax.set_xlabel("False-positive rate", fontsize=_LABEL_FS)
+    ax.set_ylabel("True-positive rate", fontsize=_LABEL_FS)
+    ax.set_title("Detection (image level)", fontsize=_LABEL_FS)
+    ax.set_xlim(0, 1)
+    ax.set_ylim(0, 1.02)
+    ax.grid(alpha=0.3)
+    ax.legend(loc="lower right", fontsize=9)
+
+    ax = axes[1]
+    if pro_curve and pro_curve.get("fpr"):
+        f = np.asarray(pro_curve["fpr"], dtype=float)
+        p = np.asarray(pro_curve["pro"], dtype=float)
+        order = np.argsort(f)
+        f, p = f[order], p[order]
+        lbl = "PRO curve"
+        if pro is not None:
+            lbl += f" (PRO = {pro:.3f})"
+        ax.plot(f, p, color=_C_OOD, linewidth=1.8, label=lbl)
+        keep = f <= fpr_limit
+        ax.fill_between(f[keep], 0, p[keep], color=_C_OOD, alpha=0.15)
+    ax.axvline(fpr_limit, color="gray", linestyle="--", linewidth=0.9,
+               label=f"integration limit ({fpr_limit:g})")
+    ax.plot([0, 1], [0, 1], color="gray", linestyle=":", linewidth=0.9,
+            label=f"chance (PRO = {fpr_limit / 2:.2f})")
+    ax.set_xlabel("False-positive rate (pixels)", fontsize=_LABEL_FS)
+    ax.set_ylabel("Per-region overlap", fontsize=_LABEL_FS)
+    sub = "Localization (per region)"
+    if pixel_auroc is not None:
+        sub += f" — pixel AUROC = {pixel_auroc:.3f}"
+    ax.set_title(sub, fontsize=_LABEL_FS)
+    ax.set_xlim(0, min(1.0, max(0.5, fpr_limit * 2)))
+    ax.set_ylim(0, 1.02)
+    ax.grid(alpha=0.3)
+    ax.legend(loc="lower right", fontsize=8)
+
+    for a in axes:
+        a.tick_params(labelsize=_TICK_FS)
+    fig.suptitle(title or "MVTec AD — detection and localization",
+                 fontsize=_TITLE_FS)
+    fig.savefig(save_path, dpi=_SAVE_DPI, bbox_inches="tight")
+    plt.close(fig)
+
+
+def plot_mvtec_vs_patchcore(
+    results: Sequence[dict],
+    reference: dict,
+    save_path: str | Path,
+    *,
+    reference_name: str = "PatchCore-10%",
+    title: str | None = None,
+) -> None:
+    """Grouped bars: our three metrics against a reference, per category.
+
+    ``results`` is the runner's per-category list (each with ``category``,
+    ``image_auroc``, ``pixel_auroc``, ``pro`` in [0, 1]); ``reference`` maps
+    a category to a ``(image, pixel, pro)`` triple **in percent**, as
+    published.
+
+    The x-axis starts at 80, not 0. Every method in this literature scores
+    above 0.9 on most categories, so a zero-based axis compresses the entire
+    interesting range into the last 10 % of the bar and hides exactly the
+    differences the figure exists to show. The axis break is made explicit
+    in the label so the truncation cannot be mistaken for the full range.
+    """
+    rows = [r for r in results if r.get("category") in reference]
+    if not rows:
+        raise ValueError("no categories in common with the reference")
+
+    metrics = (("image_auroc", "Image AUROC", 0),
+               ("pixel_auroc", "Pixel AUROC", 1),
+               ("pro", "PRO", 2))
+    cats = [r["category"] for r in rows]
+    y = np.arange(len(cats))[::-1]
+
+    fig, axes = plt.subplots(
+        1, 3, figsize=(13.5, 0.42 * len(cats) + 2.2), layout="constrained",
+        sharey=True,
+    )
+    for ax, (key, name, ref_i) in zip(axes, metrics):
+        ours = np.array(
+            [(r.get(key) or float("nan")) * 100 for r in rows], dtype=float,
+        )
+        ref = np.array([reference[c][ref_i] for c in cats], dtype=float)
+        ax.barh(y + 0.19, ours, height=0.36, color=_C_BIAS, label="LRAD (ours)")
+        ax.barh(y - 0.19, ref, height=0.36, color=_C_VARIANCE,
+                label=reference_name)
+        ax.set_xlim(80, 101)
+        ax.set_xlabel(f"{name} [%]  (axis starts at 80)", fontsize=_LABEL_FS)
+        ax.grid(alpha=0.3, axis="x")
+        ax.tick_params(labelsize=_TICK_FS)
+    axes[0].set_yticks(y)
+    axes[0].set_yticklabels(cats, fontsize=_TICK_FS)
+    axes[0].legend(loc="lower left", fontsize=9)
+
+    fig.suptitle(title or f"LRAD vs {reference_name} on MVTec AD",
+                 fontsize=_TITLE_FS)
+    fig.savefig(save_path, dpi=_SAVE_DPI, bbox_inches="tight")
+    plt.close(fig)
