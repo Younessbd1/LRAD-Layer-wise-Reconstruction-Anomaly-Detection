@@ -129,13 +129,19 @@ def _train_member(
     eval_only: bool,
     no_plots: bool = False,
 ):
-    """Train (or load) one ensemble member: trunk + per-block decoders."""
+    """Train (or load) one ensemble member: trunk + per-block decoders.
+
+    Returns ``(model, decoders, n_params, history)``.
+    """
     model_dir.mkdir(parents=True, exist_ok=True)
     weights = model_dir / "weights"
     weights.mkdir(exist_ok=True)
 
     seed_everything(seed)
     model = build_model(mcfg).to(device)
+    # Captured now: train_decoders later freezes the classifier
+    # (requires_grad=False), which would make this count read 0.
+    n_params = count_parameters(model)
     image_size = mcfg["dataset"].get("crop_size") or mcfg["dataset"]["image_size"]
     decoders = build_decoders(model, image_size=image_size).to(device)
 
@@ -146,7 +152,7 @@ def _train_member(
         decoders.load_state_dict(
             torch.load(weights / "decoders.pt", map_location=device)
         )
-        return model.eval(), decoders.eval(), {}
+        return model.eval(), decoders.eval(), n_params, {}
 
     with open(model_dir / "config.resolved.yaml", "w") as f:
         yaml.safe_dump(mcfg, f, sort_keys=False)
@@ -199,7 +205,7 @@ def _train_member(
         plot_batch_loss(hist, plots / "batch_loss.png")
         plot_decoder_history(dhist, plots / "decoder_loss.png")
 
-    return model.eval(), decoders.eval(), history
+    return model.eval(), decoders.eval(), n_params, history
 
 
 def _plot_category(
@@ -332,11 +338,11 @@ def run_category(
             category, i + 1, size, seed, mv.get("channels"),
             mv.get("kernel_size", 3),
         )
-        model, decoders, _ = _train_member(
+        model, decoders, n_params, _ = _train_member(
             member_cfgs[i], loaders, device, out_dir / f"model_{i}",
             seed=seed, eval_only=eval_only, no_plots=no_plots,
         )
-        member_params.append(count_parameters(model))
+        member_params.append(n_params)
         # Park finished members on CPU so GPU memory stays free while the
         # rest train; they come back as a group for the decomposition.
         models.append(model.to("cpu").eval())
