@@ -1527,7 +1527,9 @@ def plot_architecture_effect(
             ax.annotate(f"M{members[i]}", (x[i], auroc[i]),
                         xytext=(5, 4), textcoords="offset points",
                         fontsize=8, color="#444")
-        if log_x:
+        # A log axis needs strictly positive data; fall back to linear
+        # rather than let matplotlib warn and blank the panel.
+        if log_x and np.all(x > 0):
             ax.set_xscale("log")
         ax.axhline(0.5, color="gray", linestyle=":", linewidth=0.8)
         ax.set_xlabel(xlabel, fontsize=_LABEL_FS)
