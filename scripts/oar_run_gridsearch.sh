@@ -14,8 +14,8 @@
 #   gridsearch_results.json   every config + all metrics, sorted by fused
 #   gridsearch_auroc.png      grouped bars, every metric per config
 #   gridsearch_epochs.png     pretext AUROC vs classifier epochs
-# Paste the logged best config into configs/celeba_ood_cutpaste128.yaml
-# (training.cutpaste) before submitting oar_run_cutpaste128.sh.
+# Paste the logged best config into configs/celeba_ood_128.yaml
+# (training.cutpaste) before submitting oar_run_128.sh.
 #
 # Submit (from the Nancy frontend, in ~/lrad):
 #   ./scripts/oar_run_gridsearch.sh

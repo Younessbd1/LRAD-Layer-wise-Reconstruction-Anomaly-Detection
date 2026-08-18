@@ -13,7 +13,7 @@ the code builds:
     ``run_ensemble.py`` (cycled if the ensemble outgrows the list).
 
 Usage:
-    python scripts/generate_arch_svg.py --config configs/celeba_ood_cutpaste128.yaml
+    python scripts/generate_arch_svg.py --config configs/celeba_ood_128.yaml
     python scripts/generate_arch_svg.py --config configs/celeba_ood.yaml \\
         --out-dir docs/diagrams --size 10
     python scripts/generate_arch_svg.py --config configs/celeba_ood.yaml \\

@@ -9,7 +9,7 @@ OOD detection on CelebA faces via deep-ensemble reconstruction error decomposed 
 
 ## What it does
 
-A from-scratch convolutional classifier is trained on normal (glasses-free) CelebA faces; lightweight decoders attached to each conv block learn to invert that block's frozen activations back to a full-resolution `(3, H, W)` reconstruction (64 px in `celeba_ood.yaml`, 128 px in `celeba_ood_cutpaste128.yaml`). Training `M` such models independently forms an **architecturally diverse deep ensemble** — each member has its own channel widths and conv kernel size (`ensemble.member_variants`), on top of its own weight init and SGD shuffle order — whose per-pixel reconstruction risk decomposes exactly as `Risk = Bias + Variance`. The **bias** term — the irreducible error of the consensus reconstruction — is the anomaly score; faces wearing **eyeglasses** are held out as OOD (the attribute set is configurable) and score higher.
+A from-scratch convolutional classifier is trained on normal (glasses-free) CelebA faces; lightweight decoders attached to each conv block learn to invert that block's frozen activations back to a full-resolution `(3, H, W)` reconstruction (64 px in `celeba_ood.yaml`, 128 px in `celeba_ood_128.yaml`). Training `M` such models independently forms an **architecturally diverse deep ensemble** — each member has its own channel widths and conv kernel size (`ensemble.member_variants`), on top of its own weight init and SGD shuffle order — whose per-pixel reconstruction risk decomposes exactly as `Risk = Bias + Variance`. The **bias** term — the irreducible error of the consensus reconstruction — is the anomaly score; faces wearing **eyeglasses** are held out as OOD (the attribute set is configurable) and score higher.
 
 ## What was done in this run
 
@@ -30,7 +30,7 @@ A from-scratch convolutional classifier is trained on normal (glasses-free) Cele
 
 ### Diagrams
 
-Three figures in [docs/diagrams/](docs/diagrams/) document the pipeline, each as a `.pdf` (vector source) and a `.png` (what renders below). All three describe the **128 px CutPaste configuration** ([`configs/celeba_ood_cutpaste128.yaml`](configs/celeba_ood_cutpaste128.yaml)) — the run behind `outputs/celeba_ood/LASTOF_RESULTS`.
+Three figures in [docs/diagrams/](docs/diagrams/) document the pipeline, each as a `.pdf` (vector source) and a `.png` (what renders below). All three describe the **128 px configuration** ([`configs/celeba_ood_128.yaml`](configs/celeba_ood_128.yaml)) — the run behind `outputs/celeba_ood/LASTOF_RESULTS`, which still carried the CutPaste pretext head. That head has since been removed from the CelebA path (see below), so the `head_cutpaste` box in the figures no longer corresponds to a CelebA member.
 
 | Figure | Question it answers | Source of truth |
 | --- | --- | --- |
@@ -41,7 +41,7 @@ Three figures in [docs/diagrams/](docs/diagrams/) document the pipeline, each as
 Every number printed in them (channel widths, spatial sizes, loss weights, parameter counts, seeds) is the one the config resolves to. The same quantities are computed analytically in [`lrad/arch_diagram.py`](lrad/arch_diagram.py) and checked against `sum(p.numel() …)` on the real torch modules in `tests/test_arch_diagram.py`, which is what makes them auditable. A plainer SVG rendering of the same three views is generated straight from the config — use it when the config has moved and these figures have not been redrawn yet:
 
 ```bash
-python scripts/generate_arch_svg.py --config configs/celeba_ood_cutpaste128.yaml \
+python scripts/generate_arch_svg.py --config configs/celeba_ood_128.yaml \
     --out-dir docs/diagrams
 ```
 
@@ -65,11 +65,11 @@ Three linear heads read the 256-d pooled vector:
 
 - **`head_gender` (256→2)** — softmax + CE on the `Male` attribute. Its job in this project is *not* accuracy (it sits near 0.63); it is to produce a logit vector whose **energy** and **entropy** move when the classifier hesitates. `ens_energy_gender` is a fusion input worth 0.713 AUROC on its own.
 - **`head_attrs` (256→6)** — sigmoid + BCE, weighted `attr_loss_weight: 2.0`. Four of the six targets (`Arched_Eyebrows, Bushy_Eyebrows, Narrow_Eyes, Bags_Under_Eyes`) are **periocular**. This is the central design choice of the whole task: training only ever sees glasses-free faces, so the trunk must learn to read the eye region to satisfy these heads — and eyeglasses at test time occlude exactly that evidence. The resulting ID/OOD activation gap is what everything downstream measures.
-- **`head_cutpaste` (256→2)** — the self-supervised pretext head, active only when `model.cutpaste_head: true`. During training, [`lrad/cutpaste.py`](lrad/cutpaste.py) pastes a patch cut from a *donor* face in the same batch onto some images, and this head learns intact vs. altered (CE, `loss_weight: 0.5`). It exists because the post-hoc scoring stack plateaued near 0.81: the models had never been shown what "something covers this face" looks like. At test time `P(altered | x)` transfers to real occlusions (0.674 AUROC standalone) without any real OOD data ever being seen.
+- **`head_cutpaste` (256→2)** — the self-supervised pretext head, active only when `model.cutpaste_head: true`. **No CelebA config sets that flag any more**: the head is retained solely for MVTec AD ([`configs/mvtec.yaml`](configs/mvtec.yaml)), a cold-start benchmark with no labels at all, whose trunk trains on this pretext alone. On the historical `LASTOF_RESULTS` run it was on, and `P(altered | x)` scored 0.674 AUROC standalone; the numbers in the table below are from that run.
 
-The supervised losses are computed on intact images only; the pretext CE covers the whole batch. Total loss is `CE(gender) + 2.0 · BCE(attrs) + 0.5 · CE(cutpaste)`, one `.backward()` per step.
+On CelebA the total loss is `CE(gender) + 2.0 · BCE(attrs)`, one `.backward()` per step.
 
-The baseline member (`channels [32, 64, 128, 256, 256]`, `k=3`, cutpaste head on) is **981,802 parameters** — 979,232 in the trunk, 2,570 across the three heads. The trunk is ~99.7 % of the model; the heads are almost free.
+The baseline member (`channels [32, 64, 128, 256, 256]`, `k=3`) is **981,288 parameters** — 979,232 in the trunk, 2,056 across the two heads (it was 981,802 with the CutPaste head on, as in `LASTOF_RESULTS`). The trunk is ~99.8 % of the model; the heads are almost free.
 
 > The figure's gender-head caption still reads *"→ MSP, entropy, energy"*. **MSP was since removed** from [`lrad/evaluate.py`](lrad/evaluate.py): on two classes `1 − maxₑ pₑ` is a monotone function of `H(p)`, so it is rank-equivalent to the gender entropy and contributes no information the AUROC can see. Only `entropy` and `energy` are computed today.
 
@@ -378,7 +378,7 @@ lrad/
 │   └── utils.py                   # device, seeding, logging
 ├── configs/
 │   ├── celeba_ood.yaml            # base config (64 px)
-│   ├── celeba_ood_cutpaste128.yaml # 128 px + CutPaste pretext head
+│   ├── celeba_ood_128.yaml        # 128 px, supervised heads only
 │   └── mvtec.yaml                 # MVTec AD, per-category, pretext-only trunk
 ├── docs/
 │   ├── Documentation.md           # full report on the LASTOF_RESULTS run (FR)

@@ -161,7 +161,7 @@ Une version SVG plus sobre des trois mêmes vues est générée **depuis la conf
 `scripts/generate_arch_svg.py` (donc jamais désynchronisée du code) :
 
 ```bash
-python scripts/generate_arch_svg.py --config configs/celeba_ood_cutpaste128.yaml \
+python scripts/generate_arch_svg.py --config configs/celeba_ood_128.yaml \
     --out-dir docs/diagrams
 ```
 
@@ -1349,7 +1349,7 @@ vers 0.88, le retrait est bien la cause et la taille de l'ensemble est neutre vo
 ```bash
 # 1. Entraînement de l'ensemble + décomposition (≈ 13 h sur A40)
 python scripts/run_ensemble.py \
-    --config configs/celeba_ood_cutpaste128.yaml \
+    --config configs/celeba_ood_128.yaml \
     --output-dir outputs/celeba_ood/cp128_<horodatage>
 
 # 2. Score localisé (z-score + patch-max), pas de réentraînement
@@ -1363,10 +1363,10 @@ python scripts/run_fused.py \
 
 # 4. (optionnel) Régénérer les trois schémas d'architecture
 python scripts/generate_arch_svg.py \
-    --config configs/celeba_ood_cutpaste128.yaml --out-dir docs/diagrams
+    --config configs/celeba_ood_128.yaml --out-dir docs/diagrams
 ```
 
-Sur le cluster, `scripts/oar_run_cutpaste128.sh` enchaîne les étapes 1 à 3 dans un seul job OAR.
+Sur le cluster, `scripts/oar_run_128.sh` enchaîne les étapes 1 à 3 dans un seul job OAR.
 
 Ne relancez que les étapes 2 et 3 pour ré-évaluer un ensemble déjà entraîné ; ajoutez `--eval-only`
 à l'étape 1 pour recalculer la décomposition et les figures depuis les poids sauvegardés.

@@ -1,28 +1,29 @@
 # ---------------------------------------------------------------------------
-# CelebA OOD — CutPaste + 128 px variant of configs/celeba_ood.yaml.
+# CelebA OOD — 128 px variant of configs/celeba_ood.yaml.
 #
-# Two changes over the base config, both aimed at pushing the OOD AUROC
-# past the ~0.81 post-hoc ceiling measured on the 64 px ensemble:
+# One change over the base config: image_size 128 — eyeglasses grow from
+# ~500 to ~2 000 pixels, so the localized signals (locfre, pixel z-score)
+# resolve them better. The trunk keeps the same 5-block layout
+# (128 -> 64 -> 32 -> 16 -> 8 -> 8) and the same 10 architecture variants.
 #
-#   1. image_size 128 — eyeglasses grow from ~500 to ~2 000 pixels, so
-#      the localized signals (locfre, pixel z-score) resolve them better.
-#      The trunk keeps the same 5-block layout (128 → 64 → 32 → 16 → 8 → 8).
-#   2. CutPaste pretext task — each model gets a third binary head trained
-#      to tell intact faces from faces with a pasted donor patch/scar
-#      (lrad.cutpaste). P(altered|x) becomes an extra fusion signal that
-#      fires on real occlusions the models never saw. Hyperparameters
-#      below are the grid-search defaults — override with the winners of
-#      scripts/run_gridsearch.py once it has run.
+# NO CutPaste. The pretext head was removed from the CelebA path: this run
+# is purely supervised (gender + 6 attributes), and the OOD score comes
+# from the reconstruction bias / fusion stack alone — no synthetic
+# occlusion is ever shown to the models. lrad.cutpaste and
+# model.cutpaste_head still exist for MVTec (configs/mvtec.yaml), which is
+# a cold-start benchmark with no labels and trains on the pretext alone.
+# The fusion recipe drops the cutpaste_prob signal on its own: it is gated
+# on the head being present (lrad/fusion.py).
 #
 # Cost control vs the base config: 128 px costs ~4x per image, so
 # batch_size drops to 128. The ensemble keeps the full 10 members (one
-# architecture variant each). Submit with scripts/oar_run_cutpaste128.sh.
+# architecture variant each). Submit with scripts/oar_run_128.sh.
 # ---------------------------------------------------------------------------
 
 experiment:
-  name: "celeba_ood_cp128"
+  name: "celeba_ood_128"
   seed: 42
-  output_dir: "outputs/celeba_ood/run_cp128"
+  output_dir: "outputs/celeba_ood/run_128"
 
 dataset:
   root: "./data"
@@ -42,7 +43,6 @@ model:
   kernel_size: 3
   n_attrs: 6
   n_gender: 2
-  cutpaste_head: true
 
 training:
   epochs: 20
@@ -50,18 +50,6 @@ training:
   lr: 0.0003
   attr_loss_weight: 2.0
   log_every: 1
-
-  # CutPaste pretext (lrad.cutpaste.cutpaste_batch). Supervised losses are
-  # computed on intact images only; the pretext CE covers the whole batch.
-  # Values = winner of the multi-metric grid search (job 6781780, rank 1 of
-  # 30 by fused AUROC 0.827): big box patches only, no scars, light pretext
-  # weight. See outputs/celeba_ood/gridsearch_6781780/.
-  cutpaste:
-    prob: 0.5
-    area_range: [0.05, 0.15]
-    aspect_range: [0.3, 3.3]
-    scar_prob: 0.0
-    loss_weight: 0.5
 
   decoders:
     epochs: 25
