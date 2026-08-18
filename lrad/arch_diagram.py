@@ -137,8 +137,6 @@ def classifier_n_params(mcfg: dict) -> int:
         prev = c
     total += prev * n_gender + n_gender
     total += prev * n_attrs + n_attrs
-    if mcfg.get("cutpaste_head"):
-        total += prev * 2 + 2
     return total
 
 
@@ -419,9 +417,6 @@ def render_classifier_svg(
     feat = channels[-1]
     spatial = _spatial_sizes(img, len(channels))
     attr_w = float(tcfg.get("attr_loss_weight", 1.0))
-    cp_cfg = tcfg.get("cutpaste") or {}
-    has_cp = bool(mcfg.get("cutpaste_head"))
-    cp_w = float(cp_cfg.get("loss_weight", 1.0)) if cp_cfg else 1.0
     n_members = int(n_members if n_members is not None
                     else cfg.get("ensemble", {}).get("size", 1))
 
@@ -467,16 +462,6 @@ def render_classifier_svg(
          "accent": f"{n_attrs} attributes, 4 periocular",
          "accent_fill": _PURPLE_FG},
     ]
-    if has_cp:
-        heads.append(
-            {"badge": ("SSL", _PEACH_BG, _PEACH_FG),
-             "title": "head_cutpaste",
-             "lines": [f"Linear {feat}→2",
-                       "softmax → P(corrupted | x)",
-                       f" ·  CE ×{_num(cp_w)}"],
-             "accent": "direct OOD signal at test time",
-             "accent_fill": _PEACH_FG})
-
     # --- layout -----------------------------------------------------------
     cw, ch_, gap = 800.0, 100.0, 34.0
     cx = 70.0
@@ -545,8 +530,6 @@ def render_classifier_svg(
     legend = [("tensor", _BLUE_BG, _BLUE_FG), ("conv block", _TEAL_BG,
                                                _TEAL_FG),
               ("task head", _PURPLE_BG, _PURPLE_FG)]
-    if has_cp:
-        legend.append(("self-supervised", _PEACH_BG, _PEACH_FG))
     lx = cx
     for name, bg, fg in legend:
         e.append(f'<rect x="{lx:.1f}" y="{ly - 10:.1f}" width="13" '
@@ -559,7 +542,7 @@ def render_classifier_svg(
                                 f"{classifier_n_params(mcfg):,} params",
                    size=12, fill=_FAINT, anchor="end", mono=True))
     e.append(_text(cx + cw, ly + 20,
-                   "lrad/model.py · lrad/cutpaste.py · lrad/train.py",
+                   "lrad/model.py · lrad/train.py",
                    size=12, fill=_FAINT, anchor="end", mono=True))
     return _write(e, out_path)
 
@@ -887,8 +870,6 @@ def render_ensemble_svg(
         n_attrs = int(mcfg.get("n_attrs", 6))
         heads = [("gender", int(mcfg.get("n_gender", 2))),
                  ("attrs", n_attrs)]
-        if mcfg.get("cutpaste_head"):
-            heads.append(("cutpaste", 2))
         hh, hgap = 21.0, 6.0
         hy0 = (base - 20) - (len(heads) * hh + (len(heads) - 1) * hgap) / 2
         for j, (name, n_out) in enumerate(heads):

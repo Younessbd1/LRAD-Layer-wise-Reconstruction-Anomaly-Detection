@@ -17,13 +17,9 @@ Forward returns a dict with keys ``gender_logits`` (B, 2) and
 ``attr_logits`` (B, 6). The loss combines CrossEntropyLoss on gender_logits
 with BCEWithLogitsLoss on attr_logits.
 
-**Every head is optional.** MVTec AD (:mod:`lrad.mvtec`) is a cold-start
-benchmark with no labels whatsoever, so its trunk is trained on the
-CutPaste pretext task alone — ``gender_head: false``, ``attrs_head: false``,
-``cutpaste_head: true``, ``cutpaste_classes: 3``. A disabled head is
-``None`` and its key is simply missing from the forward dict; the defaults
-(both supervised heads on, binary cutpaste) are the CelebA configuration,
-so existing configs and checkpoints are unaffected.
+Either head can be switched off (``gender_head`` / ``attrs_head``); a
+disabled head is ``None`` and its key is simply missing from the forward
+dict. Both default to on, which is the CelebA configuration.
 """
 
 from __future__ import annotations
@@ -70,10 +66,8 @@ class FacialCNN(nn.Module):
         n_gender: int = 2,
         input_size: int = 64,
         kernel_size: int = 3,
-        cutpaste_head: bool = False,
         gender_head: bool = True,
         attrs_head: bool = True,
-        cutpaste_classes: int = 2,
     ):
         super().__init__()
         if len(channels) < 2:
@@ -82,10 +76,8 @@ class FacialCNN(nn.Module):
         self.block_out_channels = list(channels)
         self.input_size = input_size
         self.kernel_size = int(kernel_size)
-        self.cutpaste_head = bool(cutpaste_head)
         self.gender_head = bool(gender_head)
         self.attrs_head = bool(attrs_head)
-        self.cutpaste_classes = int(cutpaste_classes)
 
         # A head that is switched off reports zero outputs, so callers that
         # size buffers off ``n_attrs`` (e.g. the per-attribute accuracy
@@ -94,14 +86,10 @@ class FacialCNN(nn.Module):
         self.n_attrs = int(n_attrs) if self.attrs_head else 0
         self.n_gender = int(n_gender) if self.gender_head else 0
 
-        if not (self.gender_head or self.attrs_head or self.cutpaste_head):
+        if not (self.gender_head or self.attrs_head):
             raise ValueError(
                 "the trunk needs at least one head to train against — "
-                "enable one of gender_head / attrs_head / cutpaste_head"
-            )
-        if self.cutpaste_head and self.cutpaste_classes < 2:
-            raise ValueError(
-                f"cutpaste_classes must be >= 2, got {self.cutpaste_classes}"
+                "enable gender_head and/or attrs_head"
             )
 
         blocks: list[nn.Module] = []
@@ -118,22 +106,13 @@ class FacialCNN(nn.Module):
             prev = ch
         self.blocks = nn.ModuleList(blocks)
         self.pool = nn.AdaptiveAvgPool2d((1, 1))
-        # The supervised heads are optional: MVTec ships no labels at all,
-        # so its trunk trains on the CutPaste pretext alone. Both default to
-        # on, which is the CelebA configuration and keeps every existing
-        # checkpoint loading unchanged.
+        # Both heads default to on, which is the CelebA configuration and
+        # keeps every existing checkpoint loading unchanged.
         self.head_gender = (
             nn.Linear(prev, self.n_gender) if self.gender_head else None
         )
         self.head_attrs = (
             nn.Linear(prev, self.n_attrs) if self.attrs_head else None
-        )
-        # Optional CutPaste pretext head: intact (0) vs altered (1), or the
-        # 3-way intact / box / scar split when cutpaste_classes == 3. Off by
-        # default so checkpoints from runs without it keep loading cleanly.
-        self.head_cutpaste = (
-            nn.Linear(prev, self.cutpaste_classes)
-            if self.cutpaste_head else None
         )
 
         self._init_weights()
@@ -177,8 +156,6 @@ class FacialCNN(nn.Module):
             out["gender_logits"] = self.head_gender(h)
         if self.head_attrs is not None:
             out["attr_logits"] = self.head_attrs(h)
-        if self.head_cutpaste is not None:
-            out["cutpaste_logits"] = self.head_cutpaste(h)
         return out
 
     def forward(self, x: torch.Tensor) -> dict[str, torch.Tensor]:
@@ -200,17 +177,15 @@ def build_model(cfg: dict) -> FacialCNN:
         channels=mcfg.get("channels", (32, 64, 128, 256, 256)),
         n_attrs=mcfg.get("n_attrs", 6),
         n_gender=mcfg.get("n_gender", 2),
-        # MVTec centre-crops after resizing, so the tensor the trunk sees is
-        # crop_size, not image_size; fall back through both.
+        # A config may centre-crop after resizing, so the tensor the trunk
+        # sees is crop_size, not image_size; fall back through both.
         input_size=mcfg.get(
             "input_size",
             dcfg.get("crop_size") or dcfg.get("image_size", 64),
         ),
         kernel_size=mcfg.get("kernel_size", 3),
-        cutpaste_head=mcfg.get("cutpaste_head", False),
         gender_head=mcfg.get("gender_head", True),
         attrs_head=mcfg.get("attrs_head", True),
-        cutpaste_classes=mcfg.get("cutpaste_classes", 2),
     )
 
 

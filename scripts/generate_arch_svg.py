@@ -5,7 +5,7 @@ Three figures, all derived from the config so they cannot drift from what
 the code builds:
 
   * ``pipeline_classifier.svg`` — one member's forward pass, input tensor
-    to task/SSL heads, with the per-block shapes and the loss weights.
+    to task heads, with the per-block shapes and the loss weights.
   * ``pipeline_decoder.svg``    — the per-block ``BlockDecoder`` stack,
     one lane per conv block, with the analytic parameter cost.
   * ``ensemble_architectures_<experiment>.svg`` — one lane per ensemble

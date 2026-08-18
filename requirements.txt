@@ -8,8 +8,7 @@ torchvision==0.19.1+cu118
 numpy>=1.24,<2.0
 matplotlib>=3.7
 scikit-learn>=1.2
-# scipy: connected components for the PRO metric and the Gaussian smoothing
-# of anomaly maps (lrad.pixel_metrics).
+# scipy: Gaussian smoothing of the bias overlays (lrad.plots.smooth_cam).
 scipy>=1.10
 pyyaml>=6.0
 Pillow>=9.0

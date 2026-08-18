@@ -62,8 +62,7 @@ def test_resolve_member_configs_rejects_block_count_mismatch():
 def test_classifier_n_params_matches_torch():
     for mcfg in (
         {"channels": [8, 16, 32, 32, 32], "kernel_size": 3},
-        {"channels": [4, 8, 16, 32, 64], "kernel_size": 5,
-         "cutpaste_head": True},
+        {"channels": [4, 8, 16, 32, 64], "kernel_size": 5},
     ):
         model = build_model({"model": mcfg, "dataset": {"image_size": 32}})
         assert classifier_n_params(mcfg) == sum(

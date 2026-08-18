@@ -5,8 +5,7 @@ setup(
     version="0.3.0",
     description=(
         "Layer-wise reconstruction anomaly detection: deep-ensemble "
-        "bias/variance decomposition for OOD detection on CelebA and "
-        "cold-start industrial anomaly detection on MVTec AD."
+        "bias/variance decomposition for OOD detection on CelebA."
     ),
     author="BAHADDOU Youness",
     packages=find_packages(exclude=("tests", "scripts", "configs")),

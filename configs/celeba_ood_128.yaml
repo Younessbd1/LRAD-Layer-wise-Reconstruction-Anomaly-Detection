@@ -6,14 +6,10 @@
 # resolve them better. The trunk keeps the same 5-block layout
 # (128 -> 64 -> 32 -> 16 -> 8 -> 8) and the same 10 architecture variants.
 #
-# NO CutPaste. The pretext head was removed from the CelebA path: this run
-# is purely supervised (gender + 6 attributes), and the OOD score comes
-# from the reconstruction bias / fusion stack alone — no synthetic
-# occlusion is ever shown to the models. lrad.cutpaste and
-# model.cutpaste_head still exist for MVTec (configs/mvtec.yaml), which is
-# a cold-start benchmark with no labels and trains on the pretext alone.
-# The fusion recipe drops the cutpaste_prob signal on its own: it is gated
-# on the head being present (lrad/fusion.py).
+# Training is purely supervised — gender + 6 attributes, nothing else. The
+# OOD score comes from the reconstruction bias / fusion stack alone
+# (locfre blocks + epistemic uncertainty + gender energy); no synthetic
+# corruption is ever shown to the models.
 #
 # Cost control vs the base config: 128 px costs ~4x per image, so
 # batch_size drops to 128. The ensemble keeps the full 10 members (one
