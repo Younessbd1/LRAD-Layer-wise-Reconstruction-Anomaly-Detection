@@ -1,0 +1,73 @@
+# ---------------------------------------------------------------------------
+# ABLATION — arm "arch": architecturally diverse ensemble, NO CutPaste.
+#
+# Case study 1: what does architecture diversity buy over the seed-only
+# baseline? Identical to ablation_baseline.yaml except member_variants —
+# the 10 members get the 10 reference architectures (channel widths +
+# kernel size) instead of all sharing the baseline one.
+#
+# See ablation_baseline.yaml for the full arm table and the invariants.
+# Submit with scripts/oar_run_ablation.sh (one OAR job per arm).
+# ---------------------------------------------------------------------------
+
+experiment:
+  name: "celeba_ood_abl_arch"
+  seed: 42
+  output_dir: "outputs/celeba_ood/ablation/arch"
+
+dataset:
+  root: "./data"
+  download: false
+  image_size: 128
+  batch_size: 128
+  num_workers: 4
+  train_ratio: 0.90
+  val_ratio: 0.00
+  pin_memory: true
+  seed: 42
+  ood_attrs: [Eyeglasses]
+
+model:
+  in_channels: 3
+  channels: [32, 64, 128, 256, 256]
+  kernel_size: 3
+  n_attrs: 6
+  n_gender: 2
+
+training:
+  epochs: 20
+  save_every_epoch: false   # per-epoch checkpoints double at 128 px; off
+  lr: 0.0003
+  attr_loss_weight: 2.0
+  log_every: 1
+
+  decoders:
+    epochs: 25
+    lr: 0.001
+    log_every: 1
+
+evaluation:
+  n_viz_in_samples: 10
+  n_viz_ood_samples: 15
+  viz_seed: 1234
+  n_instances_in: 20
+  n_instances_ood: 20
+  overlay_sigma: 1.5
+  overlay_power: 0.8
+  n_top_ood: 10
+
+ensemble:
+  size: 10
+  base_seed: 42
+  agg: p95
+  member_variants:
+    - {channels: [32, 64, 128, 256, 256], kernel_size: 3}   # baseline
+    - {channels: [24, 48, 96, 192, 384], kernel_size: 3}    # slim early, wide late
+    - {channels: [48, 96, 192, 256, 256], kernel_size: 3}   # wide early
+    - {channels: [16, 48, 96, 192, 320], kernel_size: 5}    # slim + large RF
+    - {channels: [40, 80, 160, 320, 320], kernel_size: 3}   # 1.25x width
+    - {channels: [32, 64, 128, 256, 256], kernel_size: 5}   # baseline, large RF
+    - {channels: [64, 96, 160, 224, 288], kernel_size: 3}   # flat progression
+    - {channels: [24, 64, 128, 192, 256], kernel_size: 5}   # narrow late, large RF
+    - {channels: [48, 64, 96, 192, 384], kernel_size: 3}    # heavy head + tail
+    - {channels: [32, 48, 112, 224, 336], kernel_size: 5}   # steep growth, large RF
