@@ -24,13 +24,23 @@
 # re-verify that run under the current code:
 #   ARMS=arch_cutpaste ./scripts/oar_run_ablation.sh
 #
-# CLUSTER CHOICE — gruss (Nancy production, 4 nodes x 2 A40 45 GiB), same
-# reasoning as oar_run_128.sh: a 128 px member is ~3-4 h on an A40 (~10-20 h
-# on a grue T4), so 10 members fit the 48 h walltime only on gruss. Three
-# parallel jobs take 3 of the 8 A40s; OAR spreads them over free GPUs
-# (arms are fully independent, so two arms sharing a node's second GPU is
-# harmless). We are p2 on gruss — if the queue is booked solid the jobs
-# wait; do NOT retarget grue without shrinking the ensemble.
+# CLUSTER CHOICE — any of gres / grat / gruss, whichever frees a GPU
+# first. All three carry A40-class-or-faster cards, and a 128 px member is
+# ~3-4 h on an A40 (~10-20 h on a grue T4), so 10 members fit the 48 h
+# walltime on any of them:
+#
+#   gres   7 nodes x 2 L40S 48 GiB  (fastest, largest modern pool)
+#   grat   1 node  x 8 A100 40 GiB
+#   gruss  4 nodes x 2 A40  45 GiB  (only its >=48 h-walltime nodes match)
+#
+# Pinning gruss alone (the first submission, jobs 6866466-68) left the
+# three jobs Waiting: its 8 A40s were fully busy and the 48 h request
+# excludes its 24 h-max node. The IN (...) disjunction below triples the
+# eligible pool; gres and grat allow 168 h on every node, so the 48 h
+# request never shrinks them. Arms are fully independent — two arms
+# landing on one node's two GPUs is harmless. Do NOT add grue (T4) or
+# graffiti (2080 Ti) without shrinking the ensemble: 10 members overrun
+# 48 h there and OAR kills the job mid-epoch with nothing checkpointed.
 #
 # Each job trains its arm's ensemble (run_ensemble.py), then chains the
 # same post-evaluations as oar_run_128.sh: fused scoring with supervised
@@ -49,9 +59,9 @@
 #   python scripts/compare_ablation.py
 # ---------------------------------------------------------------------------
 
-#OAR -n celeba-ood-ablation-gruss
+#OAR -n celeba-ood-ablation
 #OAR -q production
-#OAR -p cluster='gruss'
+#OAR -p cluster IN ('gres', 'grat', 'gruss')
 #OAR -l gpu=1,walltime=48:00:00
 #OAR -O outputs/celeba_ood/_oar/oar.%jobid%.stdout
 #OAR -E outputs/celeba_ood/_oar/oar.%jobid%.stderr
@@ -108,7 +118,7 @@ export PYTHONUNBUFFERED=1
 export OMP_NUM_THREADS=${OMP_NUM_THREADS:-2}
 export MKL_NUM_THREADS=${MKL_NUM_THREADS:-2}
 
-echo "=== OAR job ${OAR_JOB_ID} (arm: $ARM) on $(hostname) [gruss] at $(date) ==="
+echo "=== OAR job ${OAR_JOB_ID} (arm: $ARM) on $(hostname) at $(date) ==="
 nvidia-smi || echo "nvidia-smi not available"
 "$PYTHON" -c "import torch; print('torch', torch.__version__, 'cuda', torch.cuda.is_available())"
 
