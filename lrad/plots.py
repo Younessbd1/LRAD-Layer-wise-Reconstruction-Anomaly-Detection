@@ -178,8 +178,8 @@ def plot_batch_accuracy(history: dict, save_path: str | Path) -> None:
 def plot_batch_loss(history: dict, save_path: str | Path) -> None:
     """Per-batch classifier loss across ALL training batches.
 
-    Raw per-batch combined loss (CE gender + weighted BCE attrs) drawn
-    faint, with a causal
+    Raw per-batch combined loss (CE gender + weighted BCE attrs, + the
+    CutPaste CE when the pretext task is on) drawn faint, with a causal
     rolling mean on top, epoch boundaries marked and a log y-scale so the
     within- and between-epoch decrease stays visible over the whole run.
     """
@@ -1808,5 +1808,274 @@ def plot_fused_auroc_panel(
 
     if title:
         fig.suptitle(title, fontsize=_TITLE_FS)
+    fig.savefig(save_path, dpi=_SAVE_DPI, bbox_inches="tight")
+    plt.close(fig)
+
+
+# ---------------------------------------------------------------------------
+# Ablation study — arm-comparison figures (scripts/compare_ablation.py)
+# ---------------------------------------------------------------------------
+#
+# Four arms, two ablated factors (architecture diversity x CutPaste), one
+# common control. Every figure keys the arms to FIXED colours — an arm never
+# changes colour between figures, and the baseline is deliberately the
+# neutral gray so the treated arms carry the hue. The palette is the
+# project's Okabe-Ito set (colorblind-safe); identity is never colour
+# alone: every figure carries a legend and/or per-arm axis labels.
+
+ABLATION_ARM_COLORS = {
+    "baseline": "#888888",       # control: same arch, no CutPaste (gray)
+    "arch": _C_BIAS,             # architecture diversity     (blue)
+    "cutpaste": _C_VARIANCE,     # CutPaste pretext           (orange)
+    "arch_cutpaste": _C_ACCENT,  # both factors               (green)
+}
+
+
+def _arm_color(arm: dict) -> str:
+    return arm.get("color") or ABLATION_ARM_COLORS.get(arm["arm"], "#444444")
+
+
+def plot_ablation_auroc_bars(
+    arms: Sequence[dict],
+    metrics: Sequence[tuple[str, str]],
+    save_path: str | Path,
+    *,
+    title: str | None = None,
+) -> None:
+    """Grouped AUROC bars — one group per metric, one bar per arm.
+
+    ``arms`` is a list of ``{arm, label, metrics: {name: auroc}}`` dicts;
+    ``metrics`` lists ``(key, display_label)`` pairs in plot order. A metric
+    an arm does not have (e.g. ``cutpaste_prob`` on a no-pretext arm) simply
+    leaves a gap in that group.
+
+    The y-axis starts just below the smallest plotted value (never above
+    the 0.5 chance line) instead of at 0 — every method here scores in the
+    0.5-0.9 band and a zero-based axis would compress exactly the
+    differences the ablation exists to show. The truncation is explicit in
+    the axis label, and the chance line is drawn so the anchor stays
+    visible.
+    """
+    keys = [k for k, _ in metrics]
+    vals = np.array([
+        [
+            (arm["metrics"].get(k) if arm["metrics"].get(k) is not None
+             else np.nan)
+            for k in keys
+        ]
+        for arm in arms
+    ], dtype=float)
+    if not np.isfinite(vals).any():
+        raise ValueError("no finite metric values to plot")
+
+    n_arms = len(arms)
+    x = np.arange(len(keys))
+    width = 0.8 / n_arms
+    lo = min(0.45, np.nanmin(vals) - 0.03)
+    lo = max(0.0, lo)
+
+    fig, ax = plt.subplots(
+        figsize=(1.6 + 1.05 * len(keys), 4.4), layout="constrained",
+    )
+    for i, arm in enumerate(arms):
+        ax.bar(
+            x + (i - (n_arms - 1) / 2) * width, vals[i] - lo, width * 0.92,
+            bottom=lo, color=_arm_color(arm), label=arm["label"],
+        )
+    ax.axhline(0.5, color="gray", linestyle=":", linewidth=0.9)
+    ax.text(
+        len(keys) - 0.42, 0.5, "chance", fontsize=8, color="gray",
+        ha="right", va="bottom",
+    )
+    ax.set_xticks(x)
+    ax.set_xticklabels([lbl for _, lbl in metrics], fontsize=_TICK_FS,
+                       rotation=20, ha="right")
+    ylabel = "OOD AUROC"
+    if lo > 0:
+        ylabel += f"  (axis starts at {lo:.2f})"
+    ax.set_ylabel(ylabel, fontsize=_LABEL_FS)
+    ax.set_ylim(lo, min(1.0, np.nanmax(vals) + 0.06))
+    ax.grid(alpha=0.3, axis="y")
+    ax.tick_params(labelsize=_TICK_FS)
+    ax.legend(loc="upper right", fontsize=9, ncols=min(n_arms, 2))
+    fig.suptitle(title or "Ablation — OOD AUROC by arm", fontsize=_TITLE_FS)
+    fig.savefig(save_path, dpi=_SAVE_DPI, bbox_inches="tight")
+    plt.close(fig)
+
+
+def plot_ablation_deltas(
+    cases: Sequence[dict],
+    save_path: str | Path,
+    *,
+    title: str | None = None,
+) -> None:
+    """The three case studies: signed AUROC deltas against the baseline.
+
+    ``cases`` is a list of ``{label, deltas: {metric_label: delta}}`` — one
+    horizontal-bar panel per case study, all panels on a SHARED x-scale so
+    the eye can compare effect sizes across cases. The encoding is
+    diverging (this is polarity, not identity): improvements point right in
+    the project's accent green, regressions left in the OOD vermillion,
+    with a zero line. Each bar carries its value — the delta IS the
+    result, so here every label is load-bearing rather than clutter.
+    """
+    cases = [c for c in cases if c.get("deltas")]
+    if not cases:
+        raise ValueError("no case studies with deltas to plot")
+
+    all_vals = [v for c in cases for v in c["deltas"].values()]
+    span = max(0.02, max(abs(v) for v in all_vals) * 1.25)
+    n_rows = max(len(c["deltas"]) for c in cases)
+
+    fig, axes = plt.subplots(
+        1, len(cases),
+        figsize=(3.6 * len(cases), 0.42 * n_rows + 1.8),
+        layout="constrained", sharex=True,
+    )
+    axes = np.atleast_1d(axes)
+    for ax, case in zip(axes, cases):
+        names = list(case["deltas"].keys())
+        vals = np.array([case["deltas"][n] for n in names], dtype=float)
+        y = np.arange(len(names))[::-1]
+        colors = [_C_ACCENT if v >= 0 else _C_OOD for v in vals]
+        ax.barh(y, vals, height=0.62, color=colors)
+        for yi, v in zip(y, vals):
+            ax.annotate(
+                f"{v:+.3f}", (v, yi), fontsize=8,
+                xytext=(4 if v >= 0 else -4, 0),
+                textcoords="offset points",
+                ha="left" if v >= 0 else "right", va="center",
+            )
+        ax.axvline(0.0, color="#444444", linewidth=0.8)
+        ax.set_yticks(y)
+        ax.set_yticklabels(names, fontsize=_TICK_FS)
+        ax.set_xlim(-span, span)
+        ax.set_xlabel("Δ AUROC vs baseline", fontsize=_LABEL_FS)
+        ax.set_title(case["label"], fontsize=_LABEL_FS)
+        ax.grid(alpha=0.3, axis="x")
+        ax.tick_params(labelsize=_TICK_FS)
+    fig.suptitle(
+        title or "Ablation case studies — what each ingredient buys",
+        fontsize=_TITLE_FS,
+    )
+    fig.savefig(save_path, dpi=_SAVE_DPI, bbox_inches="tight")
+    plt.close(fig)
+
+
+def plot_ablation_per_block(
+    arms: Sequence[dict],
+    save_path: str | Path,
+    *,
+    terms: Sequence[str] = ("risk", "bias", "variance"),
+    title: str | None = None,
+) -> None:
+    """Per-block decomposition AUROC, one line per arm, one panel per term.
+
+    ``arms`` is a list of ``{arm, label, per_block: {term: [auroc, ...]}}``
+    dicts. Shows WHERE in the trunk each ingredient helps: architecture
+    diversity should move the deep-block variance signal, the pretext the
+    mid-block bias signal.
+    """
+    fig, axes = plt.subplots(
+        1, len(terms), figsize=(3.6 * len(terms), 3.6),
+        layout="constrained", sharey=True,
+    )
+    axes = np.atleast_1d(axes)
+    drew = False
+    for ax, term in zip(axes, terms):
+        for arm in arms:
+            series = arm.get("per_block", {}).get(term)
+            if not series:
+                continue
+            blocks = np.arange(len(series))
+            ax.plot(
+                blocks, series, color=_arm_color(arm), linewidth=1.8,
+                marker="o", markersize=4.5, label=arm["label"],
+            )
+            drew = True
+        ax.axhline(0.5, color="gray", linestyle=":", linewidth=0.9)
+        n_blocks = max(
+            (len(a.get("per_block", {}).get(term) or ()) for a in arms),
+            default=0,
+        )
+        ax.set_xticks(np.arange(n_blocks))
+        ax.set_xticklabels(
+            [f"L{k}" for k in range(n_blocks)], fontsize=_TICK_FS,
+        )
+        ax.set_xlabel("conv block", fontsize=_LABEL_FS)
+        ax.set_title(term.capitalize(), fontsize=_LABEL_FS)
+        ax.grid(alpha=0.3)
+        ax.tick_params(labelsize=_TICK_FS)
+    if not drew:
+        plt.close(fig)
+        raise ValueError("no per-block series to plot")
+    axes[0].set_ylabel("OOD AUROC", fontsize=_LABEL_FS)
+    axes[0].legend(loc="upper left", fontsize=8)
+    fig.suptitle(
+        title or "Ablation — per-block decomposition AUROC",
+        fontsize=_TITLE_FS,
+    )
+    fig.savefig(save_path, dpi=_SAVE_DPI, bbox_inches="tight")
+    plt.close(fig)
+
+
+def plot_ablation_members(
+    arms: Sequence[dict],
+    save_path: str | Path,
+    *,
+    title: str | None = None,
+) -> None:
+    """Per-member spread by arm: recon AUROC (left), gender accuracy (right).
+
+    ``arms`` is a list of ``{arm, label, members: {auroc_recon: [...],
+    gender_acc: [...]}}`` dicts. Each member is one dot (deterministic
+    horizontal jitter by member index — same member, same offset in both
+    panels), the arm mean a horizontal dash. The spread is the point: a
+    diverse ensemble should show a WIDER member distribution while the
+    ensemble score improves — evidence the gain comes from decorrelation,
+    not from stronger individual members.
+    """
+    panels = (("auroc_recon", "per-member recon AUROC"),
+              ("gender_acc", "per-member gender accuracy"))
+    fig, axes = plt.subplots(
+        1, 2, figsize=(2.1 * max(len(arms), 2) + 3.2, 3.8),
+        layout="constrained",
+    )
+    drew = False
+    for ax, (key, label) in zip(axes, panels):
+        for i, arm in enumerate(arms):
+            vals = [v for v in arm.get("members", {}).get(key, [])
+                    if v is not None]
+            if not vals:
+                continue
+            vals = np.asarray(vals, dtype=float)
+            jitter = (np.arange(len(vals)) - (len(vals) - 1) / 2)
+            jitter = jitter / max(len(vals) - 1, 1) * 0.42
+            ax.scatter(
+                i + jitter, vals, s=26, color=_arm_color(arm),
+                alpha=0.75, linewidths=0, zorder=3,
+            )
+            ax.hlines(
+                float(vals.mean()), i - 0.30, i + 0.30,
+                color=_arm_color(arm), linewidth=2.2, zorder=4,
+            )
+            drew = True
+        if key == "auroc_recon":
+            ax.axhline(0.5, color="gray", linestyle=":", linewidth=0.9)
+        ax.set_xticks(np.arange(len(arms)))
+        ax.set_xticklabels(
+            [a["label"] for a in arms], fontsize=_TICK_FS,
+            rotation=15, ha="right",
+        )
+        ax.set_ylabel(label, fontsize=_LABEL_FS)
+        ax.grid(alpha=0.3, axis="y")
+        ax.tick_params(labelsize=_TICK_FS)
+    if not drew:
+        plt.close(fig)
+        raise ValueError("no member series to plot")
+    fig.suptitle(
+        title or "Ablation — member spread by arm (dash = arm mean)",
+        fontsize=_TITLE_FS,
+    )
     fig.savefig(save_path, dpi=_SAVE_DPI, bbox_inches="tight")
     plt.close(fig)
