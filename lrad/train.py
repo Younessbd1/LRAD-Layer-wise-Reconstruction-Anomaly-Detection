@@ -23,6 +23,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 from torch.utils.data import DataLoader
 
+from .cutpaste import cutpaste_batch
 from .model import FacialCNN
 
 logger = logging.getLogger("celeba_ood")
@@ -46,7 +47,9 @@ def evaluate_one_epoch(
         attrs = attrs.to(device, non_blocking=True)
 
         out = model(img)
-        # Heads the model was built without contribute nothing.
+        # Heads the model was built without contribute nothing. The
+        # CutPaste pretext CE is tracked per batch in ``train_model``
+        # instead, since it needs the CutPaste labels.
         loss = img.new_zeros(())
         bs = img.size(0)
         if "gender_logits" in out:
@@ -102,8 +105,19 @@ def train_model(
     early_stop_min_delta: float = 1e-4,
     early_stop_min_epochs: int = 5,
     checkpoint_dir: Optional[Path] = None,
+    cutpaste: Optional[dict] = None,
 ) -> dict:
     """Train the multi-head classifier with combined CE + BCE loss.
+
+    ``cutpaste`` (config section ``training.cutpaste``) enables the
+    CutPaste pretext task: each batch is augmented with
+    :func:`lrad.cutpaste.cutpaste_batch` (keys ``prob`` / ``area_range`` /
+    ``aspect_range`` / ``scar_prob`` are forwarded), the model's
+    ``cutpaste_logits`` head is trained with CE against the intact/altered
+    labels (weighted by ``loss_weight``, default 1.0), and the supervised
+    gender/attr losses are computed on the INTACT images only — a pasted
+    patch can occlude the very evidence those labels describe. Requires a
+    model built with ``model.cutpaste_head: true``.
 
     Returns a history dict with per-epoch train (and, when a validation set
     is given, val) loss, gender accuracy, and per-attribute accuracy, plus
@@ -125,6 +139,30 @@ def train_model(
     model = model.to(device)
     optimizer = torch.optim.Adam(model.parameters(), lr=lr)
 
+    if cutpaste is not None and getattr(model, "head_cutpaste", None) is None:
+        raise ValueError(
+            "training.cutpaste is set but the model has no cutpaste head — "
+            "set model.cutpaste_head: true"
+        )
+    cp_weight = float(cutpaste.get("loss_weight", 1.0)) if cutpaste else 0.0
+    cp_kwargs = (
+        {
+            "prob": float(cutpaste.get("prob", 0.5)),
+            "area_range": tuple(cutpaste.get("area_range", (0.02, 0.12))),
+            "aspect_range": tuple(cutpaste.get("aspect_range", (0.3, 3.3))),
+            "scar_prob": float(cutpaste.get("scar_prob", 0.5)),
+            # Derived from the head the model actually carries rather than
+            # read from the config: a 3-way head fed binary labels would
+            # train class 2 on nothing and never error, so the two must not
+            # be able to disagree.
+            "three_way": getattr(model, "cutpaste_classes", 2) == 3,
+        }
+        if cutpaste is not None else None
+    )
+    if cp_kwargs is not None:
+        logger.info("CutPaste pretext on: %s  loss_weight=%g",
+                    cp_kwargs, cp_weight)
+
     has_val = _has_samples(val_loader)
     if not has_val:
         logger.info(
@@ -142,6 +180,7 @@ def train_model(
         "batch_loss": [],
         "batch_gender_acc": [],
         "batch_attr_acc_mean": [],
+        "batch_cutpaste_acc": [],
         "epoch_ends": [],
     }
 
@@ -162,28 +201,59 @@ def train_model(
             gender = gender.to(device, non_blocking=True)
             attrs = attrs.to(device, non_blocking=True)
 
+            if cp_kwargs is not None:
+                # Augment on CPU-side tensor already moved: cutpaste_batch
+                # is pure tensor indexing, cheap on either device.
+                img, cp_labels = cutpaste_batch(img, **cp_kwargs)
+                intact = cp_labels == 0
+            else:
+                cp_labels = None
+                intact = torch.ones(
+                    img.size(0), dtype=torch.bool, device=img.device,
+                )
+
             out = model(img)
-            # Either head can be switched off; the loss sums whichever the
-            # model actually carries.
+            # Supervised losses on intact faces only — a pasted patch can
+            # occlude the very evidence the gender/attr labels describe.
             loss = img.new_zeros(())
             if "gender_logits" in out:
-                loss = loss + F.cross_entropy(out["gender_logits"], gender)
+                loss = loss + (
+                    F.cross_entropy(out["gender_logits"][intact],
+                                    gender[intact])
+                    if intact.any()
+                    # vanishingly rare with prob <= 0.5, but keep the graph
+                    # connected so .backward() never sees a detached loss
+                    else out["gender_logits"].sum() * 0.0
+                )
             if "attr_logits" in out:
                 loss = loss + attr_loss_weight * (
                     F.binary_cross_entropy_with_logits(
-                        out["attr_logits"], attrs)
+                        out["attr_logits"][intact], attrs[intact])
+                    if intact.any()
+                    else out["attr_logits"].sum() * 0.0
+                )
+            if cp_labels is not None:
+                loss_cp = F.cross_entropy(
+                    out["cutpaste_logits"], cp_labels,
+                )
+                loss = loss + cp_weight * loss_cp
+                cp_match = out["cutpaste_logits"].argmax(dim=1) == cp_labels
+                history["batch_cutpaste_acc"].append(
+                    cp_match.float().mean().item()
                 )
 
             optimizer.zero_grad(set_to_none=True)
             loss.backward()
             optimizer.step()
 
-            bs = img.size(0)
+            # Epoch metrics stay intact-only so they mean the same thing
+            # with and without the pretext task.
+            bs = int(intact.sum().item())
             n += bs
             loss_sum += loss.item() * bs
             if "gender_logits" in out:
-                g_out = out["gender_logits"]
-                gender_match = g_out.argmax(dim=1) == gender
+                g_out = out["gender_logits"][intact]
+                gender_match = g_out.argmax(dim=1) == gender[intact]
                 gender_correct += gender_match.sum().item()
                 batch_gender_acc = (
                     gender_match.float().mean().item() if bs else 0.0
@@ -192,9 +262,9 @@ def train_model(
                 batch_gender_acc = 0.0
             if "attr_logits" in out:
                 attr_pred = (
-                    torch.sigmoid(out["attr_logits"]) >= 0.5
+                    torch.sigmoid(out["attr_logits"][intact]) >= 0.5
                 ).float()
-                attr_match = (attr_pred == attrs).float()
+                attr_match = (attr_pred == attrs[intact]).float()
                 attr_correct += attr_match.sum(dim=0)
                 batch_attr_acc = attr_match.mean().item() if bs else 0.0
             else:
@@ -248,6 +318,16 @@ def train_model(
                     f"{a*100:.1f}" for a in report["attr_acc"]
                 )
                 parts.append(f"{tag}_attr_acc=[{attr_acc_str}]%")
+            if history["batch_cutpaste_acc"]:
+                # Mean over the epoch's batches: the number that says
+                # whether the pretext head is learning at all.
+                start = (history["epoch_ends"][-2] + 1
+                         if len(history["epoch_ends"]) > 1 else 0)
+                ep_cp = history["batch_cutpaste_acc"][start:]
+                if ep_cp:
+                    parts.append(
+                        f"train_cutpaste_acc={sum(ep_cp)/len(ep_cp)*100:.1f}%"
+                    )
             logger.info(
                 f"epoch {epoch:>3}/{epochs}  {prefix}"
                 + "  ".join(parts)
