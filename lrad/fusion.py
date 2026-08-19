@@ -93,6 +93,7 @@ def collect_fusion_signals(
     g_chunks: list[np.ndarray] = []
     a_chunks: list[np.ndarray] = []
     energy_chunks: list[np.ndarray] = []
+    cp_chunks: list[np.ndarray] = []
 
     for i, batch in enumerate(loader):
         if max_batches is not None and i >= max_batches:
@@ -100,7 +101,7 @@ def collect_fusion_signals(
         img = batch[0].to(device, non_blocking=True)
 
         acts_x: list[dict[int, torch.Tensor]] = []
-        g_probs, a_probs, g_logits = [], [], []
+        g_probs, a_probs, g_logits, cp_probs = [], [], [], []
         recon_sum: torch.Tensor | None = None
         for m in range(M):
             models[m].eval()
@@ -114,7 +115,15 @@ def collect_fusion_signals(
             g_probs.append(F.softmax(out["gender_logits"], dim=-1).cpu())
             a_probs.append(torch.sigmoid(out["attr_logits"]).cpu())
             g_logits.append(out["gender_logits"].cpu())
+            if "cutpaste_logits" in out:
+                cp_probs.append(
+                    F.softmax(out["cutpaste_logits"], dim=-1)[:, 1].cpu()
+                )
         mean_recon = recon_sum / M
+        if cp_probs:
+            # CutPaste pretext head: mean member P(altered | x) — trained on
+            # synthetic occlusions, fires on real ones (e.g. glasses).
+            cp_chunks.append(torch.stack(cp_probs).mean(dim=0).numpy())
 
         err: dict[int, torch.Tensor] = {}
         for m in range(M):
@@ -147,6 +156,8 @@ def collect_fusion_signals(
     }
     out["unc_epistemic_combined"] = unc["combined"]["epistemic"]
     out["ens_energy_gender"] = np.concatenate(energy_chunks)
+    if cp_chunks:
+        out["cutpaste_prob"] = np.concatenate(cp_chunks)
     return out
 
 
@@ -185,10 +196,13 @@ def evaluate_fused_ood(
     )
 
     # The fused score uses only the validated recipe (locfre blocks +
-    # epistemic + energy); the extra head scores are reported individually.
+    # epistemic + energy, plus the CutPaste head when the models carry
+    # one); the extra head scores are reported individually.
     names = [f"locfre_b{j}" for j in blocks] + [
         "unc_epistemic_combined", "ens_energy_gender",
     ]
+    if "cutpaste_prob" in sig_in:
+        names.append("cutpaste_prob")
     n_in = sig_in[names[0]].shape[0]
     fused = rank_fusion(
         [np.concatenate([sig_in[k], sig_ood[k]]) for k in names], weights,
@@ -319,6 +333,8 @@ def evaluate_supervised_fusion(
     rank_names = [f"locfre_b{j}" for j in blocks] + [
         "unc_epistemic_combined", "ens_energy_gender",
     ]
+    if "cutpaste_prob" in sig_in:
+        rank_names.append("cutpaste_prob")
     n_in = sig_in[rank_names[0]].shape[0]
     fused_rank = rank_fusion(
         [np.concatenate([sig_in[k], sig_ood[k]]) for k in rank_names],
