@@ -206,7 +206,8 @@ From the Nancy frontend, in `~/lrad` (OAR directives — cluster, GPU, walltime 
 # same ensemble at 128 px (gruss / A40, walltime 48 h)
 ./scripts/oar_run_128.sh
 
-# ablation study: one job per arm, in parallel (gruss / A40, walltime 48 h)
+# ablation study: one job per arm, in parallel (gres/grat/gruss — first free
+# L40S / A100 / A40 GPU — walltime 48 h)
 ./scripts/oar_run_ablation.sh              # baseline + arch + cutpaste
 ARMS=all ./scripts/oar_run_ablation.sh     # also re-run arch_cutpaste
 
@@ -244,7 +245,8 @@ one. The `arch_cutpaste` recipe was already run as
 are submitted and the comparison falls back to that archived run.
 
 ```bash
-# submit (one OAR job per arm — the arms train in parallel on gruss)
+# submit (one OAR job per arm — the arms train in parallel on the first
+# free GPUs among gres / grat / gruss)
 ./scripts/oar_run_ablation.sh
 
 # merge the finished arms into tables + figures (idempotent; the last OAR
