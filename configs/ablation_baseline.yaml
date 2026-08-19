@@ -1,0 +1,78 @@
+# ---------------------------------------------------------------------------
+# ABLATION — arm "baseline": same-architecture ensemble, NO CutPaste.
+#
+# The control arm every case study compares against. 10 members that all
+# share the reference architecture ([32, 64, 128, 256, 256], k=3); the only
+# diversity left is the per-member seed (init + SGD shuffle order). Training
+# is purely supervised (CE gender + 2.0 * BCE attrs) — no pretext task.
+#
+# The four arms differ ONLY in the two ablated factors; everything else
+# (128 px, batch 128, 20 + 25 epochs, seeds 42..51, agg p95, evaluation
+# section) is byte-identical across configs so the deltas are attributable:
+#
+#   arm            member_variants   training.cutpaste     config
+#   baseline       no  (same arch)   no                    this file
+#   arch           yes (10 archs)    no                    ablation_arch.yaml
+#   cutpaste       no  (same arch)   yes                   ablation_cutpaste.yaml
+#   arch_cutpaste  yes (10 archs)    yes                   ablation_arch_cutpaste.yaml
+#
+# Case studies (scripts/compare_ablation.py):
+#   1. arch          vs baseline  -> effect of architecture diversity alone
+#   2. cutpaste      vs baseline  -> effect of the CutPaste pretext alone
+#   3. arch_cutpaste vs baseline  -> joint effect of both
+#
+# Submit with scripts/oar_run_ablation.sh (one OAR job per arm).
+# ---------------------------------------------------------------------------
+
+experiment:
+  name: "celeba_ood_abl_baseline"
+  seed: 42
+  output_dir: "outputs/celeba_ood/ablation/baseline"
+
+dataset:
+  root: "./data"
+  download: false
+  image_size: 128
+  batch_size: 128
+  num_workers: 4
+  train_ratio: 0.90
+  val_ratio: 0.00
+  pin_memory: true
+  seed: 42
+  ood_attrs: [Eyeglasses]
+
+model:
+  in_channels: 3
+  channels: [32, 64, 128, 256, 256]
+  kernel_size: 3
+  n_attrs: 6
+  n_gender: 2
+
+training:
+  epochs: 20
+  save_every_epoch: false   # per-epoch checkpoints double at 128 px; off
+  lr: 0.0003
+  attr_loss_weight: 2.0
+  log_every: 1
+
+  decoders:
+    epochs: 25
+    lr: 0.001
+    log_every: 1
+
+evaluation:
+  n_viz_in_samples: 10
+  n_viz_ood_samples: 15
+  viz_seed: 1234
+  n_instances_in: 20
+  n_instances_ood: 20
+  overlay_sigma: 1.5
+  overlay_power: 0.8
+  n_top_ood: 10
+
+# No member_variants: every member is built from the model section above,
+# so the ensemble's only source of diversity is the seed.
+ensemble:
+  size: 10
+  base_seed: 42
+  agg: p95
