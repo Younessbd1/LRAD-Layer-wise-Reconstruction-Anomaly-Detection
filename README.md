@@ -65,7 +65,7 @@ Two linear heads read the 256-d pooled vector:
 
 - **`head_gender` (256→2)** — softmax + CE on the `Male` attribute. Its job in this project is *not* accuracy (it sits near 0.63); it is to produce a logit vector whose **energy** and **entropy** move when the classifier hesitates. `ens_energy_gender` is a fusion input worth 0.713 AUROC on its own.
 - **`head_attrs` (256→6)** — sigmoid + BCE, weighted `attr_loss_weight: 2.0`. Four of the six targets (`Arched_Eyebrows, Bushy_Eyebrows, Narrow_Eyes, Bags_Under_Eyes`) are **periocular**. This is the central design choice of the whole task: training only ever sees glasses-free faces, so the trunk must learn to read the eye region to satisfy these heads — and eyeglasses at test time occlude exactly that evidence. The resulting ID/OOD activation gap is what everything downstream measures.
-The total loss is `CE(gender) + 2.0 · BCE(attrs)`, one `.backward()` per step. Nothing else trains the trunk: no synthetic corruption, no reconstruction loss, no OOD data.
+The total loss is `CE(gender) + 2.0 · BCE(attrs)`, one `.backward()` per step. In the default configs nothing else trains the trunk: no synthetic corruption, no reconstruction loss, no OOD data. The one opt-in exception is the **CutPaste pretext head** (`model.cutpaste_head` + `training.cutpaste`, used by the ablation's cutpaste arms): a third linear head trained with CE to tell intact faces from faces with a pasted donor patch, its loss added with weight 0.5 while the supervised losses then use intact images only.
 
 The baseline member (`channels [32, 64, 128, 256, 256]`, `k=3`) is **981,288 parameters** — 979,232 in the trunk, 2,056 across the two heads. The trunk is ~99.8 % of the model; the heads are almost free.
 
@@ -136,7 +136,7 @@ The three figures document the *models*. They do not document the **scoring stac
 | **`fused_rank`** (label-free rank fusion) | **0.804** |
 | **`fused_supervised`** (logistic fit on a 50 % OOD calibration slice) | **0.864** |
 
-These are the numbers of the `LASTOF_RESULTS` run, whose fusion also drew on a self-supervised head the pipeline no longer trains — expect the fused rows to move when the current configuration is rerun. The gap between the raw bias term (0.623) and the fused detector (0.804 label-free) is the substance of the project, and no current diagram shows it. [`outputs/celeba_ood/LASTOF_RESULTS/Documentation.md`](outputs/celeba_ood/LASTOF_RESULTS/Documentation.md) is the archived report on that run: every formula, every figure it produces, worked numeric examples, and a critical reading of the anomalies (French).
+These are the numbers of the `LASTOF_RESULTS` run, whose fusion also drew on the CutPaste head's `P(altered | x)` (0.674 on its own) — that recipe is exactly the ablation's `arch_cutpaste` arm, and the default supervised-only configs drop the signal, so expect the fused rows to differ across the ablation arms. The gap between the raw bias term (0.623) and the fused detector (0.804 label-free) is the substance of the project, and no current diagram shows it. [`outputs/celeba_ood/LASTOF_RESULTS/Documentation.md`](outputs/celeba_ood/LASTOF_RESULTS/Documentation.md) is the archived report on that run: every formula, every figure it produces, worked numeric examples, and a critical reading of the anomalies (French).
 
 ## Features
 
@@ -146,6 +146,7 @@ These are the numbers of the `LASTOF_RESULTS` run, whose fusion also drew on a s
 - Per-instance figures: one figure per member (recon + error) and a bias / mean / min + overlay summary, per test face
 - Top-N OOD eyeglasses faces ranked by eye-region bias (strength × concentration)
 - Configurable OOD attribute set (default: eyeglasses only)
+- Optional CutPaste pretext head (`P(altered | x)` joins the fusion signals) and a 4-arm ablation study isolating architecture diversity × CutPaste against a same-arch control
 - Epoch-variability study: traces inter-model variability σ(e) from per-epoch decoder checkpoints
 - Single YAML config shared by both single-model and ensemble runners; dotted `key=value` CLI overrides (lists supported, e.g. `model.channels=[...]`)
 
@@ -205,6 +206,10 @@ From the Nancy frontend, in `~/lrad` (OAR directives — cluster, GPU, walltime 
 # same ensemble at 128 px (gruss / A40, walltime 48 h)
 ./scripts/oar_run_128.sh
 
+# ablation study: one job per arm, in parallel (gruss / A40, walltime 48 h)
+./scripts/oar_run_ablation.sh              # baseline + arch + cutpaste
+ARMS=all ./scripts/oar_run_ablation.sh     # also re-run arch_cutpaste
+
 # track / cancel
 oarstat -u $USER
 tail -f outputs/celeba_ood/_oar/oar.<jobid>.stdout
@@ -212,6 +217,50 @@ oardel <jobid>
 ```
 
 The job requests **1 GPU on `graffiti` (RTX 2080 Ti, 11 GiB) in the production/Abaca queue, walltime 48 h**. graffiti is the largest GPU pool at Nancy (12 nodes × 4 GPUs), so allocation is usually fast; the run needs < 10 GiB of VRAM, and ~3 h/model × 10 models fits comfortably in 48 h (a 2080 Ti is ~2–3× slower than the A100 this used to run on). The walltime is sized generously on purpose: an OAR job is cut at its walltime even mid-epoch and the ensemble run does not checkpoint. Note the production queue does **not** allow advance reservations (`oarsub -r`) — submission only. Fallback clusters (edit the `#OAR -p` line): `gruss` (2× A40 45 GiB) or `grue` (4× T4 15 GiB).
+
+## Ablation study — what does each ingredient buy?
+
+The ensemble recipe has two deliberate ingredients on top of a plain deep
+ensemble: **architecture diversity** (`ensemble.member_variants`) and the
+**CutPaste pretext task** (`model.cutpaste_head` + `training.cutpaste`,
+[`lrad/cutpaste.py`](lrad/cutpaste.py)). The ablation isolates them with four
+arms that differ **only** in those two factors (128 px, 10 members, seeds
+42..51, identical schedules — [`configs/ablation_baseline.yaml`](configs/ablation_baseline.yaml)
+documents the invariants):
+
+| Arm | Members | Pretext | Config |
+| --- | --- | --- | --- |
+| `baseline` | 10 × same architecture | — | [`ablation_baseline.yaml`](configs/ablation_baseline.yaml) |
+| `arch` | 10 different architectures | — | [`ablation_arch.yaml`](configs/ablation_arch.yaml) |
+| `cutpaste` | 10 × same architecture | CutPaste | [`ablation_cutpaste.yaml`](configs/ablation_cutpaste.yaml) |
+| `arch_cutpaste` | 10 different architectures | CutPaste | [`ablation_arch_cutpaste.yaml`](configs/ablation_arch_cutpaste.yaml) |
+
+Three case studies, all against the same control: **(1)** `arch` vs
+`baseline` — architecture diversity alone; **(2)** `cutpaste` vs `baseline` —
+the pretext alone; **(3)** `arch_cutpaste` vs `baseline` — both together.
+That is what separates the genuinely beneficial ingredient from the marginal
+one. The `arch_cutpaste` recipe was already run as
+`outputs/celeba_ood/LASTOF_RESULTS`, so by default only the first three arms
+are submitted and the comparison falls back to that archived run.
+
+```bash
+# submit (one OAR job per arm — the arms train in parallel on gruss)
+./scripts/oar_run_ablation.sh
+
+# merge the finished arms into tables + figures (idempotent; the last OAR
+# job also runs this automatically)
+python scripts/compare_ablation.py
+```
+
+Every arm run dir has the full LASTOF_RESULTS structure (`model_0..9/` +
+`ensemble/` with all plots, `fused_auroc.json`, `localized_auroc.json`).
+[`scripts/compare_ablation.py`](scripts/compare_ablation.py) then writes
+`outputs/celeba_ood/ablation/comparison/`: the per-arm results table
+(`ablation_table.md`/`.csv`/`ablation_results.json`) and four figures —
+grouped AUROC bars per metric, the signed Δ-vs-baseline panels for the three
+case studies, per-block Risk/Bias/Variance curves per arm, and the per-member
+spread (does diversity widen the member distribution while the ensemble
+improves?).
 
 ## Usage examples
 
@@ -238,8 +287,8 @@ python scripts/epoch_variability_study.py \
 | Section | Key parameters |
 | --- | --- |
 | `dataset` | `root`, `image_size`, `batch_size`, `train_ratio`, `val_ratio`, `ood_attrs` (attribute name or list defining OOD; default `[Eyeglasses]`) |
-| `model` | `channels` (one int per conv block), `kernel_size` (3/5), `n_attrs`, `n_gender` — the single-model architecture; ensemble members use `ensemble.member_variants` |
-| `training` | `epochs` (20), `lr`, `attr_loss_weight`, `save_every_epoch`; nested `decoders: {epochs (25), lr}` |
+| `model` | `channels` (one int per conv block), `kernel_size` (3/5), `n_attrs`, `n_gender`, `cutpaste_head` (adds the binary pretext head) — the single-model architecture; ensemble members use `ensemble.member_variants` |
+| `training` | `epochs` (20), `lr`, `attr_loss_weight`, `save_every_epoch`; nested `decoders: {epochs (25), lr}`; optional `cutpaste: {prob, area_range, aspect_range, scar_prob, loss_weight}` (pretext task; supervised losses then use intact images only) |
 | `evaluation` | `n_viz_in_samples`, `n_viz_ood_samples`, `viz_seed`, `score_comparison_block`, `score_comparison_k`, `n_instances_in`, `n_instances_ood`, `instance_block`, `overlay_sigma`, `overlay_power` (display-only knobs of the bias overlay), `n_top_ood` (size of the top OOD eyeglasses ranking) |
 | `ensemble` | `size`, `base_seed` (model `i` uses `base_seed + i`), `agg` (`mean` / `max` / `p95`), `member_variants` (per-member `{channels, kernel_size}`, cycled if `size` exceeds the list) |
 
@@ -250,7 +299,8 @@ lrad/
 ├── lrad/                          # library (flat layout)
 │   ├── dataset.py                 # CelebA loaders; configurable accessory OOD split
 │   ├── config.py                  # YAML load + dotted `key=value` CLI overrides
-│   ├── model.py                   # FacialCNN: conv trunk + gender/attrs heads
+│   ├── model.py                   # FacialCNN: conv trunk + gender/attrs (+ CutPaste) heads
+│   ├── cutpaste.py                # CutPaste synthetic occlusions (pretext task)
 │   ├── decoder.py                 # per-block ConvTranspose2d decoders
 │   ├── train.py                   # classifier + decoder training loops
 │   ├── evaluate.py                # accuracy + classifier-confidence OOD AUROC
@@ -264,7 +314,8 @@ lrad/
 │   └── utils.py                   # device, seeding, logging
 ├── configs/
 │   ├── celeba_ood.yaml            # base config (64 px)
-│   └── celeba_ood_128.yaml        # 128 px, supervised heads only
+│   ├── celeba_ood_128.yaml        # 128 px, supervised heads only
+│   └── ablation_*.yaml            # the four ablation arms (see above)
 ├── docs/
 │   └── diagrams/                  # the three figures above, .pdf source + .png
 ├── scripts/
@@ -273,6 +324,7 @@ lrad/
 │   ├── run_localized.py           # localized z-score / patch-max scoring
 │   ├── run_fused.py               # fused (locfre + epistemic + energy) AUROC
 │   ├── run_generalization.py      # bias overlay on non-CelebA photos (sanity probe)
+│   ├── compare_ablation.py        # merge the ablation arms: tables + figures
 │   ├── generate_arch_svg.py       # regenerate the three diagrams as SVG
 │   ├── epoch_variability_study.py # σ(e) variability vs decoder epochs
 │   └── oar_run_*.sh               # Grid'5000 OAR jobs (ensemble, fused, localized, 128 px)
