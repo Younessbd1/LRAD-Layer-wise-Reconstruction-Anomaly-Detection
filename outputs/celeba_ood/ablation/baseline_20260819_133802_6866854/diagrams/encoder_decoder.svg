@@ -1,0 +1,185 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1645" height="810" viewBox="0 0 1645 810" font-family="'Segoe UI', Roboto, 'Helvetica Neue', Helvetica, Arial, sans-serif">
+<title>LRAD baseline — encoder / decoder architecture (10-member ensemble, no CutPaste)</title>
+<rect width="1645" height="810" fill="#ffffff"/>
+<text x="28.0" y="30.0" font-size="17" fill="#11161f" font-weight="700" text-anchor="start">Encoder / decoder — baseline arm</text>
+<text x="28.0" y="50.0" font-size="12.5" fill="#686f7b" font-weight="400" text-anchor="start">celeba_ood_abl_baseline · shared trunk across all 10 members (seeds 42–51) · 981,288 params/member</text>
+<text x="28.0" y="68.0" font-size="11.5" fill="#94a3b8" font-weight="400" text-anchor="start">Box width/height (X/Y) scales with spatial extent H×W · box depth (Z) scales with channel count C · kernel/stride annotated above each conv/pool block.</text>
+<polygon points="154.0,206.0 164.2,199.7 164.2,293.7 154.0,300.0" fill="#8b939b" stroke="#11161f" stroke-width="1" stroke-opacity="0.35"/>
+<polygon points="60,206.0 70.2,199.7 164.2,199.7 154.0,206.0" fill="#d7dfe7" stroke="#11161f" stroke-width="1" stroke-opacity="0.35"/>
+<rect x="60" y="206.0" width="94.0" height="94.0" fill="#c7d2de" stroke="#11161f" stroke-width="1" stroke-opacity="0.35"/>
+<text x="107.0" y="320.0" font-size="11.5" fill="#11161f" font-weight="700" text-anchor="middle">Input</text>
+<text x="107.0" y="334.0" font-size="10.2" fill="#686f7b" font-weight="400" text-anchor="middle">128×128×3</text>
+<text x="107.0" y="348.0" font-size="9.5" fill="#94a3b8" font-weight="400" text-anchor="middle">CelebA aligned</text>
+<polygon points="259.1543289325507,228.8456710674493 278.9,216.5 278.9,287.7 259.1543289325507,300.0" fill="#153755" stroke="#11161f" stroke-width="1" stroke-opacity="0.35"/>
+<polygon points="188.0,228.8456710674493 207.7,216.5 278.9,216.5 259.1543289325507,228.8456710674493" fill="#5d809f" stroke="#11161f" stroke-width="1" stroke-opacity="0.35"/>
+<rect x="188.0" y="228.8456710674493" width="71.15432893255071" height="71.15432893255071" fill="#1e4f7a" stroke="#11161f" stroke-width="1" stroke-opacity="0.35"/>
+<text x="223.6" y="320.0" font-size="11.5" fill="#11161f" font-weight="700" text-anchor="middle">Conv1</text>
+<text x="223.6" y="334.0" font-size="10.2" fill="#686f7b" font-weight="400" text-anchor="middle">k3 s1</text>
+<text x="223.6" y="212.8" font-size="10" fill="#94a3b8" font-weight="400" text-anchor="middle">32×64²</text>
+<polygon points="360.3086578651014,228.8456710674493 380.0,216.5 380.0,287.7 360.3086578651014,300.0" fill="#576172" stroke="#11161f" stroke-width="1" stroke-opacity="0.35"/>
+<polygon points="289.1543289325507,228.8456710674493 308.9,216.5 380.0,216.5 360.3086578651014,228.8456710674493" fill="#a1abbd" stroke="#11161f" stroke-width="1" stroke-opacity="0.35"/>
+<rect x="289.1543289325507" y="228.8456710674493" width="71.15432893255071" height="71.15432893255071" fill="#7c8ba3" stroke="#11161f" stroke-width="1" stroke-opacity="0.35"/>
+<text x="324.7" y="320.0" font-size="11.5" fill="#11161f" font-weight="700" text-anchor="middle">BN+ReLU</text>
+<polygon points="461.4629867976521,228.8456710674493 481.2,216.5 481.2,287.7 461.4629867976521,300.0" fill="#216459" stroke="#11161f" stroke-width="1" stroke-opacity="0.35"/>
+<polygon points="390.3086578651014,228.8456710674493 410.0,216.5 481.2,216.5 461.4629867976521,228.8456710674493" fill="#69aea3" stroke="#11161f" stroke-width="1" stroke-opacity="0.35"/>
+<rect x="390.3086578651014" y="228.8456710674493" width="71.15432893255071" height="71.15432893255071" fill="#2f8f7f" stroke="#11161f" stroke-width="1" stroke-opacity="0.35"/>
+<text x="425.9" y="320.0" font-size="11.5" fill="#11161f" font-weight="700" text-anchor="middle">Pool1</text>
+<text x="425.9" y="334.0" font-size="10.2" fill="#686f7b" font-weight="400" text-anchor="middle">2×2 s2</text>
+<polygon points="550.4629867976521,245.0 575.9,229.1 575.9,284.1 550.4629867976521,300.0" fill="#153755" stroke="#11161f" stroke-width="1" stroke-opacity="0.35"/>
+<polygon points="495.4629867976521,245.0 520.9,229.1 575.9,229.1 550.4629867976521,245.0" fill="#5d809f" stroke="#11161f" stroke-width="1" stroke-opacity="0.35"/>
+<rect x="495.4629867976521" y="245.0" width="55.0" height="55.0" fill="#1e4f7a" stroke="#11161f" stroke-width="1" stroke-opacity="0.35"/>
+<text x="523.0" y="320.0" font-size="11.5" fill="#11161f" font-weight="700" text-anchor="middle">Conv2</text>
+<text x="523.0" y="334.0" font-size="10.2" fill="#686f7b" font-weight="400" text-anchor="middle">k3 s1</text>
+<text x="523.0" y="229.0" font-size="10" fill="#94a3b8" font-weight="400" text-anchor="middle">64×32²</text>
+<polygon points="635.4629867976521,245.0 660.9,229.1 660.9,284.1 635.4629867976521,300.0" fill="#576172" stroke="#11161f" stroke-width="1" stroke-opacity="0.35"/>
+<polygon points="580.4629867976521,245.0 605.9,229.1 660.9,229.1 635.4629867976521,245.0" fill="#a1abbd" stroke="#11161f" stroke-width="1" stroke-opacity="0.35"/>
+<rect x="580.4629867976521" y="245.0" width="55.0" height="55.0" fill="#7c8ba3" stroke="#11161f" stroke-width="1" stroke-opacity="0.35"/>
+<text x="608.0" y="320.0" font-size="11.5" fill="#11161f" font-weight="700" text-anchor="middle">BN+ReLU</text>
+<polygon points="720.4629867976521,245.0 745.9,229.1 745.9,284.1 720.4629867976521,300.0" fill="#216459" stroke="#11161f" stroke-width="1" stroke-opacity="0.35"/>
+<polygon points="665.4629867976521,245.0 690.9,229.1 745.9,229.1 720.4629867976521,245.0" fill="#69aea3" stroke="#11161f" stroke-width="1" stroke-opacity="0.35"/>
+<rect x="665.4629867976521" y="245.0" width="55.0" height="55.0" fill="#2f8f7f" stroke="#11161f" stroke-width="1" stroke-opacity="0.35"/>
+<text x="693.0" y="320.0" font-size="11.5" fill="#11161f" font-weight="700" text-anchor="middle">Pool2</text>
+<text x="693.0" y="334.0" font-size="10.2" fill="#686f7b" font-weight="400" text-anchor="middle">2×2 s2</text>
+<polygon points="798.0401512639274,256.42283553372465 831.6,235.5 831.6,279.1 798.0401512639274,300.0" fill="#153755" stroke="#11161f" stroke-width="1" stroke-opacity="0.35"/>
+<polygon points="754.4629867976521,256.42283553372465 788.0,235.5 831.6,235.5 798.0401512639274,256.42283553372465" fill="#5d809f" stroke="#11161f" stroke-width="1" stroke-opacity="0.35"/>
+<rect x="754.4629867976521" y="256.42283553372465" width="43.577164466275356" height="43.577164466275356" fill="#1e4f7a" stroke="#11161f" stroke-width="1" stroke-opacity="0.35"/>
+<text x="776.3" y="320.0" font-size="11.5" fill="#11161f" font-weight="700" text-anchor="middle">Conv3</text>
+<text x="776.3" y="334.0" font-size="10.2" fill="#686f7b" font-weight="400" text-anchor="middle">k3 s1</text>
+<text x="776.3" y="240.4" font-size="10" fill="#94a3b8" font-weight="400" text-anchor="middle">128×16²</text>
+<polygon points="871.6173157302028,256.42283553372465 905.1,235.5 905.1,279.1 871.6173157302028,300.0" fill="#576172" stroke="#11161f" stroke-width="1" stroke-opacity="0.35"/>
+<polygon points="828.0401512639274,256.42283553372465 861.6,235.5 905.1,235.5 871.6173157302028,256.42283553372465" fill="#a1abbd" stroke="#11161f" stroke-width="1" stroke-opacity="0.35"/>
+<rect x="828.0401512639274" y="256.42283553372465" width="43.577164466275356" height="43.577164466275356" fill="#7c8ba3" stroke="#11161f" stroke-width="1" stroke-opacity="0.35"/>
+<text x="849.8" y="320.0" font-size="11.5" fill="#11161f" font-weight="700" text-anchor="middle">BN+ReLU</text>
+<polygon points="945.1944801964781,256.42283553372465 978.7,235.5 978.7,279.1 945.1944801964781,300.0" fill="#216459" stroke="#11161f" stroke-width="1" stroke-opacity="0.35"/>
+<polygon points="901.6173157302028,256.42283553372465 935.1,235.5 978.7,235.5 945.1944801964781,256.42283553372465" fill="#69aea3" stroke="#11161f" stroke-width="1" stroke-opacity="0.35"/>
+<rect x="901.6173157302028" y="256.42283553372465" width="43.577164466275356" height="43.577164466275356" fill="#2f8f7f" stroke="#11161f" stroke-width="1" stroke-opacity="0.35"/>
+<text x="923.4" y="320.0" font-size="11.5" fill="#11161f" font-weight="700" text-anchor="middle">Pool3</text>
+<text x="923.4" y="334.0" font-size="10.2" fill="#686f7b" font-weight="400" text-anchor="middle">2×2 s2</text>
+<polygon points="1014.6944801964781,264.5 1059.6,236.4 1059.6,271.9 1014.6944801964781,300.0" fill="#153755" stroke="#11161f" stroke-width="1" stroke-opacity="0.35"/>
+<polygon points="979.1944801964781,264.5 1024.1,236.4 1059.6,236.4 1014.6944801964781,264.5" fill="#5d809f" stroke="#11161f" stroke-width="1" stroke-opacity="0.35"/>
+<rect x="979.1944801964781" y="264.5" width="35.5" height="35.5" fill="#1e4f7a" stroke="#11161f" stroke-width="1" stroke-opacity="0.35"/>
+<text x="996.9" y="320.0" font-size="11.5" fill="#11161f" font-weight="700" text-anchor="middle">Conv4</text>
+<text x="996.9" y="334.0" font-size="10.2" fill="#686f7b" font-weight="400" text-anchor="middle">k3 s1</text>
+<text x="996.9" y="248.5" font-size="10" fill="#94a3b8" font-weight="400" text-anchor="middle">256×8²</text>
+<polygon points="1080.1944801964783,264.5 1125.1,236.4 1125.1,271.9 1080.1944801964783,300.0" fill="#576172" stroke="#11161f" stroke-width="1" stroke-opacity="0.35"/>
+<polygon points="1044.6944801964783,264.5 1089.6,236.4 1125.1,236.4 1080.1944801964783,264.5" fill="#a1abbd" stroke="#11161f" stroke-width="1" stroke-opacity="0.35"/>
+<rect x="1044.6944801964783" y="264.5" width="35.5" height="35.5" fill="#7c8ba3" stroke="#11161f" stroke-width="1" stroke-opacity="0.35"/>
+<text x="1062.4" y="320.0" font-size="11.5" fill="#11161f" font-weight="700" text-anchor="middle">BN+ReLU</text>
+<polygon points="1145.6944801964783,264.5 1190.6,236.4 1190.6,271.9 1145.6944801964783,300.0" fill="#216459" stroke="#11161f" stroke-width="1" stroke-opacity="0.35"/>
+<polygon points="1110.1944801964783,264.5 1155.1,236.4 1190.6,236.4 1145.6944801964783,264.5" fill="#69aea3" stroke="#11161f" stroke-width="1" stroke-opacity="0.35"/>
+<rect x="1110.1944801964783" y="264.5" width="35.5" height="35.5" fill="#2f8f7f" stroke="#11161f" stroke-width="1" stroke-opacity="0.35"/>
+<text x="1127.9" y="320.0" font-size="11.5" fill="#11161f" font-weight="700" text-anchor="middle">Pool4</text>
+<text x="1127.9" y="334.0" font-size="10.2" fill="#686f7b" font-weight="400" text-anchor="middle">2×2 s2</text>
+<polygon points="1215.1944801964783,264.5 1260.1,236.4 1260.1,271.9 1215.1944801964783,300.0" fill="#153755" stroke="#11161f" stroke-width="1" stroke-opacity="0.35"/>
+<polygon points="1179.6944801964783,264.5 1224.6,236.4 1260.1,236.4 1215.1944801964783,264.5" fill="#5d809f" stroke="#11161f" stroke-width="1" stroke-opacity="0.35"/>
+<rect x="1179.6944801964783" y="264.5" width="35.5" height="35.5" fill="#1e4f7a" stroke="#11161f" stroke-width="1" stroke-opacity="0.35"/>
+<text x="1197.4" y="320.0" font-size="11.5" fill="#11161f" font-weight="700" text-anchor="middle">Conv5</text>
+<text x="1197.4" y="334.0" font-size="10.2" fill="#686f7b" font-weight="400" text-anchor="middle">k3 s1</text>
+<text x="1197.4" y="248.5" font-size="10" fill="#94a3b8" font-weight="400" text-anchor="middle">256×8²</text>
+<polygon points="1280.6944801964783,264.5 1325.6,236.4 1325.6,271.9 1280.6944801964783,300.0" fill="#576172" stroke="#11161f" stroke-width="1" stroke-opacity="0.35"/>
+<polygon points="1245.1944801964783,264.5 1290.1,236.4 1325.6,236.4 1280.6944801964783,264.5" fill="#a1abbd" stroke="#11161f" stroke-width="1" stroke-opacity="0.35"/>
+<rect x="1245.1944801964783" y="264.5" width="35.5" height="35.5" fill="#7c8ba3" stroke="#11161f" stroke-width="1" stroke-opacity="0.35"/>
+<text x="1262.9" y="320.0" font-size="11.5" fill="#11161f" font-weight="700" text-anchor="middle">BN+ReLU</text>
+<polygon points="1337.5887713130471,277.10570888343113 1382.5,249.0 1382.5,271.9 1337.5887713130471,300.0" fill="#216459" stroke="#11161f" stroke-width="1" stroke-opacity="0.35"/>
+<polygon points="1314.6944801964783,277.10570888343113 1359.6,249.0 1382.5,249.0 1337.5887713130471,277.10570888343113" fill="#69aea3" stroke="#11161f" stroke-width="1" stroke-opacity="0.35"/>
+<rect x="1314.6944801964783" y="277.10570888343113" width="22.894291116568837" height="22.894291116568837" fill="#2f8f7f" stroke="#11161f" stroke-width="1" stroke-opacity="0.35"/>
+<text x="1326.1" y="320.0" font-size="11.5" fill="#11161f" font-weight="700" text-anchor="middle">GAP</text>
+<text x="1326.1" y="334.0" font-size="10.2" fill="#686f7b" font-weight="400" text-anchor="middle">1×1×256</text>
+<path d="M1382.5,260.5 L1416.5,260.5 L1416.5,230.1 L1383.6,230.1" fill="none" stroke="#11161f" stroke-width="1.6" />
+<polygon points="1413.5887713130471,215.10570888343113 1421.2,210.3 1421.2,240.3 1413.5887713130471,245.10570888343113" fill="#984521" stroke="#11161f" stroke-width="1" stroke-opacity="0.35"/>
+<polygon points="1383.5887713130471,215.10570888343113 1391.2,210.3 1421.2,210.3 1413.5887713130471,215.10570888343113" fill="#e48e69" stroke="#11161f" stroke-width="1" stroke-opacity="0.35"/>
+<rect x="1383.5887713130471" y="215.10570888343113" width="30" height="30" fill="#d9622f" stroke="#11161f" stroke-width="1" stroke-opacity="0.35"/>
+<text x="1429.6" y="227.1" font-size="12" fill="#11161f" font-weight="700" text-anchor="start">FC · gender</text>
+<text x="1429.6" y="242.1" font-size="10.5" fill="#686f7b" font-weight="400" text-anchor="start">1×1×2</text>
+<path d="M1382.5,260.5 L1416.5,260.5 L1416.5,288.1 L1383.6,288.1" fill="none" stroke="#11161f" stroke-width="1.6" />
+<polygon points="1413.5887713130471,273.10570888343113 1421.2,268.3 1421.2,298.3 1413.5887713130471,303.10570888343113" fill="#984521" stroke="#11161f" stroke-width="1" stroke-opacity="0.35"/>
+<polygon points="1383.5887713130471,273.10570888343113 1391.2,268.3 1421.2,268.3 1413.5887713130471,273.10570888343113" fill="#e48e69" stroke="#11161f" stroke-width="1" stroke-opacity="0.35"/>
+<rect x="1383.5887713130471" y="273.10570888343113" width="30" height="30" fill="#d9622f" stroke="#11161f" stroke-width="1" stroke-opacity="0.35"/>
+<text x="1429.6" y="285.1" font-size="12" fill="#11161f" font-weight="700" text-anchor="start">FC · attrs</text>
+<text x="1429.6" y="300.1" font-size="10.5" fill="#686f7b" font-weight="400" text-anchor="start">1×1×6</text>
+<path d="M1382.5,260.5 L1416.5,260.5 L1416.5,346.1 L1383.6,346.1" fill="none" stroke="#94a3b8" stroke-width="1.6" stroke-dasharray="4 4"/>
+<rect x="1383.5887713130471" y="331.10570888343113" width="30" height="30" fill="none" stroke="#94a3b8" stroke-width="1.6" stroke-dasharray="4 4" rx="4"/>
+<line x1="1387.5887713130471" y1="335.10570888343113" x2="1409.5887713130471" y2="357.10570888343113" stroke="#94a3b8" stroke-width="1.4"/>
+<line x1="1409.5887713130471" y1="335.10570888343113" x2="1387.5887713130471" y2="357.10570888343113" stroke="#94a3b8" stroke-width="1.4"/>
+<text x="1429.6" y="343.1" font-size="12" fill="#94a3b8" font-weight="700" text-anchor="start">FC · cutpaste</text>
+<text x="1429.6" y="358.1" font-size="10.5" fill="#94a3b8" font-weight="400" text-anchor="start">removed — baseline arm</text>
+<line x1="425.9" y1="302.0" x2="425.9" y2="388.0" stroke="#94a3b8" stroke-width="1.4" stroke-dasharray="4 4"/>
+<polygon points="442.88582233137674,390 449.7,385.8 449.7,419.8 442.88582233137674,424" fill="#984521" stroke="#11161f" stroke-width="1" stroke-opacity="0.35"/>
+<polygon points="408.88582233137674,390 415.7,385.8 449.7,385.8 442.88582233137674,390" fill="#e48e69" stroke="#11161f" stroke-width="1" stroke-opacity="0.35"/>
+<rect x="408.88582233137674" y="390" width="34" height="34" fill="#d9622f" stroke="#11161f" stroke-width="1" stroke-opacity="0.35"/>
+<text x="425.9" y="442.0" font-size="11" fill="#11161f" font-weight="700" text-anchor="middle">Dec L0</text>
+<line x1="693.0" y1="302.0" x2="693.0" y2="388.0" stroke="#94a3b8" stroke-width="1.4" stroke-dasharray="4 4"/>
+<polygon points="709.9629867976521,390 716.7,385.8 716.7,419.8 709.9629867976521,424" fill="#984521" stroke="#11161f" stroke-width="1" stroke-opacity="0.35"/>
+<polygon points="675.9629867976521,390 682.7,385.8 716.7,385.8 709.9629867976521,390" fill="#e48e69" stroke="#11161f" stroke-width="1" stroke-opacity="0.35"/>
+<rect x="675.9629867976521" y="390" width="34" height="34" fill="#d9622f" stroke="#11161f" stroke-width="1" stroke-opacity="0.35"/>
+<text x="693.0" y="442.0" font-size="11" fill="#11161f" font-weight="700" text-anchor="middle">Dec L1</text>
+<line x1="923.4" y1="302.0" x2="923.4" y2="388.0" stroke="#94a3b8" stroke-width="1.4" stroke-dasharray="4 4"/>
+<polygon points="940.4058979633405,390 947.2,385.8 947.2,419.8 940.4058979633405,424" fill="#984521" stroke="#11161f" stroke-width="1" stroke-opacity="0.35"/>
+<polygon points="906.4058979633405,390 913.2,385.8 947.2,385.8 940.4058979633405,390" fill="#e48e69" stroke="#11161f" stroke-width="1" stroke-opacity="0.35"/>
+<rect x="906.4058979633405" y="390" width="34" height="34" fill="#d9622f" stroke="#11161f" stroke-width="1" stroke-opacity="0.35"/>
+<text x="923.4" y="442.0" font-size="11" fill="#11161f" font-weight="700" text-anchor="middle">Dec L2</text>
+<line x1="1127.9" y1="302.0" x2="1127.9" y2="388.0" stroke="#94a3b8" stroke-width="1.4" stroke-dasharray="4 4"/>
+<polygon points="1144.9444801964783,390 1151.7,385.8 1151.7,419.8 1144.9444801964783,424" fill="#984521" stroke="#11161f" stroke-width="1" stroke-opacity="0.35"/>
+<polygon points="1110.9444801964783,390 1117.7,385.8 1151.7,385.8 1144.9444801964783,390" fill="#e48e69" stroke="#11161f" stroke-width="1" stroke-opacity="0.35"/>
+<rect x="1110.9444801964783" y="390" width="34" height="34" fill="#d9622f" stroke="#11161f" stroke-width="1" stroke-opacity="0.35"/>
+<text x="1127.9" y="442.0" font-size="11" fill="#11161f" font-weight="700" text-anchor="middle">Dec L3</text>
+<line x1="1262.9" y1="302.0" x2="1262.9" y2="388.0" stroke="#94a3b8" stroke-width="1.4" stroke-dasharray="4 4"/>
+<polygon points="1279.9444801964783,390 1286.7,385.8 1286.7,419.8 1279.9444801964783,424" fill="#984521" stroke="#11161f" stroke-width="1" stroke-opacity="0.35"/>
+<polygon points="1245.9444801964783,390 1252.7,385.8 1286.7,385.8 1279.9444801964783,390" fill="#e48e69" stroke="#11161f" stroke-width="1" stroke-opacity="0.35"/>
+<rect x="1245.9444801964783" y="390" width="34" height="34" fill="#d9622f" stroke="#11161f" stroke-width="1" stroke-opacity="0.35"/>
+<text x="1262.9" y="442.0" font-size="11" fill="#11161f" font-weight="700" text-anchor="middle">Dec L4</text>
+<text x="30.0" y="450.0" font-size="11.5" fill="#686f7b" font-weight="400" text-anchor="start">frozen ConvT decoder, reconstructs 128×128×3 per tap (n_up = log2(128 / tap size)); expanded for the deepest tap (L4, bottleneck) below — same block structure for L0-L3, fewer stages.</text>
+<text x="30.0" y="506.0" font-size="12.5" fill="#11161f" font-weight="700" text-anchor="start">BlockDecoder — expanded example (tap: bottleneck L4, 8×8×256 to 128×128×3, 696,851 params)</text>
+<polygon points="86.5,583.5 125.5,559.1 125.5,585.6 86.5,610.0" fill="#8b939b" stroke="#11161f" stroke-width="1" stroke-opacity="0.35"/>
+<polygon points="60,583.5 99.0,559.1 125.5,559.1 86.5,583.5" fill="#d7dfe7" stroke="#11161f" stroke-width="1" stroke-opacity="0.35"/>
+<rect x="60" y="583.5" width="26.5" height="26.5" fill="#c7d2de" stroke="#11161f" stroke-width="1" stroke-opacity="0.35"/>
+<text x="73.2" y="628.0" font-size="10" fill="#94a3b8" font-weight="400" text-anchor="middle">256×8²</text>
+<polygon points="184.1776695296637,578.3223304703363 213.3,560.2 213.3,591.8 184.1776695296637,610.0" fill="#153755" stroke="#11161f" stroke-width="1" stroke-opacity="0.35"/>
+<polygon points="152.5,578.3223304703363 181.6,560.2 213.3,560.2 184.1776695296637,578.3223304703363" fill="#5d809f" stroke="#11161f" stroke-width="1" stroke-opacity="0.35"/>
+<rect x="152.5" y="578.3223304703363" width="31.67766952966369" height="31.67766952966369" fill="#1e4f7a" stroke="#11161f" stroke-width="1" stroke-opacity="0.35"/>
+<text x="168.3" y="556.3" font-size="10.8" fill="#11161f" font-weight="700" text-anchor="middle">ConvT1</text>
+<text x="168.3" y="568.3" font-size="9.5" fill="#686f7b" font-weight="400" text-anchor="middle">k4 s2</text>
+<text x="168.3" y="628.0" font-size="10" fill="#94a3b8" font-weight="400" text-anchor="middle">128×16²</text>
+<line x1="86.5" y1="596.8" x2="146.5" y2="594.2" stroke="#11161f" stroke-width="1.6"/>
+<polygon points="289.1776695296637,571.0 311.2,557.2 311.2,596.2 289.1776695296637,610.0" fill="#153755" stroke="#11161f" stroke-width="1" stroke-opacity="0.35"/>
+<polygon points="250.1776695296637,571.0 272.2,557.2 311.2,557.2 289.1776695296637,571.0" fill="#5d809f" stroke="#11161f" stroke-width="1" stroke-opacity="0.35"/>
+<rect x="250.1776695296637" y="571.0" width="39.0" height="39.0" fill="#1e4f7a" stroke="#11161f" stroke-width="1" stroke-opacity="0.35"/>
+<text x="269.7" y="549.0" font-size="10.8" fill="#11161f" font-weight="700" text-anchor="middle">ConvT2</text>
+<text x="269.7" y="561.0" font-size="9.5" fill="#686f7b" font-weight="400" text-anchor="middle">k4 s2</text>
+<text x="269.7" y="628.0" font-size="10" fill="#94a3b8" font-weight="400" text-anchor="middle">64×32²</text>
+<line x1="184.2" y1="594.2" x2="244.2" y2="590.5" stroke="#11161f" stroke-width="1.6"/>
+<polygon points="404.5330085889911,560.6446609406726 421.6,550.0 421.6,599.3 404.5330085889911,610.0" fill="#153755" stroke="#11161f" stroke-width="1" stroke-opacity="0.35"/>
+<polygon points="355.1776695296637,560.6446609406726 372.3,550.0 421.6,550.0 404.5330085889911,560.6446609406726" fill="#5d809f" stroke="#11161f" stroke-width="1" stroke-opacity="0.35"/>
+<rect x="355.1776695296637" y="560.6446609406726" width="49.35533905932738" height="49.35533905932738" fill="#1e4f7a" stroke="#11161f" stroke-width="1" stroke-opacity="0.35"/>
+<text x="379.9" y="538.6" font-size="10.8" fill="#11161f" font-weight="700" text-anchor="middle">ConvT3</text>
+<text x="379.9" y="550.6" font-size="9.5" fill="#686f7b" font-weight="400" text-anchor="middle">k4 s2</text>
+<text x="379.9" y="628.0" font-size="10" fill="#94a3b8" font-weight="400" text-anchor="middle">32×64²</text>
+<line x1="289.2" y1="590.5" x2="349.2" y2="585.3" stroke="#11161f" stroke-width="1.6"/>
+<polygon points="534.5330085889912,546.0 548.1,537.5 548.1,601.5 534.5330085889912,610.0" fill="#153755" stroke="#11161f" stroke-width="1" stroke-opacity="0.35"/>
+<polygon points="470.5330085889911,546.0 484.1,537.5 548.1,537.5 534.5330085889912,546.0" fill="#5d809f" stroke="#11161f" stroke-width="1" stroke-opacity="0.35"/>
+<rect x="470.5330085889911" y="546.0" width="64.0" height="64.0" fill="#1e4f7a" stroke="#11161f" stroke-width="1" stroke-opacity="0.35"/>
+<text x="502.5" y="524.0" font-size="10.8" fill="#11161f" font-weight="700" text-anchor="middle">ConvT4</text>
+<text x="502.5" y="536.0" font-size="9.5" fill="#686f7b" font-weight="400" text-anchor="middle">k4 s2</text>
+<text x="502.5" y="628.0" font-size="10" fill="#94a3b8" font-weight="400" text-anchor="middle">16×128²</text>
+<line x1="404.5" y1="585.3" x2="464.5" y2="578.0" stroke="#11161f" stroke-width="1.6"/>
+<polygon points="660.5330085889912,550 677.5,539.4 677.5,599.4 660.5330085889912,610" fill="#984521" stroke="#11161f" stroke-width="1" stroke-opacity="0.35"/>
+<polygon points="600.5330085889912,550 617.5,539.4 677.5,539.4 660.5330085889912,550" fill="#e48e69" stroke="#11161f" stroke-width="1" stroke-opacity="0.35"/>
+<rect x="600.5330085889912" y="550" width="60" height="60" fill="#d9622f" stroke="#11161f" stroke-width="1" stroke-opacity="0.35"/>
+<text x="630.5" y="528.0" font-size="10.8" fill="#11161f" font-weight="700" text-anchor="middle">Recon</text>
+<text x="630.5" y="540.0" font-size="9.5" fill="#686f7b" font-weight="400" text-anchor="middle">1×1, Sigmoid</text>
+<text x="630.5" y="628.0" font-size="10" fill="#94a3b8" font-weight="400" text-anchor="middle">3×128²</text>
+<line x1="534.5" y1="578.0" x2="594.5" y2="580.0" stroke="#11161f" stroke-width="1.6"/>
+<rect x="30" y="749" width="13" height="13" rx="3" fill="#1e4f7a"/>
+<text x="49.0" y="760.0" font-size="11" fill="#686f7b" font-weight="400" text-anchor="start">Conv / ConvTranspose</text>
+<rect x="220.0" y="749" width="13" height="13" rx="3" fill="#2f8f7f"/>
+<text x="239.0" y="760.0" font-size="11" fill="#686f7b" font-weight="400" text-anchor="start">Pooling (Max / Global-Avg)</text>
+<rect x="453.20000000000005" y="749" width="13" height="13" rx="3" fill="#7c8ba3"/>
+<text x="472.2" y="760.0" font-size="11" fill="#686f7b" font-weight="400" text-anchor="start">BatchNorm + ReLU</text>
+<rect x="614.4000000000001" y="749" width="13" height="13" rx="3" fill="#d9622f"/>
+<text x="633.4" y="760.0" font-size="11" fill="#686f7b" font-weight="400" text-anchor="start">Fully-Connected (head)</text>
+<rect x="818.8000000000001" y="749" width="13" height="13" rx="3" fill="#c7d2de"/>
+<text x="837.8" y="760.0" font-size="11" fill="#686f7b" font-weight="400" text-anchor="start">Input tensor</text>
+<line x1="951.2" y1="755" x2="973.2" y2="755" stroke="#94a3b8" stroke-width="1.4" stroke-dasharray="4 4"/>
+<text x="981.2" y="760.0" font-size="11" fill="#686f7b" font-weight="400" text-anchor="start">decoder tap (auxiliary)</text>
+<text x="1615.0" y="794.0" font-size="10.5" fill="#94a3b8" font-weight="400" text-anchor="end">lrad/model.py · lrad/decoder.py · lrad/train.py:train_decoders — baseline arm, no cutpaste_head</text>
+</svg>

@@ -1,0 +1,50 @@
+experiment:
+  name: celeba_ood_abl_baseline
+  seed: 42
+  output_dir: outputs/celeba_ood/ablation/baseline
+dataset:
+  root: /home/ybahaddo/lrad/data
+  download: false
+  image_size: 128
+  batch_size: 128
+  num_workers: 4
+  train_ratio: 0.9
+  val_ratio: 0.0
+  pin_memory: true
+  seed: 42
+  ood_attrs:
+  - Eyeglasses
+model:
+  in_channels: 3
+  channels:
+  - 32
+  - 64
+  - 128
+  - 256
+  - 256
+  kernel_size: 3
+  n_attrs: 6
+  n_gender: 2
+training:
+  epochs: 20
+  save_every_epoch: false
+  lr: 0.0003
+  attr_loss_weight: 2.0
+  log_every: 1
+  decoders:
+    epochs: 25
+    lr: 0.001
+    log_every: 1
+evaluation:
+  n_viz_in_samples: 10
+  n_viz_ood_samples: 15
+  viz_seed: 1234
+  n_instances_in: 20
+  n_instances_ood: 20
+  overlay_sigma: 1.5
+  overlay_power: 0.8
+  n_top_ood: 10
+ensemble:
+  size: 10
+  base_seed: 42
+  agg: p95
