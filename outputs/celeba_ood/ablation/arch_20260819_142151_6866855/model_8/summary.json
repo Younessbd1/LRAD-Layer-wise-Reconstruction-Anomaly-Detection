@@ -1,0 +1,55 @@
+{
+  "experiment": "celeba_ood_abl_arch",
+  "seed": 50,
+  "device": "cuda",
+  "n_train": 170465,
+  "n_val": 0,
+  "n_test_in": 18941,
+  "n_test_ood": 13193,
+  "gender_attr": "Male",
+  "attr_targets": [
+    "Arched_Eyebrows",
+    "Bushy_Eyebrows",
+    "Narrow_Eyes",
+    "Bags_Under_Eyes",
+    "Smiling",
+    "Young"
+  ],
+  "ood_attr": "Eyeglasses",
+  "model": {
+    "channels": [
+      48,
+      64,
+      96,
+      192,
+      384
+    ],
+    "kernel_size": 3,
+    "parameters": 918328
+  },
+  "accuracy": {
+    "gender": 0.9496858666385091,
+    "attrs": {
+      "Arched_Eyebrows": 0.8170635130140964,
+      "Bushy_Eyebrows": 0.9007444168734491,
+      "Narrow_Eyes": 0.8968375481759147,
+      "Bags_Under_Eyes": 0.7644263766432606,
+      "Smiling": 0.91895887228763,
+      "Young": 0.83485560424476
+    }
+  },
+  "auroc": {
+    "n_in": 18941,
+    "n_ood": 13193,
+    "score_entropy_gender": {
+      "auroc": 0.5495835638577097,
+      "in_mean": 0.035044025629758835,
+      "ood_mean": 0.0372072234749794
+    },
+    "score_entropy_attrs": {
+      "auroc": 0.5574449304738829,
+      "in_mean": 0.21037527918815613,
+      "ood_mean": 0.22654706239700317
+    }
+  }
+}

@@ -1,0 +1,93 @@
+{
+  "output_dir": "outputs/celeba_ood/ablation/arch_20260819_142151_6866855",
+  "blocks": [
+    1,
+    2,
+    3
+  ],
+  "std_floor": 0.001,
+  "n_models": 10,
+  "supervised": true,
+  "ood_cal_frac": 0.5,
+  "split_seed": 42,
+  "n_cal": 6596,
+  "calibration": {
+    "signals": [
+      "ens_energy_gender",
+      "locfre_b1",
+      "locfre_b2",
+      "locfre_b3",
+      "unc_epistemic_combined"
+    ],
+    "mu": [
+      -8.029034001835193,
+      3.5461157018520963,
+      2.873528332059374,
+      2.017057372149205,
+      0.39389709999908545
+    ],
+    "sd": [
+      3.383923652630034,
+      1.0408450196713375,
+      1.109892538563394,
+      0.9903521488663324,
+      0.20869532374905822
+    ],
+    "coef": [
+      0.8644790869589895,
+      0.8564491326188451,
+      -0.11652546624948412,
+      0.4739340899569453,
+      0.28397561850081177
+    ],
+    "intercept": 0.02074005063229829
+  },
+  "rank_signals": [
+    "locfre_b1",
+    "locfre_b2",
+    "locfre_b3",
+    "unc_epistemic_combined",
+    "ens_energy_gender"
+  ],
+  "ref_split": "train (minus calibration slice)",
+  "n_ref_images": 5120,
+  "n_test_in": 18941,
+  "n_test_ood": 6597,
+  "auroc": {
+    "locfre_b1": {
+      "auroc": 0.7848859422632739,
+      "in_mean": 3.050332281828795,
+      "ood_mean": 4.070992190286357
+    },
+    "locfre_b2": {
+      "auroc": 0.7676931326373593,
+      "in_mean": 2.376157355669202,
+      "ood_mean": 3.4114224034781815
+    },
+    "locfre_b3": {
+      "auroc": 0.7916075878202544,
+      "in_mean": 1.5455078718809516,
+      "ood_mean": 2.550794768995483
+    },
+    "unc_epistemic_combined": {
+      "auroc": 0.7392716828399672,
+      "in_mean": 0.32179082976603507,
+      "ood_mean": 0.4931481410639447
+    },
+    "ens_energy_gender": {
+      "auroc": 0.7787154205030553,
+      "in_mean": -9.682125115254872,
+      "ood_mean": -6.32014130391333
+    },
+    "fused_rank": {
+      "auroc": 0.8414969160956216,
+      "in_mean": 0.4296216458476776,
+      "ood_mean": 0.7020670616945792
+    },
+    "fused_supervised": {
+      "auroc": 0.8562747246927958,
+      "in_mean": -1.0810787150356982,
+      "ood_mean": 1.223195237187876
+    }
+  }
+}
