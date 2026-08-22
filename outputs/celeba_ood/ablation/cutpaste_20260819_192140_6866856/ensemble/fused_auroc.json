@@ -1,0 +1,103 @@
+{
+  "output_dir": "outputs/celeba_ood/ablation/cutpaste_20260819_192140_6866856",
+  "blocks": [
+    1,
+    2,
+    3
+  ],
+  "std_floor": 0.001,
+  "n_models": 10,
+  "supervised": true,
+  "ood_cal_frac": 0.5,
+  "split_seed": 42,
+  "n_cal": 6596,
+  "calibration": {
+    "signals": [
+      "cutpaste_prob",
+      "ens_energy_gender",
+      "locfre_b1",
+      "locfre_b2",
+      "locfre_b3",
+      "unc_epistemic_combined"
+    ],
+    "mu": [
+      0.004798909826064674,
+      -6.051746290576971,
+      3.6380318845444335,
+      2.9523125983772687,
+      2.011293295657045,
+      0.21640882907278436
+    ],
+    "sd": [
+      0.01950584643354927,
+      2.566930606395596,
+      1.1033266420306567,
+      1.1900300677899225,
+      0.9636681352111243,
+      0.16063206350654594
+    ],
+    "coef": [
+      0.6407176048947677,
+      1.1977413430115087,
+      1.0785893175955392,
+      -0.22643618994322293,
+      0.43201033357726126,
+      -0.6796757814839984
+    ],
+    "intercept": 0.06224663565277482
+  },
+  "rank_signals": [
+    "locfre_b1",
+    "locfre_b2",
+    "locfre_b3",
+    "unc_epistemic_combined",
+    "ens_energy_gender",
+    "cutpaste_prob"
+  ],
+  "ref_split": "train (minus calibration slice)",
+  "n_ref_images": 5120,
+  "n_test_in": 18941,
+  "n_test_ood": 6597,
+  "auroc": {
+    "locfre_b1": {
+      "auroc": 0.7928001848235449,
+      "in_mean": 3.098103755313173,
+      "ood_mean": 4.203646957521928
+    },
+    "locfre_b2": {
+      "auroc": 0.7599961824283231,
+      "in_mean": 2.435838445256221,
+      "ood_mean": 3.5075153105635164
+    },
+    "locfre_b3": {
+      "auroc": 0.7825310794726917,
+      "in_mean": 1.5730552905114692,
+      "ood_mean": 2.5214420096296237
+    },
+    "unc_epistemic_combined": {
+      "auroc": 0.5716943954403235,
+      "in_mean": 0.20912313990819148,
+      "ood_mean": 0.2308222787480067
+    },
+    "ens_energy_gender": {
+      "auroc": 0.7435272644859707,
+      "in_mean": -7.120634579248158,
+      "ood_mean": -4.914493790978606
+    },
+    "cutpaste_prob": {
+      "auroc": 0.7499541570480097,
+      "in_mean": 0.0018259238042196882,
+      "ood_mean": 0.008280970214145667
+    },
+    "fused_rank": {
+      "auroc": 0.8246533396105346,
+      "in_mean": 0.4397010872836561,
+      "ood_mean": 0.6731274375868228
+    },
+    "fused_supervised": {
+      "auroc": 0.870958786623953,
+      "in_mean": -1.1293390655011175,
+      "ood_mean": 1.3222730482873792
+    }
+  }
+}
