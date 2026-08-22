@@ -1318,6 +1318,11 @@ vérifier si l'échelle intermédiaire est en cause ou si c'est bien la redondan
 
 ### 11.6 Comparaison avec `LASTOF_RESULTS` — et ce qu'on ne peut pas en conclure
 
+> Les fichiers de `LASTOF_RESULTS` (1 Go de poids et de figures) ne sont plus
+> conservés dans le dépôt. Les chiffres cités ci-dessous sont ceux que ses
+> `ensemble/*.json` rapportaient ; la recette reste reproductible depuis
+> `configs/ablation_arch_cutpaste.yaml`.
+
 | Score | `baseline` (ce run) | `LASTOF_RESULTS` | Δ |
 |---|---|---|---|
 | `fused_supervised` | **0.8730** | 0.8638 | +0.009 |

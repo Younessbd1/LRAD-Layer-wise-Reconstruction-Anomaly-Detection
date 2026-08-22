@@ -18,13 +18,15 @@ Every number in this README comes from
 
 It is also the best run currently in the repository:
 
-| Detector | `baseline` (this run) | `LASTOF_RESULTS` (arch diversity × CutPaste) |
+| Detector | `baseline` (this run) | `LASTOF_RESULTS` (arch diversity × CutPaste) [^lastof] |
 | --- | --- | --- |
 | **`fused_supervised`** | **0.8730** | 0.8638 |
 | **`fused_rank`** (label-free) | **0.8420** | 0.8040 |
 | best single signal | `ens_energy_gender` **0.8112** | `locfre_b3` 0.7952 |
 | `unc_epistemic_combined` | **0.7336** | 0.5387 |
 | `p95` bias (reconstruction baseline) | 0.6246 | 0.6228 |
+
+[^lastof]: `LASTOF_RESULTS` was an earlier archived run of the `arch_cutpaste` recipe. Its 1 GB of weights and figures is no longer kept in the repository — the numbers quoted here are what its `ensemble/*.json` reported, and the same recipe is reproducible from [`configs/ablation_arch_cutpaste.yaml`](configs/ablation_arch_cutpaste.yaml).
 
 The plain seed-only control comes out ahead of the architecture-diverse + CutPaste recipe on every one of these. Two caveats before reading that as *"diversity does not help"*: the runs also differ in which signals the fusion could draw on (`LASTOF_RESULTS` fed it `cutpaste_prob`, worth 0.674 alone; this arm has no such head), and the controlled answer is the ablation's `arch` and `cutpaste` arms against this same control — [`scripts/compare_ablation.py`](scripts/compare_ablation.py) settles it, not this table.
 
@@ -161,8 +163,7 @@ The four figures document the *models*. They do not document the **scoring stack
 
 Mind the two evaluation splits: the decomposition and localized rows are scored on the full **18,941 ID vs 13,193 OOD** test set, while the fusion rows hold half the OOD images out for calibration and report on **18,941 ID vs 6,597 OOD**. The gap between the raw bias term (0.625) and the fused detector (0.842 label-free, 0.873 supervised) is the substance of the project, and no current diagram shows it.
 
-Two archived reports go deeper, both in French:
-[`outputs/celeba_ood/ablation/baseline_20260819_133802_6866854/Documentation.md`](outputs/celeba_ood/ablation/baseline_20260819_133802_6866854/Documentation.md) covers this run — every formula, every figure it produces, worked numeric examples, and a critical reading of the anomalies — and [`outputs/celeba_ood/LASTOF_RESULTS/Documentation.md`](outputs/celeba_ood/LASTOF_RESULTS/Documentation.md) is the equivalent for the older `arch_cutpaste` recipe.
+[`outputs/celeba_ood/ablation/baseline_20260819_133802_6866854/Documentation.md`](outputs/celeba_ood/ablation/baseline_20260819_133802_6866854/Documentation.md) goes deeper (in French): every formula, every figure it produces, worked numeric examples, and a critical reading of the anomalies.
 
 ## Features
 
@@ -267,9 +268,11 @@ Three case studies, all against the same control: **(1)** `arch` vs
 `baseline` — architecture diversity alone; **(2)** `cutpaste` vs `baseline` —
 the pretext alone; **(3)** `arch_cutpaste` vs `baseline` — both together.
 That is what separates the genuinely beneficial ingredient from the marginal
-one. The `arch_cutpaste` recipe was already run as
+one. The `arch_cutpaste` recipe had already been run as
 `outputs/celeba_ood/LASTOF_RESULTS`, so by default only the first three arms
-are submitted and the comparison falls back to that archived run. The control
+are submitted; `compare_ablation.py` still picks that directory up as the
+fourth arm when it is present on disk, and simply omits the arm otherwise —
+it is no longer stored in the repository. The control
 arm itself is the reference run documented at the top of this README
 (`baseline_20260819_133802_6866854`), and it currently posts the best fused
 AUROC of any run in the repo — so the case studies have to argue *against* it,
@@ -366,7 +369,7 @@ lrad/
                                    #         decoders, training, plots, checkpointing
 ```
 
-Outputs are gitignored, with two runs force-added as references: the `baseline` arm above and the archived `LASTOF_RESULTS`. An ensemble run writes per-model results under `model_<i>/` (weights, history, plots) and the decomposition under `ensemble/` (AUROC table, identity residual, all heatmap figures, `top_ood_glasses.png` + `.json`), with the per-instance figures under `ensemble/plots/instances_{in,ood}/<ID|OOD>_XX/` (one folder per face: `model_01.png` … `model_10.png` + `summary.png`).
+Outputs are gitignored, with the three ablation arms and their merged `comparison/` force-added as references. An ensemble run writes per-model results under `model_<i>/` (weights, history, plots) and the decomposition under `ensemble/` (AUROC table, identity residual, all heatmap figures, `top_ood_glasses.png` + `.json`), with the per-instance figures under `ensemble/plots/instances_{in,ood}/<ID|OOD>_XX/` (one folder per face: `model_01.png` … `model_10.png` + `summary.png`).
 
 ## Contributing
 
